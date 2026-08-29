@@ -1,0 +1,42 @@
+'use client';
+
+import Image from 'next/image';
+import { HugeIcon } from '@/components/HugeIcon';
+
+interface LightboxImage {
+  url: string;
+  width: number;
+  height: number;
+}
+
+/** Overlay simples sobre a lista — fechar não mexe no scroll de baixo, então a posição é preservada de graça (ver A10 da RFC-008). */
+export default function ImageLightbox({ image, onClose }: { image: LightboxImage; onClose: () => void }) {
+  return (
+    <div
+      className="absolute inset-0 z-30 flex items-center justify-center bg-background/90 backdrop-blur-sm"
+      onClick={onClose}
+      role="dialog"
+      aria-modal="true"
+    >
+      <button
+        type="button"
+        onClick={onClose}
+        aria-label="Fechar"
+        className="absolute right-4 top-4 flex size-9 items-center justify-center rounded-full bg-muted/60 text-foreground hover:bg-muted"
+      >
+        <HugeIcon name="cancel-01" size={18} />
+      </button>
+
+      <div className="relative max-h-[85vh] max-w-[90vw]" onClick={(event) => event.stopPropagation()}>
+        <Image
+          src={image.url}
+          alt=""
+          width={image.width}
+          height={image.height}
+          className="max-h-[85vh] w-auto max-w-[90vw] rounded-lg object-contain"
+          unoptimized
+        />
+      </div>
+    </div>
+  );
+}

@@ -1,0 +1,125 @@
+@tailwind base;
+  @tailwind components;
+  @tailwind utilities;
+
+  @layer base {
+    :root {
+      --background: 0 0% 100%;
+      --foreground: 240 5.9% 3.9%;
+
+      --card: 0 0% 97%;
+      --card-foreground: 240 5.9% 3.9%;
+
+      --popover: 0 0% 100%;
+      --popover-foreground: 240 5.9% 3.9%;
+
+      /* yellow-500 as primary CTA */
+      --primary: 47.9 95.8% 53.1%;
+      --primary-foreground: 0 0% 0%;
+
+      --secondary: 240 4.8% 95.9%;
+      --secondary-foreground: 240 5.9% 10%;
+
+      --muted: 240 4.8% 95.9%;
+      --muted-foreground: 240 3.8% 46.1%;
+
+      --accent: 240 4.8% 95.9%;
+      --accent-foreground: 0 0% 0%;
+
+      /* red-600 */
+      --destructive: 0 72.2% 50.6%;
+      --destructive-foreground: 0 0% 98%;
+
+      --border: 240 5.9% 90%;
+      --input: 240 5.9% 90%;
+      --ring: 47.9 95.8% 53.1%;
+
+      --radius: 1rem;
+
+      /* Paleta categórica validada (CVD-safe) do dashboard de infra —
+         ver AdminInfraView.tsx. Ordem fixa: blue/orange/aqua/violet. */
+      --chart-cpu: 212.8 67.7% 50.2%;
+      --chart-ram: 158.5 73.3% 39.6%;
+      --chart-disk: 248.8 48.4% 44.1%;
+      --chart-net-rx: 212.8 67.7% 50.2%;
+      --chart-net-tx: 17.0 82.1% 56.3%;
+    }
+
+    .dark {
+      /* zinc-950 */
+      --background: 240 5.9% 3.9%;
+      --foreground: 0 0% 98%;
+
+      /* zinc-900 — card / dialog surfaces */
+      --card: 240 5.9% 10%;
+      --card-foreground: 0 0% 98%;
+
+      /* zinc-900 — popover surfaces */
+      --popover: 240 5.9% 10%;
+      --popover-foreground: 0 0% 98%;
+
+      /* yellow-500 as primary CTA */
+      --primary: 37.29 89.92% 53.33%;
+      --primary-foreground: 0 0% 0%;
+
+      /* zinc-800 — secondary surfaces */
+      --secondary: 240 3.7% 15.9%;
+      --secondary-foreground: 0 0% 98%;
+
+      /* zinc-800 — muted/subtle surfaces */
+      --muted: 240 3.7% 15.9%;
+      --muted-foreground: 240 5% 64.9%;
+
+      /* yellow-500 as accent highlight */
+      --muted: 250 3.7% 15.9%;
+      --accent-foreground: 0 0% 0%;
+
+      /* red-600 */
+      --destructive: 0 72.2% 50.6%;
+      --destructive-foreground: 0 0% 98%;
+
+      /* zinc-700 — borders and inputs */
+      --border: 240 3.8% 27.3%;
+      --input: 240 3.7% 15.9%;
+      --ring: 47.9 95.8% 53.1%;
+
+      /* Mesmos passos, calibrados pro fundo escuro — ver AdminInfraView.tsx. */
+      --chart-cpu: 212.8 76.8% 56.1%;
+      --chart-ram: 159.2 72.7% 35.9%;
+      --chart-disk: 246.6 69.4% 71.8%;
+      --chart-net-rx: 212.8 76.8% 56.1%;
+      --chart-net-tx: 17.1 70.2% 50.0%;
+    }
+  }
+
+  /* View Transitions: cross-fade everything that is NOT a shared element,
+     while named nodes (view-transition-name) morph into their counterpart. */
+  ::view-transition-old(root),
+  ::view-transition-new(root) {
+    animation-duration: 0.35s;
+    animation-timing-function: cubic-bezier(0.4, 0, 0.2, 1);
+  }
+
+  /* Named shared elements (e.g. each player card morphing from the lobby grid
+     into its team row) glide a touch slower with an ease-out for a settled feel. */
+  ::view-transition-group(*) {
+    animation-duration: 0.45s;
+    animation-timing-function: cubic-bezier(0.22, 1, 0.36, 1);
+  }
+
+  @media (prefers-reduced-motion: reduce) {
+    ::view-transition-group(*),
+    ::view-transition-old(*),
+    ::view-transition-new(*) {
+      animation: none !important;
+    }
+  }
+
+  @layer base {
+    * {
+      @apply border-border;
+    }
+    body {
+      @apply bg-background text-foreground;
+    }
+  }
