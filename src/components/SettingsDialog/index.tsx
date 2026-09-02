@@ -7,6 +7,7 @@ import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
 import type { UserDTO } from '@/app/api/user/types';
 import { cn } from '@/lib/utils';
 import AccountLinkTab from './AccountLinkTab';
+import AudioVideoTab from './AudioVideoTab';
 import ProfileTab from './ProfileTab';
 
 /**
@@ -21,13 +22,13 @@ import ProfileTab from './ProfileTab';
  * TabsContent inativo por padrão, mas `active` deixa a intenção explícita e
  * sobrevive a um `forceMount` no futuro.
  *
- * Áudio e vídeo ainda mora no `VoiceDeviceSettingsPopover` — vira aba junto com
- * o noise gate (frente C de docs/rfc-migracao-tdc.md), que é quem traz os
- * campos que a justificam.
+ * O `VoiceDeviceSettingsPopover` do rodapé da sidebar continua existindo como
+ * atalho pros mesmos controles de Áudio e vídeo — aqui eles cabem sem espremer.
  */
 const TABS = [
   { id: 'profile', label: 'Perfil', icon: 'user-circle' },
   { id: 'account-link', label: 'Conexão e dispositivos', icon: 'qr-code-01' },
+  { id: 'audio-video', label: 'Áudio e vídeo', icon: 'mic-02' },
 ] as const;
 
 type TabId = (typeof TABS)[number]['id'];
@@ -103,6 +104,10 @@ export default function SettingsDialog({
 
             <TabsContent value="account-link" className="mt-0">
               <AccountLinkTab active={tab === 'account-link'} />
+            </TabsContent>
+
+            <TabsContent value="audio-video" className="mt-0">
+              <AudioVideoTab active={tab === 'audio-video'} />
             </TabsContent>
           </div>
         </Tabs>

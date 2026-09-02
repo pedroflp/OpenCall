@@ -12,7 +12,7 @@ import { useVideoInputDevices } from '@/hooks/useVideoInputDevices';
 import { cn } from '@/lib/utils';
 import CameraDeviceButton from './CameraDeviceButton';
 import ConnectionQualityIndicator from './ConnectionQualityIndicator';
-import NoiseSuppressionPopover from './NoiseSuppressionPopover';
+import MicSettingsPopover from './MicSettingsPopover';
 import VoiceDeviceSettingsPopover from './VoiceDeviceSettingsPopover';
 
 function SelfButton({
@@ -86,9 +86,9 @@ export default function SelfControlCard({ channelName, user }: { channelName: st
             </div>
           </ConnectionQualityIndicator>
           <div className='flex items-center gap-1'>
-            <NoiseSuppressionPopover
+            <MicSettingsPopover
               trigger={
-                <Button type="button" size="icon" variant="ghost" aria-label="Supressão de ruído">
+                <Button type="button" size="icon" variant="ghost" aria-label="Configurações do microfone">
                   <HugeIcon name="audio-wave-02" size={19} />
                 </Button>
               }

@@ -4,19 +4,20 @@ import { useEffect, useRef, useState } from 'react';
 import { createLocalAudioTrack, type LocalAudioTrack } from 'livekit-client';
 import { HugeIcon } from '@/components/HugeIcon';
 import { Button } from '@/components/ui/button';
+import { Label } from '@/components/ui/label';
 import { Popover, PopoverContent, PopoverTrigger } from '@/components/ui/popover';
+import { Slider } from '@/components/ui/slider';
 import { Tooltip, TooltipContent, TooltipTrigger } from '@/components/ui/tooltip';
 import { useToast } from '@/components/ui/use-toast';
 import {
-  applyNoiseSuppressionMode,
+  applyMicProcessing,
   audioDeviceConstraint,
   createAudioContext,
-  isKrispSupported,
-  type NoiseSuppressionMode,
+  NOISE_GATE_MAX_DB,
+  NOISE_GATE_MIN_DB,
 } from '@/lib/rtc/noiseSuppression';
 import { useVoice } from '@/providers/VoiceProvider';
 import AudioWaveform from './AudioWaveform';
-import KrispLogo from './KrispLogo';
 
 // Sem sinkId explícito o preview toca no dispositivo padrão do navegador, e
 // não no que está escolhido nas configurações sonoras. 'default' (em vez de
@@ -33,8 +34,8 @@ async function applyOutputDevice(element: HTMLMediaElement, outputDeviceId: stri
   }
 }
 
-// A track processada (pós-Krisp) é o que realmente vai pro alto-falante — usa
-// ela quando existe pra waveform refletir a supressão, não o áudio cru.
+// A track processada (pós-gate) é o que realmente vai pro alto-falante — usa
+// ela quando existe pra waveform refletir o corte, não o áudio cru.
 function attachAnalyser(context: AudioContext, track: LocalAudioTrack): AnalyserNode {
   const analyser = context.createAnalyser();
   analyser.fftSize = 1024;
@@ -44,51 +45,11 @@ function attachAnalyser(context: AudioContext, track: LocalAudioTrack): Analyser
   return analyser;
 }
 
-function OptionCard({
-  selected,
-  disabled,
-  title,
-  description,
-  icon,
-  onClick,
-}: {
-  selected: boolean;
-  disabled?: boolean;
-  title: React.ReactNode;
-  description: string;
-  icon: React.ReactNode;
-  onClick: () => void;
-}) {
-  return (
-    <button
-      type="button"
-      disabled={disabled}
-      aria-pressed={selected}
-      onClick={onClick}
-      className={
-        'flex w-full items-center gap-3 rounded-xl border p-3 text-left transition-colors disabled:cursor-not-allowed disabled:opacity-50 ' +
-        (selected ? 'border-primary/50 bg-primary/10' : 'border-border bg-muted/30 hover:bg-muted/50')
-      }
-    >
-      <div className="flex size-8 shrink-0 items-center justify-center rounded-lg bg-background/60">{icon}</div>
-      <div className="min-w-0 flex-1">
-        <div className="text-[13px] font-bold">{title}</div>
-        <div className="text-[11.5px] text-muted-foreground">{description}</div>
-      </div>
-      {selected ? (
-        <HugeIcon name="checkmark-circle-02" size={18} className="shrink-0 text-primary" />
-      ) : (
-        <div className="size-[18px] shrink-0" />
-      )}
-    </button>
-  );
-}
-
 // Preview isolado, sem publicar nada — funciona mesmo fora do canal. Cria uma
-// track de microfone só local, aplica o modo selecionado e toca de volta no
-// dispositivo de saída escolhido, pra ouvir o resultado antes de entrar em voz.
+// track de microfone só local, aplica o gate e toca de volta no dispositivo de
+// saída escolhido, pra ouvir o resultado antes de entrar em voz.
 function useSelfListenPreview(
-  mode: NoiseSuppressionMode,
+  thresholdDb: number,
   inputDeviceId: string,
   outputDeviceId: string,
   inChannel: boolean,
@@ -134,19 +95,16 @@ function useSelfListenPreview(
         deviceId: audioDeviceConstraint(inputDeviceId),
         echoCancellation: true,
         autoGainControl: true,
-        noiseSuppression: mode === 'default',
+        noiseSuppression: true,
       });
-      // Fora de uma Room ninguém seta isso — setProcessor() exige um
-      // AudioContext mesmo que o preview comece em modo padrão, porque o
-      // usuário pode trocar pra Krisp com o teste já rodando (ver efeito abaixo).
+      // Fora de uma Room ninguém seta isso, e o gate é um AudioWorklet —
+      // setProcessor() exige um AudioContext (ver createAudioContext).
       const audioContext = createAudioContext();
       if (audioContext) {
         track.setAudioContext(audioContext);
         audioContextRef.current = audioContext;
       }
-      // Modo padrão já nasce correto pelas capture options acima — só o Krisp
-      // precisa de uma segunda passada pra anexar o processor.
-      if (mode === 'krisp') await applyNoiseSuppressionMode(track, mode, inputDeviceId);
+      await applyMicProcessing(track, thresholdDb, inputDeviceId);
       trackRef.current = track;
 
       const audioEl = track.attach();
@@ -187,17 +145,21 @@ function useSelfListenPreview(
     else void start();
   };
 
-  // Troca de modo com o preview ativo reaplica ao vivo, sem precisar reabrir o mic.
+  // Trocar de MICROFONE com o preview ativo reaquire a track. O LIMIAR não
+  // entra aqui de propósito: ele é ajustado ao vivo pelo próprio slider (ver
+  // updateNoiseGateThreshold no onValueChange), sem reabrir o mic — reaquisitar
+  // a cada pixel arrastado cortaria o áudio no meio do teste.
   useEffect(() => {
     const track = trackRef.current;
     const context = audioContextRef.current;
     if (!track) return;
-    void applyNoiseSuppressionMode(track, mode, inputDeviceId).then(() => {
+    void applyMicProcessing(track, thresholdDb, inputDeviceId).then(() => {
       // restartTrack troca a MediaStreamTrack por baixo — o analyser antigo
       // ficaria escutando uma track morta sem isso.
       if (context && trackRef.current === track) setAnalyser(attachAnalyser(context, track));
     });
-  }, [mode, inputDeviceId]);
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [inputDeviceId]);
 
   // Trocar a saída nas configurações sonoras com o teste rolando também tem
   // que redirecionar o áudio na hora, sem reabrir o microfone.
@@ -212,15 +174,10 @@ function useSelfListenPreview(
   return { active, loading, toggle, stop, analyser };
 }
 
-export default function NoiseSuppressionPopover({ trigger }: { trigger: React.ReactNode }) {
-  const { noiseSuppressionMode, setNoiseSuppressionMode, inputDeviceId, outputDeviceId, channel, deafened, toggleDeafen } = useVoice();
+export default function MicSettingsPopover({ trigger }: { trigger: React.ReactNode }) {
+  const { noiseGateThreshold, setNoiseGateThreshold, inputDeviceId, outputDeviceId, channel, deafened, toggleDeafen } = useVoice();
   const [open, setOpen] = useState(false);
-  const [krispSupported, setKrispSupported] = useState(true);
-  const preview = useSelfListenPreview(noiseSuppressionMode, inputDeviceId, outputDeviceId, channel !== null, deafened, toggleDeafen);
-
-  useEffect(() => {
-    void isKrispSupported().then(setKrispSupported);
-  }, []);
+  const preview = useSelfListenPreview(noiseGateThreshold, inputDeviceId, outputDeviceId, channel !== null, deafened, toggleDeafen);
 
   // Fechar o popover com o preview ligado deixaria o mic capturando e o áudio
   // tocando sem nenhum indicador visível — encerra o teste junto com o fechamento.
@@ -236,24 +193,31 @@ export default function NoiseSuppressionPopover({ trigger }: { trigger: React.Re
           <TooltipTrigger asChild>{trigger}</TooltipTrigger>
         </PopoverTrigger>
         <PopoverContent align="start" sideOffset={12} className="space-y-3 border-0">
-          <p className="text-[11px] font-bold uppercase tracking-wider text-muted-foreground">Supressão de ruído</p>
+          <p className="text-[11px] font-bold uppercase tracking-wider text-muted-foreground">Microfone</p>
 
-          <div className="flex flex-col gap-2">
-            <OptionCard
-              selected={noiseSuppressionMode === 'default'}
-              title="Supressão padrão"
-              description="Cancelamento de eco e ruído nativo do navegador."
-              icon={<HugeIcon name="audio-wave-01" size={16} />}
-              onClick={() => void setNoiseSuppressionMode('default')}
+          <div className="space-y-2">
+            <div className="flex items-baseline justify-between gap-2">
+              <Label htmlFor="noise-gate">Sensibilidade</Label>
+              <span className="text-[11px] tabular-nums text-muted-foreground">{noiseGateThreshold} dB</span>
+            </div>
+
+            {/* O slider cresce pra DIREITA na direção de "abre mais fácil": o
+                limiar em dB é negativo, então o valor cru cresce ao contrário do
+                que a barra sugere. Invertendo aqui, arrastar pra direita é
+                sempre "captar mais", que é como a pessoa lê a barra. */}
+            <Slider
+              id="noise-gate"
+              value={[NOISE_GATE_MIN_DB + NOISE_GATE_MAX_DB - noiseGateThreshold]}
+              min={NOISE_GATE_MIN_DB}
+              max={NOISE_GATE_MAX_DB}
+              step={1}
+              onValueChange={([next]) => setNoiseGateThreshold(NOISE_GATE_MIN_DB + NOISE_GATE_MAX_DB - next)}
             />
-            <OptionCard
-              selected={noiseSuppressionMode === 'krisp'}
-              disabled={!krispSupported}
-              title="Krisp"
-              description={krispSupported ? 'Modelo de IA, mais agressivo com ruído de fundo.' : 'Não suportado neste navegador.'}
-              icon={<KrispLogo height={14} />}
-              onClick={() => void setNoiseSuppressionMode('krisp')}
-            />
+
+            <p className="text-[11px] text-muted-foreground">
+              Abaixo do limiar o microfone fica em silêncio. Arraste pra direita se estão dizendo que você some; pra
+              esquerda se o ruído de fundo passa.
+            </p>
           </div>
 
           <Button type="button" variant="secondary" size="sm" className="w-full gap-2" disabled={preview.loading} onClick={preview.toggle}>
@@ -264,7 +228,7 @@ export default function NoiseSuppressionPopover({ trigger }: { trigger: React.Re
           <p className="text-[11px] text-muted-foreground">Use fones de ouvido pra evitar eco no teste.</p>
         </PopoverContent>
       </Popover>
-      <TooltipContent>Supressão de ruído</TooltipContent>
+      <TooltipContent>Configurações do microfone</TooltipContent>
     </Tooltip>
   );
 }

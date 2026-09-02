@@ -25,10 +25,7 @@ dependencies:
     version: 1.2.33
   '@livekit/components-react':
     specifier: ^2.9.24
-    version: 2.9.24(@livekit/krisp-noise-filter@0.4.4)(livekit-client@2.22.0)(react-dom@18.3.1)(react@18.3.1)(tslib@2.8.1)
-  '@livekit/krisp-noise-filter':
-    specifier: ^0.4.4
-    version: 0.4.4(livekit-client@2.22.0)
+    version: 2.9.24(livekit-client@2.22.0)(react-dom@18.3.1)(react@18.3.1)(tslib@2.8.1)
   '@phosphor-icons/react':
     specifier: ^2.1.7
     version: 2.1.10(react-dom@18.3.1)(react@18.3.1)
@@ -907,7 +904,7 @@ packages:
       tslib: 2.8.1
     dev: false
 
-  /@livekit/components-react@2.9.24(@livekit/krisp-noise-filter@0.4.4)(livekit-client@2.22.0)(react-dom@18.3.1)(react@18.3.1)(tslib@2.8.1):
+  /@livekit/components-react@2.9.24(livekit-client@2.22.0)(react-dom@18.3.1)(react@18.3.1)(tslib@2.8.1):
     resolution: {integrity: sha512-qw5Oy1EfPg1f/xrKYrFielSrmtxY8BZ9mDt6299G5aikotQIztmldBfTNosrVS7VSNit7qeYfOFSyKaML20W6Q==}
     engines: {node: '>=18'}
     peerDependencies:
@@ -921,7 +918,6 @@ packages:
         optional: true
     dependencies:
       '@livekit/components-core': 0.12.15(livekit-client@2.22.0)(tslib@2.8.1)
-      '@livekit/krisp-noise-filter': 0.4.4(livekit-client@2.22.0)
       clsx: 2.1.1
       events: 3.3.0
       jose: 6.2.10
@@ -930,16 +926,6 @@ packages:
       react-dom: 18.3.1(react@18.3.1)
       tslib: 2.8.1
       usehooks-ts: 3.1.1(react@18.3.1)
-    dev: false
-
-  /@livekit/krisp-noise-filter@0.4.4(livekit-client@2.22.0):
-    resolution: {integrity: sha512-ljnNPRE0W0IPuMcgRruQZaIz/zWCfqt9vQYXgX0WmojIbHlRrak7BW+FXW4KtXZKi+/dZPNuEL0c2v1wIHR5Cg==}
-    peerDependencies:
-      livekit-client: ^2.18.7
-    dependencies:
-      '@livekit/mutex': 1.1.1
-      '@livekit/protocol': 1.50.4
-      livekit-client: 2.22.0(@types/dom-mediacapture-record@1.0.22)
     dev: false
 
   /@livekit/mutex@1.1.1:

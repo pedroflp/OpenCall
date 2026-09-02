@@ -29,11 +29,12 @@ import {
   saveVideoInputDeviceId,
 } from '@/lib/rtc/devices';
 import {
-  applyNoiseSuppressionMode,
+  applyMicProcessing,
   audioDeviceConstraint,
-  loadNoiseSuppressionMode,
-  saveNoiseSuppressionMode,
-  type NoiseSuppressionMode,
+  DEFAULT_NOISE_GATE_THRESHOLD_DB,
+  loadNoiseGateThreshold,
+  saveNoiseGateThreshold,
+  updateNoiseGateThreshold,
 } from '@/lib/rtc/noiseSuppression';
 import { CAMERA_CAPTURE_OPTIONS, CAMERA_PUBLISH_OPTIONS, videoDeviceConstraint } from '@/lib/rtc/cameraQuality';
 import {
@@ -232,8 +233,9 @@ interface VoiceContextValue {
   setInputDeviceId: (deviceId: string) => Promise<void>;
   setOutputDeviceId: (deviceId: string) => Promise<void>;
   setVideoDeviceId: (deviceId: string) => Promise<void>;
-  noiseSuppressionMode: NoiseSuppressionMode;
-  setNoiseSuppressionMode: (mode: NoiseSuppressionMode) => Promise<void>;
+  /** Limiar do gate de ruído em dB (ver lib/rtc/noiseSuppression) — quanto maior, mais forte a voz precisa ser pra abrir. */
+  noiseGateThreshold: number;
+  setNoiseGateThreshold: (thresholdDb: number) => void;
   getParticipantVolume: (identity: string) => number;
   setParticipantVolume: (identity: string, volume: number) => void;
   isParticipantMuted: (identity: string) => boolean;
@@ -285,7 +287,7 @@ function readCameraFacingMode(room: Room): 'user' | 'environment' | null {
 
 /**
  * Dispositivo que o microfone publicado está de fato capturando — a track
- * exposta pode ser a processada pelo Krisp, que sai de um nó de áudio e não
+ * exposta pode ser a processada pelo gate, que sai de um nó de áudio e não
  * carrega deviceId nenhum, daí o getSourceTrackSettings (ver noiseSuppression).
  */
 function readMicSource(room: Room): { deviceId: string; label: string } | null {
@@ -357,12 +359,12 @@ export function VoiceProvider({ children }: { children: React.ReactNode }) {
   const [inputDeviceId, setInputDeviceIdState] = useState('');
   const [outputDeviceId, setOutputDeviceIdState] = useState('');
   const [videoDeviceId, setVideoDeviceIdState] = useState('');
-  const [noiseSuppressionMode, setNoiseSuppressionModeState] = useState<NoiseSuppressionMode>('default');
+  const [noiseGateThreshold, setNoiseGateThresholdState] = useState<number>(DEFAULT_NOISE_GATE_THRESHOLD_DB);
   // O listener de LocalTrackPublished é registrado uma vez por Room (dentro de
-  // join()) e reaplica o modo a cada republicação do mic — precisa ler o valor
+  // join()) e reaplica o gate a cada republicação do mic — precisa ler o valor
   // atual, não o capturado no closure de quando a room foi criada. Mesma coisa
   // pro microfone escolhido, que o listener usa pra reaquisitar a track.
-  const noiseSuppressionModeRef = useRef<NoiseSuppressionMode>('default');
+  const noiseGateThresholdRef = useRef<number>(DEFAULT_NOISE_GATE_THRESHOLD_DB);
   const inputDeviceIdRef = useRef('');
   const [participantVolumes, setParticipantVolumes] = useState<Record<string, number>>({});
   const [mutedParticipants, setMutedParticipants] = useState<Record<string, boolean>>({});
@@ -402,9 +404,9 @@ export function VoiceProvider({ children }: { children: React.ReactNode }) {
     setInputDeviceIdState(storedInputDeviceId);
     setOutputDeviceIdState(loadAudioOutputDeviceId());
     setVideoDeviceIdState(loadVideoInputDeviceId());
-    const storedMode = loadNoiseSuppressionMode();
-    noiseSuppressionModeRef.current = storedMode;
-    setNoiseSuppressionModeState(storedMode);
+    const storedThreshold = loadNoiseGateThreshold();
+    noiseGateThresholdRef.current = storedThreshold;
+    setNoiseGateThresholdState(storedThreshold);
   }, []);
 
   // Efeitos sonoros (join/mute/attention/inlive...) tocam via `new Audio()` solto,
@@ -568,9 +570,9 @@ export function VoiceProvider({ children }: { children: React.ReactNode }) {
           // navegador satura em 1.0 — o slider de volume por participante não conseguiria
           // passar de 100% (ver ParticipantVolumeControl, faixa até 150%/ganho).
           webAudioMix: true,
-          // noiseSuppression já nasce desligada quando o modo salvo é Krisp, pra não
-          // capturar com a constraint nativa e precisar reaquisitar o mic de novo
-          // assim que o processor entra (ver LocalTrackPublished abaixo).
+          // A supressão nativa do navegador (echo/AGC/ruído) é a BASE e fica
+          // sempre ligada; o gate de ruído entra por cima como processor, na
+          // republicação (ver LocalTrackPublished abaixo).
           // deviceId como `{ exact }` (audioDeviceConstraint), não o id solto: solto
           // vira constraint "ideal", que o navegador pode ignorar — era isso que
           // fazia o canal capturar o microfone padrão do sistema mesmo com outro
@@ -578,7 +580,7 @@ export function VoiceProvider({ children }: { children: React.ReactNode }) {
           // do LiveKit usa quando a troca acontece com o canal já aberto.
           audioCaptureDefaults: {
             deviceId: audioDeviceConstraint(activeInputDeviceId),
-            noiseSuppression: noiseSuppressionModeRef.current !== 'krisp',
+            noiseSuppression: true,
           },
           audioOutput: outputDeviceId ? { deviceId: outputDeviceId } : undefined,
           videoCaptureDefaults: {
@@ -649,9 +651,9 @@ export function VoiceProvider({ children }: { children: React.ReactNode }) {
             setVideoFacingMode(readCameraFacingMode(next));
             if (publication.source === Track.Source.ScreenShare) playSound('inlive');
             // Cada vez que o mic (re)publica ele é uma MediaStreamTrack nova, sem o
-            // processor/constraints da vez anterior — reaplica o modo escolhido.
+            // processor/constraints da vez anterior — reaplica o gate de ruído.
             if (publication.source === Track.Source.Microphone && publication.track instanceof LocalAudioTrack) {
-              void applyNoiseSuppressionMode(publication.track, noiseSuppressionModeRef.current, inputDeviceIdRef.current);
+              void applyMicProcessing(publication.track, noiseGateThresholdRef.current, inputDeviceIdRef.current);
             }
           })
           .on(RoomEvent.LocalTrackUnpublished, (publication) => {
@@ -832,7 +834,7 @@ export function VoiceProvider({ children }: { children: React.ReactNode }) {
             // preenche as chaves ausentes com o audioCaptureDefaults da Room e
             // traria o deviceId exigido de volta.
             deviceId: { ideal: 'default' },
-            noiseSuppression: noiseSuppressionModeRef.current !== 'krisp',
+            noiseSuppression: true,
           });
           toast({
             title: 'Microfone escolhido indisponível',
@@ -841,7 +843,7 @@ export function VoiceProvider({ children }: { children: React.ReactNode }) {
         }
 
         // Captura INICIAL: o LocalTrackPublished reaquire a track logo depois
-        // (applyNoiseSuppressionMode), então divergir aqui do exigido não é
+        // (applyMicProcessing), então divergir aqui do exigido não é
         // necessariamente o microfone errado no ar — é onde olhar primeiro se for.
         // eslint-disable-next-line no-console
         console.debug('[voice-debug] captura inicial do microfone —', {
@@ -1322,33 +1324,19 @@ export function VoiceProvider({ children }: { children: React.ReactNode }) {
     [room, toast]
   );
 
-  const setNoiseSuppressionMode = useCallback(
-    async (mode: NoiseSuppressionMode) => {
-      noiseSuppressionModeRef.current = mode;
-      setNoiseSuppressionModeState(mode);
-      saveNoiseSuppressionMode(mode);
+  // Atualiza o gate JÁ EM EXECUÇÃO, sem reaquisitar o microfone: arrastar o
+  // slider de sensibilidade no meio de uma chamada não pode cortar o áudio por
+  // um instante (ver updateNoiseGateThreshold).
+  const setNoiseGateThreshold = useCallback(
+    (thresholdDb: number) => {
+      noiseGateThresholdRef.current = thresholdDb;
+      setNoiseGateThresholdState(thresholdDb);
+      saveNoiseGateThreshold(thresholdDb);
 
       const track = room?.localParticipant.getTrackPublication(Track.Source.Microphone)?.track;
-      if (!track || !(track instanceof LocalAudioTrack)) return;
-
-      try {
-        const applied = await applyNoiseSuppressionMode(track, mode, inputDeviceId);
-        if (mode === 'krisp' && !applied) {
-          toast({
-            variant: 'destructive',
-            title: 'Krisp não suportado',
-            description: 'Esse navegador não roda o filtro de ruído do Krisp.',
-          });
-        }
-      } catch (error) {
-        toast({
-          variant: 'destructive',
-          title: 'Não foi possível aplicar a supressão de ruído',
-          description: error instanceof Error ? error.message : 'Erro inesperado.',
-        });
-      }
+      if (track instanceof LocalAudioTrack) updateNoiseGateThreshold(track, thresholdDb);
     },
-    [room, inputDeviceId, toast]
+    [room]
   );
 
   const getParticipantVolume = useCallback(
@@ -1507,8 +1495,8 @@ export function VoiceProvider({ children }: { children: React.ReactNode }) {
       setInputDeviceId,
       setOutputDeviceId,
       setVideoDeviceId,
-      noiseSuppressionMode,
-      setNoiseSuppressionMode,
+      noiseGateThreshold,
+      setNoiseGateThreshold,
       getParticipantVolume,
       setParticipantVolume,
       isParticipantMuted,
@@ -1554,8 +1542,8 @@ export function VoiceProvider({ children }: { children: React.ReactNode }) {
       setInputDeviceId,
       setOutputDeviceId,
       setVideoDeviceId,
-      noiseSuppressionMode,
-      setNoiseSuppressionMode,
+      noiseGateThreshold,
+      setNoiseGateThreshold,
       getParticipantVolume,
       setParticipantVolume,
       isParticipantMuted,
