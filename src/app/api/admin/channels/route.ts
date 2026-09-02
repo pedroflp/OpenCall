@@ -34,11 +34,16 @@ export async function POST(req: NextRequest) {
   const name = typeof body?.name === 'string' ? body.name.trim() : '';
   if (!name || name.length > NAME_MAX_LENGTH) return err(400, 'INVALID_NAME');
 
+  // `null`/ausente é canal SEM limite, não erro: o admin desliga "Limitar
+  // tamanho" e a sala do LiveKit é criada sem teto (ver /api/rtc/join). Texto
+  // ignora o campo (ADR-0001).
   let maxParticipants: number | null = null;
   if (type === ChannelType.VOICE) {
     const raw = body?.maxParticipants;
-    if (typeof raw !== 'number' || !Number.isInteger(raw) || raw < 1) return err(400, 'INVALID_MAX_PARTICIPANTS');
-    maxParticipants = raw;
+    if (raw !== undefined && raw !== null) {
+      if (typeof raw !== 'number' || !Number.isInteger(raw) || raw < 1) return err(400, 'INVALID_MAX_PARTICIPANTS');
+      maxParticipants = raw;
+    }
   }
 
   const user = await getUser();

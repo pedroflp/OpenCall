@@ -32,7 +32,7 @@ import DiscordOAuth from '@/components/DiscordOAuth';
 import QrLoginButton from '@/components/QrLoginButton';
 import DeleteChannelDialog from '@/flows/admin/channels/DeleteChannelDialog';
 import InviteToChannelsModal from './InviteToChannelsModal';
-import ChannelDialog, { DEFAULT_MAX_PARTICIPANTS } from './ChannelDialog';
+import ChannelDialog from './ChannelDialog';
 import DevicePairingModal from '@/components/DevicePairingModal';
 import ParticipantTile from './ParticipantTile';
 import PreviewParticipantsList from './PreviewParticipantsList';
@@ -182,9 +182,9 @@ function ChannelMenuButton({ onOpen }: { onOpen: () => void }) {
   );
 }
 
-/** Badge do limite de participantes (só voice, ver ADR-0001) — mostrado no fim da linha do nome do canal. 99 é o teto do slider, ver DEFAULT_MAX_PARTICIPANTS em ChannelDialog — sentinela de "sem limite", não mostra badge. */
+/** Badge do limite de participantes (só voice, ver ADR-0001) — mostrado no fim da linha do nome do canal. `null` é canal sem limite: não mostra badge nenhum. */
 function ChannelLimitBadge({ maxParticipants, currentCount }: { maxParticipants: number | null; currentCount: number }) {
-  if (typeof maxParticipants !== 'number' || maxParticipants === DEFAULT_MAX_PARTICIPANTS) return null;
+  if (maxParticipants === null) return null;
 
   return (
     <Tooltip>

@@ -1,8 +1,10 @@
 import { fetchApi } from '@/services/api/fetchApi';
 import type { ChannelType } from '@prisma/client';
 
-export type ChannelCreateInput = { type: ChannelType; name: string; maxParticipants?: number };
-export type ChannelUpdateInput = { name?: string; maxParticipants?: number };
+/** `maxParticipants: null` é canal de voz sem limite; ausente, pra texto, é o campo não se aplicar (ADR-0001). */
+export type ChannelCreateInput = { type: ChannelType; name: string; maxParticipants?: number | null };
+/** `null` remove o limite; ausente não mexe no valor gravado. */
+export type ChannelUpdateInput = { name?: string; maxParticipants?: number | null };
 
 export async function createChannel(input: ChannelCreateInput) {
   const response = await fetchApi('admin/channels', {

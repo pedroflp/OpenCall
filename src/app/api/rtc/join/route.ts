@@ -41,11 +41,11 @@ export async function POST(req: NextRequest) {
 
   const channel = await getVoiceChannel(channelId);
   if (!channel) return err(404, 'CHANNEL_NOT_FOUND');
-  if (channel.maxParticipants === null) return err(500, 'CHANNEL_MISCONFIGURED');
-
+  // maxParticipants null é canal sem limite (o admin desligou "Limitar tamanho"),
+  // não configuração quebrada — createRoom sem a chave cria sala sem teto.
   await livekitApi().room.createRoom({
     name: channel.id,
-    maxParticipants: channel.maxParticipants,
+    ...(channel.maxParticipants === null ? {} : { maxParticipants: channel.maxParticipants }),
     emptyTimeout: 300,
     departureTimeout: 20,
   });

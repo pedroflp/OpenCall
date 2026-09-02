@@ -20,14 +20,8 @@ import { createChannel, updateChannel } from '@/app/api/admin/channels/requests'
 import type { AdminChannelDTO } from '@/app/api/admin/channels/types';
 
 const NAME_MAX_LENGTH = 50;
-/**
- * Teto do slider e valor enviado quando o limite está desligado. Não existe
- * "sem limite" no contrato: `POST /api/admin/channels` recusa canal de voz sem
- * `maxParticipants`, e `/api/rtc/join` trata `null` como CHANNEL_MISCONFIGURED
- * (canal em que ninguém consegue entrar). Então desligar o toggle não manda
- * `null` — manda o teto, que é o mais perto de "sem limite" que o modelo tem.
- */
-export const DEFAULT_MAX_PARTICIPANTS = 99;
+/** Teto do slider. Não é sentinela de nada: canal sem limite grava `null`. */
+export const MAX_PARTICIPANTS_CEILING = 99;
 
 type EditableChannel = Pick<AdminChannelDTO, 'id' | 'type' | 'name' | 'maxParticipants'>;
 
@@ -70,22 +64,24 @@ export default function ChannelDialog({
 
   const [type, setType] = useState<ChannelType>(channel?.type ?? defaultType);
   const [name, setName] = useState(channel?.name ?? '');
-  const [maxParticipants, setMaxParticipants] = useState(channel?.maxParticipants ?? DEFAULT_MAX_PARTICIPANTS);
-  const [limited, setLimited] = useState(Boolean(channel) && channel?.maxParticipants !== DEFAULT_MAX_PARTICIPANTS);
+  const [maxParticipants, setMaxParticipants] = useState(channel?.maxParticipants ?? MAX_PARTICIPANTS_CEILING);
+  const [limited, setLimited] = useState(channel?.maxParticipants != null);
   const [submitting, setSubmitting] = useState(false);
 
   const isVoice = type === ChannelType.VOICE;
   // POST /api/admin/channels recusa maxParticipants < 1 pra canal de voz —
   // o slider vai até 0 (pedido), mas 0 participantes trava o envio em vez de
   // criar um canal em que ninguém consegue entrar.
-  const invalid = !name.trim() || (isVoice && maxParticipants < 1);
+  const invalid = !name.trim() || (isVoice && limited && maxParticipants < 1);
+  /** `null` = sem limite (toggle desligado) — é o que a API grava. */
+  const limitValue = limited ? maxParticipants : null;
 
   function resetToChannelOrDefaults() {
     setType(channel?.type ?? defaultType);
     setName(channel?.name ?? '');
-    const max = channel?.maxParticipants ?? DEFAULT_MAX_PARTICIPANTS;
+    const max = channel?.maxParticipants ?? MAX_PARTICIPANTS_CEILING;
     setMaxParticipants(max);
-    setLimited(Boolean(channel) && max !== DEFAULT_MAX_PARTICIPANTS);
+    setLimited(channel?.maxParticipants != null);
   }
 
   async function handleSubmit() {
@@ -97,8 +93,8 @@ export default function ChannelDialog({
 
     setSubmitting(true);
     const result = channel
-      ? await updateChannel(channel.id, { name: name.trim(), ...(isVoice ? { maxParticipants } : {}) })
-      : await createChannel({ type, name: name.trim(), ...(isVoice ? { maxParticipants } : {}) });
+      ? await updateChannel(channel.id, { name: name.trim(), ...(isVoice ? { maxParticipants: limitValue } : {}) })
+      : await createChannel({ type, name: name.trim(), ...(isVoice ? { maxParticipants: limitValue } : {}) });
     setSubmitting(false);
 
     const savedChannel = result.data?.channel as AdminChannelDTO | undefined;
@@ -191,11 +187,12 @@ export default function ChannelDialog({
                 <Switch
                   id="limit-channel-size"
                   checked={limited}
-                  // Desligar devolve o teto: o slider some, e o que fica pra trás
-                  // não pode ser o número que a pessoa arrastou e não vê mais.
+                  // Desligar devolve o teto ao slider: o que fica guardado pra
+                  // quando religar não pode ser o número que a pessoa arrastou e
+                  // não vê mais. O que vai pro banco nesse estado é `null`.
                   onCheckedChange={(next) => {
                     setLimited(next);
-                    if (!next) setMaxParticipants(DEFAULT_MAX_PARTICIPANTS);
+                    if (!next) setMaxParticipants(MAX_PARTICIPANTS_CEILING);
                   }}
                 />
                 <Label htmlFor="limit-channel-size" className="cursor-pointer">
@@ -208,7 +205,7 @@ export default function ChannelDialog({
                   <Slider
                     value={[maxParticipants]}
                     min={0}
-                    max={DEFAULT_MAX_PARTICIPANTS}
+                    max={MAX_PARTICIPANTS_CEILING}
                     step={1}
                     onValueChange={([next]) => setMaxParticipants(next)}
                     className="[&_[data-slot=slider-track]]:h-8 [&_[data-slot=slider-thumb]]:hover:cursor-grab [&_[data-slot=slider-thumb]]:rounded-[2px] [&_[data-slot=slider-thumb]]:w-[4px] [&_[data-slot=slider-track]]:rounded-[0.7rem] [&_[data-slot=slider-thumb]]:bg-primary [&_[data-slot=slider-thumb]]:border-primary [&_[data-slot=slider-range]]:bg-primary/10"

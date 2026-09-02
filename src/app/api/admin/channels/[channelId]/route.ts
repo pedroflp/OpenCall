@@ -30,10 +30,15 @@ export async function PATCH(req: NextRequest, { params }: { params: { channelId:
   }
 
   // maxParticipants só se aplica a voice (ver ADR-0001) — ignorado em silêncio pra texto.
+  // `null` explícito remove o limite; ausente não mexe no que já está gravado.
   if (body?.maxParticipants !== undefined && existing.type === ChannelType.VOICE) {
     const raw = body.maxParticipants;
-    if (typeof raw !== 'number' || !Number.isInteger(raw) || raw < 1) return err(400, 'INVALID_MAX_PARTICIPANTS');
-    data.maxParticipants = raw;
+    if (raw === null) {
+      data.maxParticipants = null;
+    } else {
+      if (typeof raw !== 'number' || !Number.isInteger(raw) || raw < 1) return err(400, 'INVALID_MAX_PARTICIPANTS');
+      data.maxParticipants = raw;
+    }
   }
 
   if (Object.keys(data).length === 0) return err(400, 'NO_VALID_FIELDS');

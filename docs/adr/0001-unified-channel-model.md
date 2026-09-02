@@ -17,6 +17,6 @@ Uma tabela única `Channel`, com um enum `type` como discriminador. Campos que s
 
 ## Consequências
 
-- `maxParticipants` fica `Int?` — nulo pra `type: TEXT`. Validação de "obrigatório se voice" fica na camada de API/form, não no schema.
+- `maxParticipants` fica `Int?`, e o nulo carrega dois sentidos por tipo: em `TEXT` é "não se aplica", em `VOICE` é "sem limite" (decisão posterior — a v1 exigia o campo pra voz). Quem separa os dois é o `type`, que já é o discriminador da tabela.
 - Se no futuro voz e texto divergirem muito mais (ex.: texto ganhar campos como `topic`, `pinnedMessageId`, e voz ganhar `region`/`codec` por canal), a tabela única cresce com colunas majoritariamente nulas pra um dos tipos. Se isso acontecer, migrar pra duas tabelas nesse ponto é uma refatoração localizada (a FK em `TextMessage.channelId` continua valendo pro `id` da linha, independente de qual tabela ele vier a ocupar).
 - Uma query (`findMany({ where: { type } })`) já serve os dois casos, evitando duplicar a lógica de cache (ADR-0004) e de ordenação.

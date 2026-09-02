@@ -9,12 +9,6 @@ import { invalidateChannelsCache } from "@/lib/rtc/channels"
 /** Evita reler o Postgres em toda checagem de sessão — só quando o cache expira. */
 const ROLES_CACHE_TTL_MS = 15 * 60 * 1000;
 
-// /api/rtc/join recusa entrada em canal de voz com maxParticipants null
-// (CHANNEL_MISCONFIGURED) — não existe "sem limite" no produto hoje, então o
-// canal de voz seedado no bootstrap usa um teto bem folgado em vez de deixar
-// vazio.
-const DEFAULT_VOICE_MAX_PARTICIPANTS = 99;
-
 export const authOptions: AuthOptions = {
   providers: [
     DiscordProvider({
@@ -54,14 +48,11 @@ export const authOptions: AuthOptions = {
             prisma.channel.create({
               data: { type: ChannelType.TEXT, name: 'Geral', sortIndex: 0, createdById: discordId },
             }),
+            // Sem limite (maxParticipants null): o canal do bootstrap não tem
+            // por que nascer com teto arbitrário — quem instalou decide depois
+            // em "Limitar tamanho", se quiser.
             prisma.channel.create({
-              data: {
-                type: ChannelType.VOICE,
-                name: 'Geral',
-                maxParticipants: DEFAULT_VOICE_MAX_PARTICIPANTS,
-                sortIndex: 0,
-                createdById: discordId,
-              },
+              data: { type: ChannelType.VOICE, name: 'Geral', sortIndex: 0, createdById: discordId },
             }),
           ]);
           invalidateChannelsCache();

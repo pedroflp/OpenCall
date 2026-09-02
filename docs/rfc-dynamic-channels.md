@@ -50,7 +50,7 @@ model Channel {
   id              String      @id @default(cuid())
   type            ChannelType
   name            String
-  maxParticipants Int?        // só voice; null pra text
+  maxParticipants Int?        // null = sem limite (voice) ou não se aplica (text)
   sortIndex       Int         @default(0)
   createdAt       DateTime    @default(now())
   createdById     String?
@@ -102,7 +102,7 @@ Cada rota valida que o `channelId` recebido existe e é `type: TEXT` (mesma leit
 Seguindo o padrão já existente em `/api/admin/groups` (mesma forma: list+create na raiz, update+delete em `[id]`):
 
 - `GET /api/admin/channels` — lista os dois tipos, com `messageCount` por canal (pra UI avisar o tamanho do estrago antes do hard-delete, ver §5.6/D3)
-- `POST /api/admin/channels` — cria `{ type, name, maxParticipants? }` (`maxParticipants` obrigatório se `type: VOICE`)
+- `POST /api/admin/channels` — cria `{ type, name, maxParticipants? }`. Em `VOICE`, `maxParticipants` ausente ou `null` é **canal sem limite** (a sala do LiveKit é criada sem teto); em `TEXT` o campo é ignorado. Decisão posterior à v1 desta RFC, que exigia o campo pra voz.
 - `PATCH /api/admin/channels/[channelId]` — edita nome / limite / sortIndex
 - `DELETE /api/admin/channels/[channelId]` — hard-delete de verdade (ver ADR-0003, revogada por pedido de produto): remove o canal e cascade o histórico de texto associado. A UI exige double confirm (nome do canal digitado) antes de chamar essa rota.
 
