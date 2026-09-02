@@ -34,6 +34,9 @@ import DeleteChannelDialog from '@/flows/admin/channels/DeleteChannelDialog';
 import InviteToChannelsModal from './InviteToChannelsModal';
 import ChannelDialog from './ChannelDialog';
 import DevicePairingModal from '@/components/DevicePairingModal';
+import SettingsDialog from '@/components/SettingsDialog';
+import { useSelfIdentity } from '@/hooks/useSelfIdentity';
+import { useProfileBroadcast } from '@/hooks/useProfileBroadcast';
 import ParticipantTile from './ParticipantTile';
 import PreviewParticipantsList from './PreviewParticipantsList';
 import SelfControlCard from './SelfControlCard';
@@ -735,6 +738,9 @@ function SidebarFooter({
   connectedChannelId: string | null;
   joining: boolean;
 }) {
+  const [settingsOpen, setSettingsOpen] = useState(false);
+  const identity = useSelfIdentity(user);
+
   if (!authenticated) {
     return (
       <div className="flex shrink-0 flex-col gap-2 p-2">
@@ -749,13 +755,27 @@ function SidebarFooter({
     return <SelfControlCard channelName={channelName} user={user} />;
   }
 
-  const name = user?.username || 'Você';
+  const name = identity?.username || 'Você';
 
   return (
     <div className="shrink-0 p-2 relative rounded-2xl overflow-hidden bg-gradient-to-tr from-muted to-accent/10">
-      <Avatar image={user?.avatar} className='absolute top-1/2 -translate-y-1/2 left-0 blur-lg pointer-events-none z-1' fallback={name.slice(0, 2)} size={24} />
+      <Avatar image={identity?.avatar} className='absolute top-1/2 -translate-y-1/2 left-0 blur-lg pointer-events-none z-1' fallback={name.slice(0, 2)} size={24} />
       <div className="flex items-center gap-2 relative z-2">
-        <Avatar image={user?.avatar} fallback={name.slice(0, 2)} size={10} />
+        {/* O próprio avatar é o atalho pra aba Perfil: é onde a pessoa procura
+            a própria foto quando quer trocá-la. */}
+        <Tooltip>
+          <TooltipTrigger asChild>
+            <button
+              type="button"
+              aria-label="Editar perfil"
+              className="rounded-full transition-opacity hover:opacity-80"
+              onClick={() => setSettingsOpen(true)}
+            >
+              <Avatar image={identity?.avatar} fallback={name.slice(0, 2)} size={10} />
+            </button>
+          </TooltipTrigger>
+          <TooltipContent>Editar perfil</TooltipContent>
+        </Tooltip>
         <div className="min-w-0 flex-1">
           <div className="truncate text-sm font-bold">{name}</div>
           <div className="flex items-center gap-1 text-[11.5px] text-muted-foreground">
@@ -772,6 +792,8 @@ function SidebarFooter({
           }
         />
       </div>
+
+      <SettingsDialog open={settingsOpen} onOpenChange={setSettingsOpen} user={user} initialTab="profile" />
     </div>
   );
 }
@@ -793,6 +815,9 @@ export default function VoiceChannelSidebar({ user }: { user: UserDTO | null }) 
   const isAdmin = Boolean(session?.user?.isAdmin);
   const isChannelsAdmin = Boolean(session?.user?.isChannelsAdmin);
   const { rtcEnabled, setRtcEnabled } = useRtcEnabled(true);
+  // Uma assinatura só pra sidebar inteira: repassa a troca de máscara de
+  // qualquer usuário pro store de presença (ver useProfileBroadcast).
+  useProfileBroadcast();
   const { status, channel: voiceChannel } = useVoice();
   const connectedChannelId = status === 'connected' ? (voiceChannel?.id ?? null) : null;
   const joining = status === 'connecting';

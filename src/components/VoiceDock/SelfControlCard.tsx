@@ -1,6 +1,7 @@
 'use client';
 
 import type { UserDTO } from '@/app/api/user/types';
+import { useSelfIdentity } from '@/hooks/useSelfIdentity';
 import Avatar from '@/components/Avatar';
 import { HugeIcon } from '@/components/HugeIcon';
 import { Button } from '@/components/ui/button';
@@ -67,11 +68,15 @@ export default function SelfControlCard({ channelName, user }: { channelName: st
   const canFlipCamera = cameraEnabled && videoFacingMode !== null && cameraDevices.length > 1;
   const canSelectCameraDevice = cameraDevices.length > 1;
 
-  const name = user?.username || 'Você';
+  // Máscara de perfil resolvida aqui, e não no `user` cru: o UserDTO é prop de
+  // Server Component e só renova no router.refresh() — o evento `profile` chega
+  // antes (ver useSelfIdentity).
+  const identity = useSelfIdentity(user);
+  const name = identity?.username || 'Você';
 
   return (
     <div className="max-[899px]:m-2 p-2 relative py-4 rounded-2xl overflow-hidden bg-gradient-to-tr to-emerald-600/10 from-accent/10">
-      <Avatar image={user?.avatar} className='absolute bottom-0 left-0 blur-lg opacity-80 pointer-events-none z-1' fallback={name.slice(0, 2)} size={24} />
+      <Avatar image={identity?.avatar} className='absolute bottom-0 left-0 blur-lg opacity-80 pointer-events-none z-1' fallback={name.slice(0, 2)} size={24} />
       <div className="relative z-2 flex flex-col gap-3">
         <div className="flex items-center justify-between gap-2 ml-1">
           <ConnectionQualityIndicator>
@@ -200,7 +205,7 @@ export default function SelfControlCard({ channelName, user }: { channelName: st
 
         <div className="flex items-center gap-2">
           <div className="relative shrink-0">
-            <Avatar image={user?.avatar} fallback={name.slice(0, 2)} size={10} />
+            <Avatar image={identity?.avatar} fallback={name.slice(0, 2)} size={10} />
             <span className="absolute -bottom-0.5 -right-0.5 size-2.5 rounded-full bg-green-500 ring-2 ring-background" aria-hidden />
           </div>
           <div className="min-w-0 flex-1">

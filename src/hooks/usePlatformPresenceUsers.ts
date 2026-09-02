@@ -35,6 +35,7 @@ function sameUsers(a: PlatformPresenceUser[], b: PlatformPresenceUser[]): boolea
         user.groups.join(',') === other.groups.join(',') &&
         user.lastActiveAt === other.lastActiveAt &&
         user.chatBlocked === other.chatBlocked &&
+        user.discordUsername === other.discordUsername &&
         user.voiceChannelId === other.voiceChannelId
       );
     })
@@ -129,6 +130,40 @@ export function setChatBlockedLocally(userId: string, blocked: boolean) {
 
   const users = snapshot.users.slice();
   users[index] = { ...users[index], chatBlocked: blocked };
+  snapshot = { ...snapshot, users };
+  listeners.forEach((notify) => notify());
+}
+
+/**
+ * Aplica a troca de máscara de alguém direto no store, sem esperar o poll.
+ *
+ * Quem empurra é o evento `profile` do barramento do chat (ver
+ * useProfileBroadcast) — o poll de 30s já corrigiria, mas 30s olhando pro nome
+ * antigo é tempo demais pra parecer que salvou.
+ */
+export function applyProfileLocally(
+  userId: string,
+  identity: { username: string; avatar: string; discordUsername: string | null },
+) {
+  const index = snapshot.users.findIndex((user) => user.id === userId);
+  if (index === -1) return;
+
+  const current = snapshot.users[index];
+  if (
+    current.username === identity.username &&
+    current.avatar === identity.avatar &&
+    current.discordUsername === identity.discordUsername
+  ) {
+    return;
+  }
+
+  const users = snapshot.users.slice();
+  users[index] = {
+    ...current,
+    username: identity.username,
+    avatar: identity.avatar,
+    discordUsername: identity.discordUsername,
+  };
   snapshot = { ...snapshot, users };
   listeners.forEach((notify) => notify());
 }

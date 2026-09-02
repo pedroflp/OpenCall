@@ -17,8 +17,13 @@ export type PresenceStatus = 'online' | 'away' | 'offline';
 
 export interface PlatformPresenceUser {
   id: string;
+  /** Já com a MÁSCARA DE PERFIL aplicada (ver lib/profile/identity) — o `username` cru do Discord não sai de /api/presence/users. */
   username: string;
   avatar: string;
+  /** Username do Discord, só quando um apelido o cobre — é o que o popover mostra em miúdo embaixo do nome. */
+  discordUsername: string | null;
+  /** Usado pelo gate de moderação de perfil: um channels_admin não mexe no perfil de um ADMIN (ver a rota). */
+  isAdmin: boolean;
   activeStatus: PresenceStatus;
   groups: string[];
   /**
