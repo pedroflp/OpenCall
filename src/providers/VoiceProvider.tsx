@@ -7,6 +7,7 @@ import {
   Room,
   RoomEvent,
   LocalAudioTrack,
+  type LocalTrack,
   LocalVideoTrack,
   Track,
   supportsVP9,
@@ -90,6 +91,41 @@ const ENTER_STREAM_RATE_LIMIT = { windowMs: 10_000, max: 8 };
 function supportsRestrictOwnAudio() {
   if (typeof navigator === 'undefined' || !navigator.mediaDevices?.getSupportedConstraints) return false;
   return 'restrictOwnAudio' in navigator.mediaDevices.getSupportedConstraints();
+}
+
+// O loopback do sistema chega inteiro, e o app está DENTRO dele — tocando a voz
+// de todo mundo do canal. Sem filtro essa voz volta pra sala dentro da live e
+// quem assiste se ouve com atraso; é eco digital, que fone não resolve e AEC
+// nunca cobriu (ver supportsRestrictOwnAudio).
+//
+// Quem filtra é o `restrictOwnAudio`, e ele é BEST-EFFORT: o navegador pode não
+// conhecer a constraint. Por isso a regra aqui não é "pedimos o filtro", é **só
+// vai ao ar o que provar que foi filtrado**: ou o getSettings devolve
+// `restrictOwnAudio`, ou o device já é o loopback sem o app. Qualquer outro
+// loopback é mix cru.
+//
+// Áudio de ABA continua passando: a captura de aba já é isolada por natureza, e
+// só o mix do sistema chega com device de loopback.
+const FILTERED_LOOPBACK_DEVICE_ID = 'loopbackWithoutChrome';
+
+function leaksOwnAudio(track: LocalTrack): boolean {
+  const settings = track.mediaStreamTrack.getSettings() as MediaTrackSettings & { restrictOwnAudio?: boolean };
+  const deviceId = typeof settings.deviceId === 'string' ? settings.deviceId : '';
+  // As duas provas de que o filtro pegou. A segunda existe porque a primeira é
+  // o eco da constraint, e eco pode não voltar.
+  if (settings.restrictOwnAudio === true || deviceId === FILTERED_LOOPBACK_DEVICE_ID) return false;
+
+  return deviceId.startsWith('loopback');
+}
+
+/** Tira do ar o áudio do sistema que não passou no teste. `true` se tirou. */
+async function dropUnfilteredSystemAudio(room: Room): Promise<boolean> {
+  const track = room.localParticipant.getTrackPublication(Track.Source.ScreenShareAudio)?.track;
+  if (!track || !leaksOwnAudio(track)) return false;
+  // Só o áudio: o vídeo continua no ar. Derrubar a transmissão inteira por
+  // causa do som seria trocar um problema por um maior.
+  await room.localParticipant.unpublishTrack(track, true);
+  return true;
 }
 
 // Também passadas por publicação (não só no publishDefaults do Room, que é
@@ -1021,7 +1057,11 @@ export function VoiceProvider({ children }: { children: React.ReactNode }) {
     try {
       const config = configRef.current;
       const restrictOwnAudio = supportsRestrictOwnAudio();
-      const options: ScreenShareCaptureOptions = {
+      // `windowAudio` não está no tipo do SDK porque é mais novo que ele (Chrome
+      // 141). O SDK o repassa pro getDisplayMedia por causa do patch em
+      // patches/livekit-client@2.22.0.patch — sem ele o campo seria descartado
+      // no caminho, silenciosamente.
+      const options: ScreenShareCaptureOptions & { windowAudio?: 'system' | 'window' | 'exclude' } = {
         // O SDK repassa `audio` verbatim pro getDisplayMedia, então a constraint
         // chega inteira mesmo não estando no tipo AudioCaptureOptions.
         // channelCount: 2 pede a captura em estéreo, que é o caso comum pra
@@ -1034,6 +1074,16 @@ export function VoiceProvider({ children }: { children: React.ReactNode }) {
         // não oferecê-lo e deixar só o áudio de aba, que já é isolado por
         // natureza (a captura de aba pega só o áudio daquela aba).
         systemAudio: restrictOwnAudio ? 'include' : 'exclude',
+        // A mesma regra, um degrau mais estreito: quem escolhe uma JANELA leva o
+        // som daquela janela, nunca o mix do sistema. O default do navegador é o
+        // contrário (`'system'`), e é ele que mandaria pro ar o player de música
+        // e a reunião do lado de quem só quis mostrar o jogo. Vale do Chrome 141
+        // em diante; onde não existe, cai no default e o `leaksOwnAudio`
+        // continua sendo a rede de baixo.
+        //
+        // `'exclude'` quando não há filtro de áudio próprio, pelo mesmo motivo do
+        // systemAudio acima: janela sem isolamento é mix, e mix sem filtro é eco.
+        windowAudio: restrictOwnAudio ? 'window' : 'exclude',
         // Orienta o encoder a favorecer movimento sobre detalhe estático desde a
         // captura, coerente com degradationPreference.
         contentHint: 'motion',
@@ -1059,6 +1109,15 @@ export function VoiceProvider({ children }: { children: React.ReactNode }) {
       if (next) {
         setHasViewer(false);
         reportScreenShareAudio(room, restrictOwnAudio);
+        if (await dropUnfilteredSystemAudio(room)) {
+          // Sem aviso, o sintoma seria "transmiti e não saiu som" — e a causa
+          // (navegador sem o filtro) não aparece em lugar nenhum da tela.
+          toast({
+            variant: 'destructive',
+            title: 'Transmissão sem o som do sistema',
+            description: 'Este navegador levaria a voz da call junto. Use o Chrome ou o Edge 140+ pra transmitir com som.',
+          });
+        }
       }
     } catch {
       setScreenSharing(room.localParticipant.isScreenShareEnabled);
@@ -1366,6 +1425,14 @@ export function VoiceProvider({ children }: { children: React.ReactNode }) {
     [streamVolumes]
   );
 
+  // O volume vale pela sessão e é reaplicado pelo SDK a cada nova subscription
+  // (RemoteParticipant guarda um volumeMap por source) — mas só depois do patch
+  // em patches/livekit-client@2.22.0.patch. O SDK testa o valor guardado com
+  // `if (this.elementVolume)` em três pontos, e ZERO É FALSY: sair da live e
+  // voltar recriava a track, o reapply era pulado e o áudio voltava em 100% com
+  // o slider ainda marcando 0. Vale igual pro mute de participante
+  // (toggleParticipantMute também escreve 0), onde o sintoma é alguém silenciado
+  // voltar a falar. Presente até a 2.22.1 — conferir antes de subir o SDK.
   const setStreamVolume = useCallback(
     (identity: string, volume: number) => {
       volume = Math.min(MAX_PARTICIPANT_VOLUME, Math.max(0, volume));

@@ -44,7 +44,7 @@ export default function AdminTabsView({
   const infraEnabled = metricsSeries !== null && forecast !== null;
   // Grupos e Transmissão continuam ADMIN-only — um CHANNELS_ACCESS puro (sem
   // ADMIN) só vê Usuários e Canais (que já mostra Admin de canais + Acesso ao
-  // TDCalls juntos, e agora também criar/arquivar canal — ver D5/ADR-0005).
+  // canais de voz juntos, e agora também criar/excluir canal — ver D5/ADR-0005).
   // Qualidade mexe em custo de banda do servidor, então fica no mesmo nível de
   // Grupos, não no de moderação de canal.
   if (!currentUserIsAdmin && currentUserIsChannelsAdmin) {

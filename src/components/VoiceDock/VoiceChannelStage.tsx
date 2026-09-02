@@ -17,6 +17,7 @@ import { Slider } from '@/components/ui/slider';
 import { Tooltip, TooltipContent, TooltipTrigger } from '@/components/ui/tooltip';
 import { useVoice } from '@/providers/VoiceProvider';
 import { useParticipantMedia } from '@/hooks/useParticipantMedia';
+import { useStageOverlayToggle } from '@/hooks/useStageOverlayToggle';
 import { useParticipantGridLayout } from '@/hooks/useParticipantGridLayout';
 import { useSpeakingIndicator } from '@/hooks/useSpeakingIndicator';
 import { avatarFromParticipant, participantDisplayName } from '@/lib/rtc/participant';
@@ -350,6 +351,10 @@ function IncomingAttentionCard({
 function FocusedCameraTile({ trackRef, onUnfocus }: { trackRef: TrackReference; onUnfocus: () => void }) {
   const stageRef = useRef<HTMLDivElement>(null);
   const [isFullscreen, setIsFullscreen] = useState(false);
+  // Mesma superfície e mesmo gesto da live: em tela cheia, clicar no vídeo
+  // esconde nome e controles. Duas telas que se parecem tanto não podem
+  // responder ao mesmo clique de jeitos diferentes.
+  const overlay = useStageOverlayToggle(isFullscreen);
   const name = participantDisplayName(trackRef.participant);
 
   useEffect(() => {
@@ -371,6 +376,7 @@ function FocusedCameraTile({ trackRef, onUnfocus }: { trackRef: TrackReference; 
     <div className="flex h-full flex-col items-center justify-center gap-4 p-4">
       <div
         ref={stageRef}
+        onClick={overlay.onStageClick}
         className={cn(
           'relative overflow-hidden bg-black shadow-2xl',
           isFullscreen ? 'size-full' : 'aspect-video w-full rounded-xl'
@@ -381,12 +387,15 @@ function FocusedCameraTile({ trackRef, onUnfocus }: { trackRef: TrackReference; 
           className={cn('size-full object-contain', trackRef.participant.isLocal && 'scale-x-[-1]')}
         />
 
-        <div className="absolute bottom-3 left-3 z-10 flex items-center gap-2 rounded-full bg-black/55 py-1.5 pl-1.5 pr-3">
+        <div
+          aria-hidden={!overlay.visible}
+          className={cn('absolute bottom-3 left-3 z-10 flex items-center gap-2 rounded-full bg-black/55 py-1.5 pl-1.5 pr-3', overlay.overlayClassName)}
+        >
           <Avatar image={avatarFromParticipant(trackRef.participant)} fallback={name.slice(0, 2)} size={6} />
           <span className="text-sm font-semibold text-white">{name}</span>
         </div>
 
-        <div className="absolute right-3 top-3 z-10 flex items-center gap-2">
+        <div aria-hidden={!overlay.visible} className={cn('absolute right-3 top-3 z-10 flex items-center gap-2', overlay.overlayClassName)}>
           <FullscreenToggleButton
             isFullscreen={isFullscreen}
             onClick={toggleFullscreen}
@@ -446,6 +455,9 @@ function ConnectedStage({
   }
   const stageRef = useRef<HTMLDivElement>(null);
   const [isFullscreen, setIsFullscreen] = useState(false);
+  // Só em tela cheia: fora dela a live é um card 16:9 com os controles logo
+  // abaixo, e ali esconder não ganha nada.
+  const overlay = useStageOverlayToggle(isFullscreen);
 
   useEffect(() => {
     if (focusedCameraSid && !focusedCameraTrack) onUnfocusCamera();
@@ -528,6 +540,7 @@ function ConnectedStage({
           <div className="flex h-full flex-col items-center justify-center gap-4 p-4">
             <div
               ref={stageRef}
+              onClick={overlay.onStageClick}
               className={cn(
                 'relative overflow-hidden bg-gradient-to-tr from-muted/30 to-primary/5 backdrop-blur-md shadow-3xl',
                 isFullscreen ? 'size-full' : 'aspect-video w-full rounded-xl'
@@ -539,7 +552,10 @@ function ConnectedStage({
                 style={{ filter: SPECTATOR_SHARPEN_FILTER }}
               />
 
-              <div className="absolute bottom-3 left-3 z-10 flex items-center gap-2 rounded-full bg-black/55 py-1.5 pl-1.5 pr-3">
+              <div
+                aria-hidden={!overlay.visible}
+                className={cn('absolute bottom-3 left-3 z-10 flex items-center gap-2 rounded-full bg-black/55 py-1.5 pl-1.5 pr-3', overlay.overlayClassName)}
+              >
                 <Avatar
                   image={avatarFromParticipant(watchedTrack.participant)}
                   fallback={participantDisplayName(watchedTrack.participant).slice(0, 2)}
@@ -551,7 +567,7 @@ function ConnectedStage({
                 </Badge>
               </div>
 
-              <div className="absolute right-3 top-3 z-10 flex items-center gap-2">
+              <div aria-hidden={!overlay.visible} className={cn('absolute right-3 top-3 z-10 flex items-center gap-2', overlay.overlayClassName)}>
                 {streamQuality && (
                   <StreamQualityBadge height={streamQuality.screenShareHeight} frameRate={streamQuality.screenShareMaxFramerate} />
                 )}

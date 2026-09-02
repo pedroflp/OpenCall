@@ -66,7 +66,7 @@ function PermissionsRow({
       ? 'Só um admin pode remover admin de canais de outro admin'
       : null;
 
-  // Acesso ao TDCalls continua ADMIN-only (rota /canal-access não muda) — quem
+  // Acesso à voz continua ADMIN-only (rota /canal-access não muda) — quem
   // só tem CHANNELS_ACCESS vê a coluna, mas não consegue mexer nela.
   const canalAccessTooltip = targetIsAdmin
     ? 'Admin sempre tem acesso ao OpenCall'

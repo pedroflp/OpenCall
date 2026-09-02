@@ -130,7 +130,7 @@ export default function ProfileModerationDialog({
         <DialogHeader>
           <DialogTitle>Editar perfil</DialogTitle>
           <DialogDescription>
-            Apelido e foto que esta pessoa escolheu para o TDCall. Remover devolve o que vem do Discord.
+            Apelido e foto que esta pessoa escolheu. Remover devolve o que vem do Discord.
           </DialogDescription>
         </DialogHeader>
 

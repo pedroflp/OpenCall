@@ -4,6 +4,11 @@ settings:
   autoInstallPeers: true
   excludeLinksFromLockfile: false
 
+patchedDependencies:
+  livekit-client@2.22.0:
+    hash: q4yg7jw7l7ctdlxxaglcpc33yq
+    path: patches/livekit-client@2.22.0.patch
+
 dependencies:
   '@aws-sdk/client-s3':
     specifier: ^3.906.0
@@ -106,7 +111,7 @@ dependencies:
     version: 1.4.0
   livekit-client:
     specifier: ^2.22.0
-    version: 2.22.0(@types/dom-mediacapture-record@1.0.22)
+    version: 2.22.0(patch_hash=q4yg7jw7l7ctdlxxaglcpc33yq)(@types/dom-mediacapture-record@1.0.22)
   livekit-server-sdk:
     specifier: ^2.18.0
     version: 2.18.0
@@ -898,7 +903,7 @@ packages:
       tslib: ^2.6.2
     dependencies:
       '@floating-ui/dom': 1.7.6
-      livekit-client: 2.22.0(@types/dom-mediacapture-record@1.0.22)
+      livekit-client: 2.22.0(patch_hash=q4yg7jw7l7ctdlxxaglcpc33yq)(@types/dom-mediacapture-record@1.0.22)
       loglevel: 1.9.1
       rxjs: 7.8.2
       tslib: 2.8.1
@@ -921,7 +926,7 @@ packages:
       clsx: 2.1.1
       events: 3.3.0
       jose: 6.2.10
-      livekit-client: 2.22.0(@types/dom-mediacapture-record@1.0.22)
+      livekit-client: 2.22.0(patch_hash=q4yg7jw7l7ctdlxxaglcpc33yq)(@types/dom-mediacapture-record@1.0.22)
       react: 18.3.1
       react-dom: 18.3.1(react@18.3.1)
       tslib: 2.8.1
@@ -4415,7 +4420,7 @@ packages:
     resolution: {integrity: sha512-7ylylesZQ/PV29jhEDl3Ufjo6ZX7gCqJr5F7PKrqc93v7fzSymt1BpwEU8nAUXs8qzzvqhbjhK5QZg6Mt/HkBg==}
     dev: false
 
-  /livekit-client@2.22.0(@types/dom-mediacapture-record@1.0.22):
+  /livekit-client@2.22.0(patch_hash=q4yg7jw7l7ctdlxxaglcpc33yq)(@types/dom-mediacapture-record@1.0.22):
     resolution: {integrity: sha512-GLtYQfRh/RsvXaOX1x609bFZ17yyKmKWDqu9JmkMKn9vIFLi2GsapRv9gT8OJO/1R2dsitrkbGmloyUfxWQsaA==}
     peerDependencies:
       '@types/dom-mediacapture-record': ^1
@@ -4431,6 +4436,7 @@ packages:
       typed-emitter: 2.1.0
       webrtc-adapter: 9.0.6
     dev: false
+    patched: true
 
   /livekit-server-sdk@2.18.0:
     resolution: {integrity: sha512-iUGmkbyi0g4DHKQ0Z4VSVs/V+ddp3T75ccQIe6LX94AYlqgyh+SVSM1lQMjFQuI3Qh6Z9v06T4xxV+vWmp7VeQ==}

@@ -137,7 +137,7 @@ export default function LoginPopover() {
                   <Separator className="flex-1" />
                 </div>
 
-                {/* Mesma lógica do tdc: decidido pelo breakpoint, não por JS —
+                {/* Decidido pelo breakpoint, não por JS —
                     detectar mobile em efeito trocaria o botão depois do
                     primeiro paint. */}
                 <Button type="button" variant="outline" className="w-full gap-2 py-6 md:hidden" onClick={() => setStep('qr')}>

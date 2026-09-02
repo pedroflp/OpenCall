@@ -13,7 +13,7 @@ async function fetcher(url: string): Promise<RtcEnabledConfig> {
 }
 
 /**
- * Liga/desliga do TDCalls controlado pelo admin (ver /api/rtc/config). `active`
+ * Liga/desliga da voz controlado pelo admin (ver /api/rtc/config). `active`
  * segue o mesmo padrão de useChannelPresence: false pausa o polling pra não gastar
  * chamada de quem não tem acesso ao canal. Enquanto carrega, assume ligado — evita
  * o dock sumir e reaparecer a cada navegação só por causa da primeira busca.

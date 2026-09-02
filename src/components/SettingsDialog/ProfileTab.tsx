@@ -243,7 +243,7 @@ export default function ProfileTab({ user }: { user: UserDTO | null }) {
       <div>
         <p className="text-[11px] font-bold uppercase tracking-wider text-muted-foreground">Perfil</p>
         <p className="mt-1 text-xs text-muted-foreground">
-          Um apelido e uma foto só seus, por cima do que vem do Discord. Vale em todo o TDCall.
+          Um apelido e uma foto só seus, por cima do que vem do Discord. Valem em todo o OpenCall.
         </p>
       </div>
 

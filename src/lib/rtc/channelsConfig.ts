@@ -84,7 +84,7 @@ export function getChannelsConfig(): Promise<ChannelsConfig> {
     })
     .catch(() => {
       cache.inFlight = null;
-      // Banco instável não deve derrubar o TDCalls nem jogar a qualidade pro
+      // Banco instável não deve derrubar a voz nem jogar a qualidade pro
       // default no meio de uma live — mantém o último estado conhecido.
       return withEnvOverride(cache.config);
     });

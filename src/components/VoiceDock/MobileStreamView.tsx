@@ -9,6 +9,7 @@ import { HugeIcon } from '@/components/HugeIcon';
 import { Badge } from '@/components/ui/badge';
 import { avatarFromParticipant, participantDisplayName } from '@/lib/rtc/participant';
 import { useIsMobile } from '@/hooks/useIsMobile';
+import { useStageOverlayToggle } from '@/hooks/useStageOverlayToggle';
 import { useVoice } from '@/providers/VoiceProvider';
 import { cn } from '@/lib/utils';
 import { LiveVolumeButton } from './VoiceChannelStage';
@@ -84,6 +85,10 @@ function MobileStreamViewInner({ active, room }: { active: boolean; room: Room }
   const screenShareTracks = useTracks([Track.Source.ScreenShare], { room, onlySubscribed: false });
   const watchedTrack = watching ? screenShareTracks.find((track) => track.participant.identity === watching) : undefined;
   const containerRef = useRef<HTMLDivElement>(null);
+  // Sempre ligado, ao contrário do palco desktop: aqui não existe o estado
+  // "fora da tela cheia" — este overlay JÁ cobre a tela inteira, e é o único
+  // renderizado enquanto a transmissão está aberta.
+  const overlay = useStageOverlayToggle(true);
   const shouldShow = active && isMobile && Boolean(watchedTrack);
 
   // Sem simulcast no screen share — setEnabled(false) é o único jeito de
@@ -131,11 +136,17 @@ function MobileStreamViewInner({ active, room }: { active: boolean; room: Room }
   const closeLabel = isOwnStream ? 'Encerrar transmissão' : 'Sair da transmissão';
 
   return (
-    <div ref={containerRef} className="fixed inset-0 flex flex-col bg-black" style={{ zIndex: STREAM_VIEW_Z_INDEX }}>
+    <div
+      ref={containerRef}
+      onClick={overlay.onStageClick}
+      className="fixed inset-0 flex flex-col bg-black"
+      style={{ zIndex: STREAM_VIEW_Z_INDEX }}
+    >
       <VideoTrack trackRef={watchedTrack} className="size-full object-contain" />
 
       <div
-        className="absolute left-3 right-3 flex items-center justify-between gap-2"
+        aria-hidden={!overlay.visible}
+        className={cn('absolute left-3 right-3 flex items-center justify-between gap-2', overlay.overlayClassName)}
         style={{ top: 'max(0.75rem, env(safe-area-inset-top))' }}
       >
         <div className="flex min-w-0 items-center gap-2 rounded-full bg-black/55 py-1.5 pl-1.5 pr-3">
@@ -166,7 +177,8 @@ function MobileStreamViewInner({ active, room }: { active: boolean; room: Room }
       </div>
 
       <div
-        className="absolute inset-x-0 flex items-center justify-center gap-3"
+        aria-hidden={!overlay.visible}
+        className={cn('absolute inset-x-0 flex items-center justify-center gap-3', overlay.overlayClassName)}
         style={{ bottom: 'max(1rem, env(safe-area-inset-bottom))' }}
       >
         <StreamControlButton

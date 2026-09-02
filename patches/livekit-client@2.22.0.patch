@@ -1,0 +1,43 @@
+diff --git a/dist/livekit-client.esm.mjs b/dist/livekit-client.esm.mjs
+index 731beefaf7f814aadc346f0294208bb84a2683b8..50f805931183d950b5950971b35919d65f7fa15b 100644
+--- a/dist/livekit-client.esm.mjs
++++ b/dist/livekit-client.esm.mjs
+@@ -13355,6 +13355,11 @@ function screenCaptureToDisplayMediaStreamOptions(options) {
+     selfBrowserSurface: options.selfBrowserSurface,
+     surfaceSwitching: options.surfaceSwitching,
+     systemAudio: options.systemAudio,
++    // OpenCall: repassado pelo mesmo motivo do systemAudio — sem ele, escolher uma
++    // janela leva o mix do sistema (o default do spec e' 'system'), e a regra do
++    // app e' que janela leva o audio daquela janela e mais nada. Ver
++    // toggleScreenShare em src/providers/VoiceProvider.tsx.
++    windowAudio: options.windowAudio,
+     preferCurrentTab: options.preferCurrentTab
+   };
+ }
+@@ -28477,7 +28482,7 @@ class RpcServerManager extends eventsExports.EventEmitter {
+    * gets the volume of attached audio elements (loudest)
+    */
+   getVolume() {
+-    if (this.elementVolume) {
++    if (this.elementVolume !== undefined) {
+       return this.elementVolume;
+     }
+     if (isReactNative()) {
+@@ -28526,7 +28531,7 @@ class RpcServerManager extends eventsExports.EventEmitter {
+       element.volume = 0;
+       element.muted = true;
+     }
+-    if (this.elementVolume) {
++    if (this.elementVolume !== undefined) {
+       // make sure volume setting is being applied to the newly attached element
+       this.setVolume(this.elementVolume);
+     }
+@@ -28586,7 +28591,7 @@ class RpcServerManager extends eventsExports.EventEmitter {
+     this.gainNode = context.createGain();
+     lastNode.connect(this.gainNode);
+     this.gainNode.connect(context.destination);
+-    if (this.elementVolume) {
++    if (this.elementVolume !== undefined) {
+       this.gainNode.gain.setTargetAtTime(this.elementVolume, 0, 0.1);
+     }
+     // try to resume the context if it isn't running already
