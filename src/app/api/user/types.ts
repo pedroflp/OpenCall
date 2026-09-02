@@ -8,6 +8,19 @@ export type UserDTO = {
   channelPreferences?: ChannelPreferences;
   groups?: string[];
   isMobileDownloaded: boolean;
+
+  /**
+   * A MÁSCARA DE PERFIL, crua — `username` e `avatar` acima continuam sendo os
+   * do Discord.
+   *
+   * Este DTO também serve o /admin, onde a máscara NÃO vale, então ele não pode
+   * carregar a identidade já resolvida. Quem renderiza os canais resolve com
+   * `channelsIdentity(user)` de lib/profile/identity — o UserDTO satisfaz o
+   * `ProfileMaskSource` inteiro de propósito, pra chamada ser essa e nada mais.
+   */
+  displayName: string | null;
+  displayAvatar: string | null;
+  useDiscordProfile: boolean;
 }
 
 export type ChannelPreferences = {

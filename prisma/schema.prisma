@@ -67,6 +67,32 @@ model User {
   /// janela/dispositivo mobile dele daí em diante.
   isMobileDownloaded Boolean @default(false) @map("is_mobile_downloaded")
 
+  /// Máscara de perfil: apelido e foto que o usuário escolhe em Configurações >
+  /// Perfil e que SOBREPÕEM `username`/`avatar` (que continuam sendo o que o
+  /// Discord manda, reescritos a cada login em authOptions.ts). São colunas
+  /// separadas justamente por isso — gravar a escolha por cima do campo do
+  /// Discord seria perdê-la no próximo login.
+  ///
+  /// Os dois são independentes: só apelido, só foto, ou os dois. Campo vazio
+  /// cai no Discord.
+  ///
+  /// `displayAvatar` guarda a KEY do objeto no R2 (`avatars/<id>/<uuid>.<ext>`),
+  /// nunca a URL — mesmo motivo do imageKey do chat: a base pública é variável
+  /// de ambiente, e URL gravada no banco é a que não sobrevive a trocar de
+  /// domínio de bucket. A URL sai de channelsIdentity() em lib/profile/identity.
+  displayName   String? @map("display_name")
+  displayAvatar String? @map("display_avatar")
+
+  /// O switch "Usar meu perfil do Discord" da aba Perfil. Governa os DOIS
+  /// campos acima: ligado, aparece o nome e a foto do Discord mesmo havendo
+  /// máscara salva. `true` (default) é o primeiro auth — ninguém tem apelido
+  /// ainda.
+  ///
+  /// Salvar apelido ou subir foto vira pra `false` sozinho, senão a pessoa
+  /// salva e não vê nada mudar. Ligar de volta PRESERVA o que está salvo: é
+  /// interruptor, não "apagar" — quem apaga é o campo vazio (ver a rota PATCH).
+  useDiscordProfile Boolean @default(true) @map("use_discord_profile")
+
   // Ids da tabela Group — sem FK explícita (array solto): remover um grupo já
   // limpa essa referência via DELETE cascade manual na rota, não via
   // constraint de banco.

@@ -6,6 +6,8 @@ export interface PresenceParticipant {
   identity: string;
   name: string;
   avatar?: string;
+  /** Username do Discord, só quando um apelido o cobre (ver ChannelsIdentity) — é o que o popover mostra em miúdo embaixo do nome. */
+  discordUsername?: string;
   isAdmin: boolean;
   micMuted: boolean;
   deafened: boolean;
@@ -318,6 +320,39 @@ export function dropParticipant(channelId: string, identity: string): void {
 
   const next = current.filter((participant) => participant.identity !== identity);
   if (next.length !== current.length) setChannel(channelId, next);
+}
+
+/**
+ * Reescreve nome/avatar de um participante já no store, sem esperar webhook.
+ *
+ * O store só aprende por webhook do LiveKit, e não existe webhook de "mudou o
+ * nome" — quem troca a máscara de perfil no meio da chamada apareceria com o
+ * nome antigo na lista da sidebar de quem está de FORA da sala, por até um
+ * ciclo de poll (ver propagateProfileChange).
+ */
+export function applyParticipantIdentity(
+  channelId: string,
+  identity: string,
+  next: { name: string; avatar?: string; discordUsername?: string },
+): void {
+  const current = store.channels.get(channelId);
+  if (!current) return;
+
+  const index = current.findIndex((participant) => participant.identity === identity);
+  if (index === -1) return;
+
+  const participant = current[index];
+  if (
+    participant.name === next.name &&
+    participant.avatar === next.avatar &&
+    participant.discordUsername === next.discordUsername
+  ) {
+    return;
+  }
+
+  const updated = current.slice();
+  updated[index] = { ...participant, name: next.name, avatar: next.avatar, discordUsername: next.discordUsername };
+  setChannel(channelId, updated);
 }
 
 /** Alimenta o store a partir de /api/rtc/webhook — ver applyPresenceWebhook lá. */

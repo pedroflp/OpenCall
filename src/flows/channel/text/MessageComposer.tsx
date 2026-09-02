@@ -269,6 +269,10 @@ export default function MessageComposer({
       replyToPreview: replyTarget
         ? {
             id: replyTarget.id,
+            // Mesmo id que o DTO do servidor manda (ver toMessageDTO) — a
+            // citação otimista precisa dele pra também reagir ao evento
+            // `profile`, senão ela é a única linha da tela com o nome antigo.
+            authorId: replyTarget.author.id,
             authorUsername: replyTarget.author.username,
             authorAvatar: replyTarget.author.avatar,
             excerpt: (replyTarget.content ?? '').slice(0, 120),

@@ -5,6 +5,7 @@ import { getStatus, resolveAwaySince, type PresenceStatus, type PlatformPresence
 import { persistAwaySince, clearAwaySince } from '@/lib/presence/lastActiveAt';
 import { loadAllPresence } from '@/lib/rtc/presence';
 import { isRtcEnabled } from '@/lib/rtc/channelsConfig';
+import { channelsIdentity, PROFILE_MASK_SELECT } from '@/lib/profile/identity';
 import type { GroupDTO } from '@/app/api/groups/types';
 
 const STATUS_ORDER: Record<PresenceStatus, number> = { online: 0, away: 1, offline: 2 };
@@ -33,7 +34,7 @@ export async function GET() {
   const [dbUsers, dbGroups, activeVoiceChannels] = await Promise.all([
     prisma.user.findMany({
       where: { roles: { hasSome: ['CANAL_ACCESS', 'ADMIN'] } },
-      select: { id: true, username: true, avatar: true, groups: true, lastActiveAt: true, chatBlocked: true },
+      select: { id: true, ...PROFILE_MASK_SELECT, groups: true, lastActiveAt: true, chatBlocked: true, roles: true },
     }),
     prisma.group.findMany({ orderBy: { sortIndex: 'asc' } }),
     loadActiveVoiceChannels(),
@@ -65,10 +66,16 @@ export async function GET() {
         clearAwaySince(user.id).catch((error) => console.error('[presence/users] failed to clear awaySince', error));
       }
 
+      // A sidebar é dos canais, então quem tem máscara aparece com ela — o
+      // `username` cru do Discord não sai desta rota (ver lib/profile/identity).
+      const identity = channelsIdentity(user);
+
       return {
         id: user.id,
-        username: user.username,
-        avatar: user.avatar,
+        username: identity.username,
+        avatar: identity.avatar,
+        discordUsername: identity.discordUsername,
+        isAdmin: user.roles.includes('ADMIN'),
         activeStatus,
         groups: user.groups,
         lastActiveAt: awaySince ?? undefined,

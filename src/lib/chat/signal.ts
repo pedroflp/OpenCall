@@ -16,6 +16,8 @@ export type ChatEvent =
   | { type: 'cleared'; channelId: string; ids: string[] }
   | { type: 'typing'; channelId: string; user: { id: string; username: string } }
   | { type: 'blocked'; userId: string; blocked: boolean }
+  /** Máscara de perfil mudou — quem tem DTO na tela busca de novo (ver propagateProfileChange). */
+  | { type: 'profile'; user: { id: string; username: string; avatar: string; discordUsername: string | null } }
   | { type: 'channel_created'; channelType: ChannelType }
   | { type: 'channel_updated'; channelType: ChannelType }
   | { type: 'channel_deleted'; channelType: ChannelType };

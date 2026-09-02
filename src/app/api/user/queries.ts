@@ -22,5 +22,8 @@ export async function findUserDTO(userId: string): Promise<UserDTO | null> {
     channelPreferences: (dbUser.channelPreferences as ChannelPreferences | null) ?? undefined,
     groups: dbUser.groups,
     isMobileDownloaded: dbUser.isMobileDownloaded,
+    displayName: dbUser.displayName,
+    displayAvatar: dbUser.displayAvatar,
+    useDiscordProfile: dbUser.useDiscordProfile,
   };
 }
