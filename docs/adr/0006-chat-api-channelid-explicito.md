@@ -20,5 +20,5 @@ Opção 1 — `channelId` como parâmetro explícito (query string em GET, campo
 
 ## Consequências
 
-- Toda rota precisa validar explicitamente que o `channelId` recebido existe, é do tipo `TEXT` e não está arquivado — antes essa checagem nem existia (a constante garantia isso implicitamente). Essa validação usa a mesma leitura cacheada de canal do ADR-0004.
+- Toda rota precisa validar explicitamente que o `channelId` recebido existe e é do tipo `TEXT` — antes essa checagem nem existia (a constante garantia isso implicitamente). Essa validação usa a mesma leitura cacheada de canal do ADR-0004.
 - Se no futuro a API de chat crescer o suficiente pra justificar nesting por canal (ex.: uploads/typing/events realmente precisarem disso), essa é uma migração de rota localizada, não um redesenho de schema.

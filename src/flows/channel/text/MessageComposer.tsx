@@ -111,6 +111,7 @@ function AttachmentPreview({ attachment, onRemove, onRetry }: { attachment: Pend
 }
 
 export default function MessageComposer({
+  channelId,
   onSend,
   replyTarget,
   onCancelReply,
@@ -124,6 +125,7 @@ export default function MessageComposer({
   blocked,
   currentUser,
 }: {
+  channelId: string;
   onSend: (input: SendMessageInput) => Promise<SendMessageResult>;
   replyTarget: ClientMessage | null;
   onCancelReply: () => void;
@@ -189,8 +191,12 @@ export default function MessageComposer({
     const now = Date.now();
     if (now < nextTypingAtRef.current) return;
     nextTypingAtRef.current = now + TYPING_THROTTLE_MS;
-    fetch('/api/chat/typing', { method: 'POST' }).catch(() => { });
-  }, []);
+    fetch('/api/chat/typing', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ channelId }),
+    }).catch(() => { });
+  }, [channelId]);
 
   const resizeTextarea = useCallback(() => {
     const el = textareaRef.current;

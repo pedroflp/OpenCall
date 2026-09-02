@@ -17,7 +17,7 @@ export async function DELETE(_req: NextRequest, { params }: { params: { id: stri
 
   const message = await prisma.textMessage.findUnique({
     where: { id: params.id },
-    select: { id: true, authorId: true, imageKey: true, createdAt: true, deletedAt: true },
+    select: { id: true, channelId: true, authorId: true, imageKey: true, createdAt: true, deletedAt: true },
   });
   if (!message || message.deletedAt) return err(404, 'NOT_FOUND');
 
@@ -33,7 +33,7 @@ export async function DELETE(_req: NextRequest, { params }: { params: { id: stri
   });
   if (result.count === 0) return err(404, 'NOT_FOUND');
 
-  publishToChannel({ type: 'deleted', id: message.id });
+  publishToChannel({ type: 'deleted', channelId: message.channelId, id: message.id });
 
   if (message.imageKey) {
     moveImageToDeleted({

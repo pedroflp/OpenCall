@@ -38,7 +38,7 @@ export async function POST(req: Request) {
     return new Response('invalid signature', { status: 401 });
   }
 
-  applyPresenceWebhook(event);
+  await applyPresenceWebhook(event);
 
   // O LiveKit reenfileira e repete o evento em qualquer resposta que não seja
   // 2xx — o processamento acima não pode fazer a rota falhar.

@@ -14,7 +14,7 @@ import { useVoice } from '@/providers/VoiceProvider';
 import { useChannelPresence } from '@/hooks/useChannelPresence';
 import { useIsMobile } from '@/hooks/useIsMobile';
 import { useRtcEnabled } from '@/hooks/useRtcEnabled';
-import { DEFAULT_CHANNEL_ID } from '@/lib/rtc/channels';
+import { useVoiceChannels } from '@/hooks/useChannels';
 import { routeNames } from '@/app/route.names';
 import { cn } from '@/lib/utils';
 import Avatar from '@/components/Avatar';
@@ -214,16 +214,18 @@ export default function VoiceDock({ className }: { className?: string }) {
   const hasCanalAccess = sessionStatus === 'authenticated' && Boolean(session?.user?.canalAccess);
   const { rtcEnabled } = useRtcEnabled(hasCanalAccess);
   const hasAccess = hasCanalAccess && rtcEnabled;
+  const { channels: voiceChannels } = useVoiceChannels();
+  const defaultChannel = voiceChannels[0] ?? null;
   const preview = useChannelPresence(
-    DEFAULT_CHANNEL_ID,
-    hasAccess && status !== 'connected' && !onChannelPage,
+    defaultChannel?.id ?? '',
+    hasAccess && Boolean(defaultChannel) && status !== 'connected' && !onChannelPage,
   );
 
   // No mobile não tem espaço pra esse card flutuante sem sobrepor a UI —
   // quem quiser voltar ao canal usa a navegação normal do app.
-  if (!hasAccess || onChannelPage || isMobile) return null;
+  if (!hasAccess || onChannelPage || isMobile || !defaultChannel) return null;
 
-  const goToChannel = () => router.push(routeNames.CHANNEL(channel?.id ?? DEFAULT_CHANNEL_ID));
+  const goToChannel = () => router.push(routeNames.CHANNEL(channel?.id ?? defaultChannel.id));
 
   const showConnected = status === 'connected' && Boolean(channel);
   const showPreview = !showConnected && preview.participants.length > 0;
@@ -237,12 +239,12 @@ export default function VoiceDock({ className }: { className?: string }) {
         <ConnectedCard onNavigate={goToChannel} />
       ) : showPreview ? (
         <PreviewCard
-          channelName="Geral"
+          channelName={defaultChannel.name}
           participants={preview.participants}
           onNavigate={goToChannel}
           onJoin={() => {
             goToChannel();
-            join(DEFAULT_CHANNEL_ID);
+            join(defaultChannel.id);
           }}
         />
       ) : (

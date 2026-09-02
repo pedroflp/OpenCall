@@ -22,12 +22,13 @@ interface ReadState {
  * ponto certo não valia o custo aqui (ver relatório final da implementação).
  */
 export function useUnreadDivider(params: {
+  channelId: string;
   messages: ClientMessage[];
   loadingInitial: boolean;
   atBottom: boolean;
   currentUserId: string | null;
 }) {
-  const { messages, loadingInitial, atBottom, currentUserId } = params;
+  const { channelId, messages, loadingInitial, atBottom, currentUserId } = params;
 
   const [dividerMessageId, setDividerMessageId] = useState<string | null>(null);
   const [visible, setVisible] = useState(true);
@@ -49,7 +50,7 @@ export function useUnreadDivider(params: {
 
     (async () => {
       try {
-        const response = await fetch('/api/chat/read');
+        const response = await fetch(`/api/chat/read?channelId=${encodeURIComponent(channelId)}`);
         if (!response.ok) return;
         const data = (await response.json()) as ReadState;
         if (data.unreadCount <= 0) return;
@@ -66,7 +67,7 @@ export function useUnreadDivider(params: {
         // Sem divisor em caso de falha — não é crítico o suficiente pra travar a lista.
       }
     })();
-  }, [loadingInitial, messages]);
+  }, [channelId, loadingInitial, messages]);
 
   // Chegou no fundo com a aba visível: marca lido e o divisor some com fade
   // (o caller decide o fade via dividerMessageId virando null).
@@ -78,8 +79,8 @@ export function useUnreadDivider(params: {
     prevLastIdRef.current = latest.id;
     dismissedRef.current = true;
     setDividerMessageId(null);
-    if (latest.status === 'sent') markChatRead(latest.id);
-  }, [atBottom, visible, messages]);
+    if (latest.status === 'sent') markChatRead(channelId, latest.id);
+  }, [channelId, atBottom, visible, messages]);
 
   // Mensagem nova chegando enquanto rolado pra cima: se não há divisor na
   // tela, ancora um novo antes dela (ver §8.2).

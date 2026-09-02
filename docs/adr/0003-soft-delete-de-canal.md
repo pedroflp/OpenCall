@@ -1,6 +1,6 @@
 # ADR-0003: Remover canal é soft-delete (`archivedAt`), não `DELETE` de linha
 
-**Status**: Proposto
+**Status**: Revogada — ver "Atualização" abaixo. `DELETE /api/admin/channels/[channelId]` faz hard-delete de verdade.
 **RFC relacionada**: [rfc-dynamic-channels](../rfc-dynamic-channels.md)
 
 ## Contexto
@@ -27,3 +27,11 @@ Reativar (`archivedAt = null`) é uma operação normal de update, exposta na UI
 - A tabela `Channel` cresce indefinidamente (canais arquivados nunca são fisicamente removidos). Aceitável — o volume esperado é baixo (dezenas, não milhares).
 - Toda query de listagem (sidebar, `CHANNEL_LIST`) precisa lembrar de filtrar `archivedAt: null`; a UI de admin é a exceção (mostra arquivados também, pra permitir reativar).
 - Um hard-delete de verdade (para conformidade/GDPR-like ou limpeza manual) fica como operação manual via banco, fora do escopo desta feature — não é exposto na UI.
+
+## Atualização (pedido de produto, pós-implementação)
+
+Decisão revertida: o produto pediu explicitamente um hard-delete exposto na UI pra canais de voz e de texto, em vez de só arquivar. `DELETE /api/admin/channels/[channelId]` agora remove a linha de `Channel` de verdade (`prisma.channel.delete`), dentro de uma transação que também limpa `VoiceChannelAlert` (sem FK pro canal, então não cascade automático).
+
+O trade-off original entre `CASCADE` (perde histórico sem aviso) e `RESTRICT` (trava o delete na prática) foi resolvido assim: `TextMessage.channel`/`TextChannelRead.channel` viraram `onDelete: Cascade`, mas a **UI força um double confirm antes de chamar a rota** — o diálogo mostra a contagem de mensagens que seriam apagadas (`messageCount`, calculado em `listAdminChannels`) e exige digitar o nome exato do canal pra habilitar o botão. Isso troca a proteção que estava no banco (impedir a perda de dados) por uma proteção na UI (garantir que o admin viu o tamanho do estrago antes de confirmar) — aceitável porque a ação só é alcançável por `isCurrentUserChannelsAdmin`.
+
+O campo `archivedAt` foi removido do schema — não existe mais estado "arquivado"; reativar também deixou de existir. O risco de canal de voz excluído com gente conectada (não desconecta, só impede entrada de gente nova) continua o mesmo descrito acima — só que agora é permanente, não reversível reativando o canal.

@@ -2,7 +2,7 @@ import { NextRequest, NextResponse } from 'next/server';
 import { ServerError } from 'livekit-server-sdk';
 import { getUser, isCurrentUserAdmin } from '@/app/api/auth/[...nextauth]/auth';
 import { isRtcEnabled, setRtcEnabled } from '@/lib/rtc/channelsConfig';
-import { CHANNEL_LIST } from '@/lib/rtc/channels';
+import { getVoiceChannels } from '@/lib/rtc/channels';
 import { livekitApi } from '@/lib/rtc/server';
 
 export const runtime = 'nodejs';
@@ -26,8 +26,9 @@ export async function GET() {
 // falha aqui não deve reverter o toggle, que já foi persistido — pior caso é
 // a sala levar até o próximo poll de presença pra esvaziar de fato.
 async function disconnectAllChannels(): Promise<void> {
+  const channels = await getVoiceChannels();
   await Promise.all(
-    CHANNEL_LIST.map(async (channel) => {
+    channels.map(async (channel) => {
       try {
         await livekitApi().room.deleteRoom(channel.id);
       } catch (error) {

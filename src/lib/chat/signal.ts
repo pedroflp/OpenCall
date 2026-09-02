@@ -1,3 +1,4 @@
+import type { ChannelType } from '@prisma/client';
 import type { MessageDTO } from '@/lib/chat/dto';
 
 /**
@@ -10,11 +11,14 @@ import type { MessageDTO } from '@/lib/chat/dto';
  * PUBLISH no Redis e o boot assina o canal — nenhuma rota muda (ver §6.4).
  */
 export type ChatEvent =
-  | { type: 'message'; message: MessageDTO; clientNonce: string }
-  | { type: 'deleted'; id: string }
-  | { type: 'cleared'; ids: string[] }
-  | { type: 'typing'; user: { id: string; username: string } }
-  | { type: 'blocked'; userId: string; blocked: boolean };
+  | { type: 'message'; channelId: string; message: MessageDTO; clientNonce: string }
+  | { type: 'deleted'; channelId: string; id: string }
+  | { type: 'cleared'; channelId: string; ids: string[] }
+  | { type: 'typing'; channelId: string; user: { id: string; username: string } }
+  | { type: 'blocked'; userId: string; blocked: boolean }
+  | { type: 'channel_created'; channelType: ChannelType }
+  | { type: 'channel_updated'; channelType: ChannelType }
+  | { type: 'channel_deleted'; channelType: ChannelType };
 
 type Send = (event: ChatEvent) => void;
 

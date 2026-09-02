@@ -1,6 +1,6 @@
 import { NextRequest, NextResponse } from 'next/server';
 import { auth } from '@/app/api/auth/[...nextauth]/auth';
-import { getChannel } from '@/lib/rtc/channels';
+import { getVoiceChannel } from '@/lib/rtc/channels';
 import { livekitApi } from '@/lib/rtc/server';
 import { isRtcEnabled } from '@/lib/rtc/channelsConfig';
 
@@ -25,7 +25,7 @@ export async function POST(req: NextRequest) {
     return err(400, 'INVALID_BODY');
   }
 
-  const channel = getChannel(channelId);
+  const channel = await getVoiceChannel(channelId);
   if (!channel) return err(404, 'CHANNEL_NOT_FOUND');
 
   try {

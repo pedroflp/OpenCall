@@ -1,6 +1,6 @@
 import { NextRequest, NextResponse } from 'next/server';
 import { getUser } from '@/app/api/auth/[...nextauth]/auth';
-import { getChannel } from '@/lib/rtc/channels';
+import { getVoiceChannel } from '@/lib/rtc/channels';
 import { getStatus } from '@/lib/presence/platformPresence';
 import { getCallCooldownRemaining, startCall } from '@/lib/rtc/callSignal';
 
@@ -24,7 +24,7 @@ export async function POST(req: NextRequest) {
   if (typeof channelId !== 'string' || !channelId) return err(400, 'INVALID_CHANNEL');
   if (targetUserId === user.id) return err(400, 'CANNOT_CALL_SELF');
 
-  const channel = getChannel(channelId);
+  const channel = await getVoiceChannel(channelId);
   if (!channel) return err(404, 'CHANNEL_NOT_FOUND');
 
   // Mesma régua da PlatformUsersSidebar (online/ausente) — checada de novo

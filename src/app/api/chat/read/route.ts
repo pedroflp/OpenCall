@@ -1,7 +1,7 @@
 import { NextRequest, NextResponse } from 'next/server';
 import { getUser } from '@/app/api/auth/[...nextauth]/auth';
 import { prisma } from '@/services/prisma';
-import { TEXT_CHANNEL_ID } from '@/lib/chat/channel';
+import { getTextChannel } from '@/lib/chat/textChannels';
 
 export const runtime = 'nodejs';
 export const dynamic = 'force-dynamic';
@@ -10,7 +10,7 @@ function err(status: number, code: string) {
   return NextResponse.json({ error: code }, { status });
 }
 
-async function countUnread(userId: string, lastReadMessageId: string | null, mentionsOnly: boolean): Promise<number> {
+async function countUnread(userId: string, channelId: string, lastReadMessageId: string | null, mentionsOnly: boolean): Promise<number> {
   const mentionFilter = mentionsOnly ? { mentions: { some: { userId } } } : {};
 
   if (lastReadMessageId) {
@@ -18,7 +18,7 @@ async function countUnread(userId: string, lastReadMessageId: string | null, men
     if (lastRead) {
       return prisma.textMessage.count({
         where: {
-          channelId: TEXT_CHANNEL_ID,
+          channelId,
           deletedAt: null,
           authorId: { not: userId },
           ...mentionFilter,
@@ -36,7 +36,7 @@ async function countUnread(userId: string, lastReadMessageId: string | null, men
   const dbUser = await prisma.user.findUnique({ where: { id: userId }, select: { createdAt: true } });
   return prisma.textMessage.count({
     where: {
-      channelId: TEXT_CHANNEL_ID,
+      channelId,
       deletedAt: null,
       authorId: { not: userId },
       ...mentionFilter,
@@ -45,19 +45,23 @@ async function countUnread(userId: string, lastReadMessageId: string | null, men
   });
 }
 
-export async function GET() {
+export async function GET(req: NextRequest) {
   const user = await getUser();
   if (!user) return err(401, 'UNAUTHENTICATED');
 
+  const channelId = new URL(req.url).searchParams.get('channelId');
+  if (!channelId) return err(400, 'MISSING_CHANNEL');
+  if (!(await getTextChannel(channelId))) return err(404, 'CHANNEL_NOT_FOUND');
+
   const read = await prisma.textChannelRead.findUnique({
-    where: { userId_channelId: { userId: user.id, channelId: TEXT_CHANNEL_ID } },
+    where: { userId_channelId: { userId: user.id, channelId } },
     select: { lastReadMessageId: true },
   });
 
   const lastReadMessageId = read?.lastReadMessageId ?? null;
   const [unreadCount, mentionUnreadCount] = await Promise.all([
-    countUnread(user.id, lastReadMessageId, false),
-    countUnread(user.id, lastReadMessageId, true),
+    countUnread(user.id, channelId, lastReadMessageId, false),
+    countUnread(user.id, channelId, lastReadMessageId, true),
   ]);
 
   return NextResponse.json({ lastReadMessageId, unreadCount, mentionUnreadCount });
@@ -67,17 +71,19 @@ export async function PUT(req: NextRequest) {
   const user = await getUser();
   if (!user) return err(401, 'UNAUTHENTICATED');
 
-  const body = (await req.json().catch(() => null)) as { messageId?: unknown } | null;
-  if (!body || typeof body.messageId !== 'string') return err(400, 'INVALID_BODY');
+  const body = (await req.json().catch(() => null)) as { channelId?: unknown; messageId?: unknown } | null;
+  if (!body || typeof body.channelId !== 'string' || typeof body.messageId !== 'string') return err(400, 'INVALID_BODY');
+  const channelId = body.channelId;
+  if (!(await getTextChannel(channelId))) return err(404, 'CHANNEL_NOT_FOUND');
 
   const message = await prisma.textMessage.findUnique({
     where: { id: body.messageId },
     select: { id: true, channelId: true, createdAt: true },
   });
-  if (!message || message.channelId !== TEXT_CHANNEL_ID) return err(404, 'MESSAGE_NOT_FOUND');
+  if (!message || message.channelId !== channelId) return err(404, 'MESSAGE_NOT_FOUND');
 
   const current = await prisma.textChannelRead.findUnique({
-    where: { userId_channelId: { userId: user.id, channelId: TEXT_CHANNEL_ID } },
+    where: { userId_channelId: { userId: user.id, channelId } },
     select: { lastReadMessageId: true },
   });
 
@@ -98,8 +104,8 @@ export async function PUT(req: NextRequest) {
   }
 
   await prisma.textChannelRead.upsert({
-    where: { userId_channelId: { userId: user.id, channelId: TEXT_CHANNEL_ID } },
-    create: { userId: user.id, channelId: TEXT_CHANNEL_ID, lastReadMessageId: message.id },
+    where: { userId_channelId: { userId: user.id, channelId } },
+    create: { userId: user.id, channelId, lastReadMessageId: message.id },
     update: { lastReadMessageId: message.id },
   });
 

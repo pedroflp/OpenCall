@@ -21,6 +21,7 @@ export type MessageWithRelations = Prisma.TextMessageGetPayload<{ include: typeo
 
 export interface MessageDTO {
   id: string;
+  channelId: string;
   content: string | null;
   image: { url: string; width: number; height: number; bytes: number } | null;
   author: { id: string; username: string; avatar: string };
@@ -49,6 +50,7 @@ export function toMessageDTO(row: MessageWithRelations): MessageDTO {
 
   return {
     id: row.id,
+    channelId: row.channelId,
     content: row.content,
     image:
       row.imageKey && row.imageWidth && row.imageHeight && row.imageBytes != null

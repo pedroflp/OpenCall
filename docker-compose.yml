@@ -1,0 +1,72 @@
+# Infra de desenvolvimento local — Postgres, MinIO (substitui o R2) e LiveKit
+# (substitui o cloud). Não é o deploy de produção (isso é o Dockerfile na raiz
+# + Railway/VPS, ver README). O app em si (Next.js) roda no host via `pnpm
+# dev` — dev server em container tem hot-reload e binários nativos (Prisma,
+# ssh2) chatos o suficiente pra não valer a pena aqui.
+#
+# Uso: pnpm docker:up   (ver seção "Docker" do README — `docker compose up -d
+# --wait` sozinho falha porque o minio-init é um job de inicialização que
+# termina com exit 0, e --wait trata isso como falha)
+
+services:
+  postgres:
+    image: postgres:16-alpine
+    environment:
+      POSTGRES_USER: opencall
+      POSTGRES_PASSWORD: opencall
+      POSTGRES_DB: opencall
+    ports:
+      - "5433:5432"
+    volumes:
+      - postgres-data:/var/lib/postgresql/data
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U opencall"]
+      interval: 5s
+      timeout: 5s
+      retries: 10
+
+  minio:
+    image: minio/minio:latest
+    command: server /data --console-address ":9001"
+    environment:
+      MINIO_ROOT_USER: opencall
+      MINIO_ROOT_PASSWORD: opencall123
+    ports:
+      - "9000:9000" # API S3
+      - "9001:9001" # console web
+    volumes:
+      - minio-data:/data
+    healthcheck:
+      test: ["CMD", "curl", "-f", "http://localhost:9000/minio/health/live"]
+      interval: 5s
+      timeout: 5s
+      retries: 10
+
+  # Cria o bucket e libera leitura pública (equivalente ao domínio público do
+  # R2) na primeira subida. Roda uma vez e sai — status "exited (0)" é sucesso.
+  minio-init:
+    image: minio/mc:latest
+    depends_on:
+      minio:
+        condition: service_healthy
+    entrypoint: >
+      /bin/sh -c "
+      mc alias set local http://minio:9000 opencall opencall123 &&
+      mc mb -p local/opencall &&
+      mc anonymous set download local/opencall &&
+      exit 0
+      "
+
+  livekit:
+    image: livekit/livekit-server:latest
+    command: ["--config", "/etc/livekit.yaml", "--bind", "0.0.0.0"]
+    volumes:
+      - ./docker/livekit.yaml:/etc/livekit.yaml:ro
+    ports:
+      - "7880:7880" # API/WebSocket
+      - "7881:7881" # ICE/TCP
+      - "50000-50019:50000-50019/udp" # ICE/UDP — ver docker/livekit.yaml
+
+volumes:
+  postgres-data:
+  minio-data:

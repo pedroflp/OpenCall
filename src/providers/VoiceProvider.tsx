@@ -16,7 +16,7 @@ import {
   type TrackPublishOptions,
 } from 'livekit-client';
 import { RoomAudioRenderer, RoomContext } from '@livekit/components-react';
-import { DEFAULT_CHANNEL_ID, type RtcConfig } from '@/lib/rtc/channels';
+import type { RtcConfig } from '@/lib/rtc/channels';
 import { decodeRtcConfig } from '@/lib/rtc/roomMetadata';
 import {
   loadAudioInputDeviceId,
@@ -213,7 +213,7 @@ interface VoiceContextValue {
   streamQuality: RtcConfig | null;
   cameraEnabled: boolean;
   videoFacingMode: 'user' | 'environment' | null;
-  join: (channelId?: string, watchIdentity?: string) => Promise<void>;
+  join: (channelId: string, watchIdentity?: string) => Promise<void>;
   leave: () => Promise<void>;
   toggleMic: () => Promise<void>;
   toggleDeafen: () => Promise<void>;
@@ -504,7 +504,7 @@ export function VoiceProvider({ children }: { children: React.ReactNode }) {
   );
 
   const join = useCallback(
-    async (channelId: string = DEFAULT_CHANNEL_ID, watchIdentity?: string) => {
+    async (channelId: string, watchIdentity?: string) => {
       if (joining.current) return;
       if (status === 'connected' && channel?.id === channelId) {
         // Já conectado nesse canal (ex: clicou "AO VIVO" de outra página) — só falta
@@ -933,7 +933,7 @@ export function VoiceProvider({ children }: { children: React.ReactNode }) {
     if (!guardRateLimit('mic', TOGGLE_RATE_LIMIT)) return;
     await room.localParticipant.setMicrophoneEnabled(next);
     setMicEnabled(next);
-    playSound('mute');
+    playSound(next ? 'unmute' : 'mute');
 
     // Ligar o mic enquanto ensurdecido não faz sentido no modelo desse app —
     // ensurdecer sempre implica mudo (ver toggleDeafen), então desligar o mudo
@@ -950,7 +950,7 @@ export function VoiceProvider({ children }: { children: React.ReactNode }) {
     const next = !deafened;
     setDeafened(next);
     deafenedRef.current = next;
-    playSound('deaf');
+    playSound(next ? 'deaf' : 'undeaf');
     if (!next) stopAttentionSound();
 
     if (!room) return;

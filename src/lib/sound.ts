@@ -1,13 +1,15 @@
 import { getSoundEffectsVolume } from '@/lib/rtc/preferences';
 
 const SOUND_URLS = {
-  join: '/assets/sounds/join.wav',
-  disconnect: '/assets/sounds/disconnect.wav',
+  join: '/assets/sounds/channel_join.mp3',
+  disconnect: '/assets/sounds/channel_left.mp3',
   mute: '/assets/sounds/mute.mp3',
-  deaf: '/assets/sounds/deaf.wav',
-  inlive: '/assets/sounds/inlive.mp3',
-  offlive: '/assets/sounds/offlive.mp3',
-  joinlive: '/assets/sounds/joinlive.wav',
+  unmute: '/assets/sounds/unmute.mp3',
+  deaf: '/assets/sounds/deaf.mp3',
+  undeaf: '/assets/sounds/undeaf.mp3',
+  inlive: '/assets/sounds/live-start.mp3',
+  offlive: '/assets/sounds/live-exit.mp3',
+  joinlive: '/assets/sounds/live-join.mp3',
   attention: '/assets/sounds/attention.wav',
   call: '/assets/sounds/call.wav',
 } as const;

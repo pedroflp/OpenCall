@@ -1,7 +1,7 @@
 import { NextRequest, NextResponse } from 'next/server';
 import { AccessToken, TrackSource } from 'livekit-server-sdk';
 import { getUser, isCurrentUserAdmin } from '@/app/api/auth/[...nextauth]/auth';
-import { buildRtcConfig, getChannel } from '@/lib/rtc/channels';
+import { buildRtcConfig, getVoiceChannel } from '@/lib/rtc/channels';
 import { getChannelsConfig } from '@/lib/rtc/channelsConfig';
 import { livekitApi, livekitUrl } from '@/lib/rtc/server';
 import { checkRateLimit } from '@/lib/rtc/rateLimit';
@@ -39,8 +39,9 @@ export async function POST(req: NextRequest) {
   const channelId = (body as { channelId?: unknown } | null)?.channelId;
   if (typeof channelId !== 'string') return err(400, 'INVALID_CHANNEL');
 
-  const channel = getChannel(channelId);
+  const channel = await getVoiceChannel(channelId);
   if (!channel) return err(404, 'CHANNEL_NOT_FOUND');
+  if (channel.maxParticipants === null) return err(500, 'CHANNEL_MISCONFIGURED');
 
   await livekitApi().room.createRoom({
     name: channel.id,

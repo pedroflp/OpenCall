@@ -15,6 +15,39 @@ enum UserRole {
   @@map("user_role")
 }
 
+enum ChannelType {
+  VOICE
+  TEXT
+
+  @@map("channel_type")
+}
+
+/// Canal dinâmico (voz ou texto), criado/editado/excluído por um admin em
+/// /admin/channels (ver RFC "Canais dinâmicos"). `geral`/`primos`/`global` são
+/// seedados com o mesmo id que já usavam como constante de código — trocar o
+/// id invalidaria salas do LiveKit e histórico de TextMessage/TextChannelRead
+/// já existente (ver ADR-0001).
+///
+/// Sem soft-delete (ver ADR-0003, revisada): excluir um canal remove a linha
+/// de verdade. TextMessage/TextChannelRead cascade junto; VoiceChannelAlert
+/// (sem FK) é limpo manualmente na mesma transação da rota DELETE.
+model Channel {
+  id              String      @id @default(cuid())
+  type            ChannelType
+  name            String
+  /// Só voice; null pra text (ver ADR-0001 — tabela única com discriminador).
+  maxParticipants Int?        @map("max_participants")
+  sortIndex       Int         @default(0) @map("sort_index")
+  createdAt       DateTime    @default(now()) @map("created_at")
+  createdById     String?     @map("created_by_id")
+
+  textMessages     TextMessage[]
+  textChannelReads TextChannelRead[]
+
+  @@index([type, sortIndex])
+  @@map("channels")
+}
+
 model User {
   id        String     @id // = discordId
   username  String
@@ -24,9 +57,9 @@ model User {
   roles     UserRole[] @default([])
   createdAt DateTime   @default(now()) @map("created_at")
 
-  /// Bloqueio de envio no canal de texto, aplicado por um channels_admin (ver
-  /// POST /api/chat/block) — sem FK pro canal pelo mesmo motivo de
-  /// TextChannelRead (canal único de código, não tabela; ver D1 na RFC-008).
+  /// Bloqueio de envio em qualquer canal de texto, aplicado por um
+  /// channels_admin (ver POST /api/chat/block) — é global ao usuário, não
+  /// por canal.
   chatBlocked Boolean @default(false) @map("chat_blocked")
 
   /// true depois que o usuário marca "Não mostrar novamente" no popup de
@@ -60,11 +93,26 @@ model Group {
   @@map("groups")
 }
 
+/// Código de convite que concede CANAL_ACCESS a quem resgata — criado por um
+/// channels_admin em /admin/invites. Multi-uso e sem expiração por padrão: o
+/// mesmo código serve pra vários convidados até alguém revogar (revokedAt).
+model InviteCode {
+  id            String    @id @default(cuid())
+  code          String    @unique
+  createdById   String?   @map("created_by_id")
+  createdAt     DateTime  @default(now()) @map("created_at")
+  revokedAt     DateTime? @map("revoked_at")
+  /// Contador simples, não uma tabela de resgates — não há necessidade de
+  /// auditoria por usuário hoje, só de saber se o código está sendo usado.
+  redeemedCount Int       @default(0) @map("redeemed_count")
+
+  @@map("invite_codes")
+}
+
 /**
  * Linha única (id fixo em 1, ver SINGLETON_ID em lib/rtc/channelsConfig.ts) com
  * a configuração do OpenCall que o admin muda em runtime (kill switch e
  * qualidade de transmissão).
- *
  * streamSettings é Json (não colunas) porque o shape é validado por
  * parseStreamSettings, que já é a fonte única de verdade do formato — espalhar
  * height/frameRate/bitrate/preset em colunas duplicaria essa validação no banco
@@ -94,10 +142,12 @@ model VoiceChannelAlert {
   @@map("voice_channel_alerts")
 }
 
-/// Canal de texto único da v1 — ver TEXT_CHANNEL_ID em lib/chat/channel.ts.
 model TextMessage {
-  id        String @id @default(cuid())
-  channelId String @default("global") @map("channel_id")
+  id        String  @id @default(cuid())
+  channelId String  @map("channel_id")
+  /// Cascade: excluir o canal (hard-delete, ver ADR-0003 revisada) apaga o
+  /// histórico de mensagens junto — a rota de admin avisa a contagem antes.
+  channel   Channel @relation(fields: [channelId], references: [id], onDelete: Cascade)
 
   authorId String @map("author_id")
   author   User   @relation("TextMessageAuthor", fields: [authorId], references: [id], onDelete: Cascade)
@@ -116,9 +166,9 @@ model TextMessage {
 
   /// SetNull, não Cascade: apagar a mensagem citada não pode apagar quem citou.
   /// A UI cai pro estado "mensagem original indisponível".
-  replyToId String?        @map("reply_to_id")
-  replyTo   TextMessage?   @relation("TextMessageReply", fields: [replyToId], references: [id], onDelete: SetNull)
-  replies   TextMessage[]  @relation("TextMessageReply")
+  replyToId String?       @map("reply_to_id")
+  replyTo   TextMessage?  @relation("TextMessageReply", fields: [replyToId], references: [id], onDelete: SetNull)
+  replies   TextMessage[] @relation("TextMessageReply")
 
   /// Quem foi @mencionado — tabela própria (não array escalar) pra dar pra
   /// incluir author/replyTo/mentions todos via um único `include` (ver
@@ -150,16 +200,18 @@ model TextMessageMention {
   @@map("text_message_mentions")
 }
 
-/// Estado de leitura por usuário. Sem FK pro canal porque canal ainda é
-/// constante de código, não tabela.
+/// Estado de leitura por usuário e canal.
 model TextChannelRead {
-  userId    String @map("user_id")
-  channelId String @map("channel_id")
+  userId    String  @map("user_id")
+  channelId String  @map("channel_id")
+  /// Cascade — mesmo motivo de TextMessage.channel.
+  channel   Channel @relation(fields: [channelId], references: [id], onDelete: Cascade)
 
   lastReadMessageId String?  @map("last_read_message_id")
   updatedAt         DateTime @updatedAt @map("updated_at")
 
   @@id([userId, channelId])
+  @@index([channelId])
   @@map("text_channel_reads")
 }
 
@@ -170,15 +222,15 @@ model TextChannelRead {
 /// script mantém o estado cumulativo localmente pra sobreviver a reboot sem
 /// estourar o número.
 model ServerMetricSnapshot {
-  id           String   @id @default(cuid())
-  capturedAt   DateTime @map("captured_at")
-  cpuPercent   Float    @map("cpu_percent")
-  ramUsedMb    Int      @map("ram_used_mb")
-  ramTotalMb   Int      @map("ram_total_mb")
-  diskUsedGb   Float    @map("disk_used_gb")
-  diskTotalGb  Float    @map("disk_total_gb")
-  netRxBytes   BigInt   @map("net_rx_bytes")
-  netTxBytes   BigInt   @map("net_tx_bytes")
+  id          String   @id @default(cuid())
+  capturedAt  DateTime @map("captured_at")
+  cpuPercent  Float    @map("cpu_percent")
+  ramUsedMb   Int      @map("ram_used_mb")
+  ramTotalMb  Int      @map("ram_total_mb")
+  diskUsedGb  Float    @map("disk_used_gb")
+  diskTotalGb Float    @map("disk_total_gb")
+  netRxBytes  BigInt   @map("net_rx_bytes")
+  netTxBytes  BigInt   @map("net_tx_bytes")
 
   @@index([capturedAt(sort: Desc)])
   @@map("server_metric_snapshots")

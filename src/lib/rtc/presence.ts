@@ -1,6 +1,6 @@
 import { ServerError, TrackSource, type ParticipantInfo, type TrackInfo, type WebhookEvent } from 'livekit-server-sdk';
 import { livekitApi } from '@/lib/rtc/server';
-import { CHANNEL_LIST, getChannel } from '@/lib/rtc/channels';
+import { getVoiceChannel, getVoiceChannels } from '@/lib/rtc/channels';
 
 export interface PresenceParticipant {
   identity: string;
@@ -34,6 +34,8 @@ const RESYNC_IDLE_MS = 30_000;
 
 interface Store {
   channels: Map<string, PresenceParticipant[]>;
+  /** Última lista de ids de canal de voz vista (ver refreshFromLiveKit) — canal dinâmico, não dá mais pra enumerar de forma síncrona. */
+  channelIds: string[];
   refreshedAt: number;
   inFlight: Promise<void> | null;
   hydrated: boolean;
@@ -46,6 +48,7 @@ interface Store {
 const globalForPresence = globalThis as unknown as { __rtcPresenceStore?: Store };
 const store: Store = (globalForPresence.__rtcPresenceStore ??= {
   channels: new Map(),
+  channelIds: [],
   refreshedAt: 0,
   inFlight: null,
   hydrated: false,
@@ -152,9 +155,19 @@ function same(a: PresenceParticipant[], b: PresenceParticipant[]): boolean {
   );
 }
 
+/**
+ * Ids de canal a enumerar num snapshot: a última lista vista num refresh
+ * (store.channelIds) unida com o que já tem entrada no Map — cobre um canal
+ * recém-criado que já recebeu um webhook antes do próximo refresh periódico
+ * rodar (ver refreshFromLiveKit).
+ */
+function knownChannelIds(): string[] {
+  return Array.from(new Set([...store.channelIds, ...store.channels.keys()]));
+}
+
 export function presenceSnapshot(): PresenceSnapshot {
   const snapshot: PresenceSnapshot = {};
-  for (const channel of CHANNEL_LIST) snapshot[channel.id] = store.channels.get(channel.id) ?? [];
+  for (const channelId of knownChannelIds()) snapshot[channelId] = store.channels.get(channelId) ?? [];
   return snapshot;
 }
 
@@ -189,7 +202,9 @@ function setChannel(channelId: string, participants: PresenceParticipant[]): boo
  * gente pagam um listParticipants — que aí custa ~11ms, porque a sala existe.
  */
 async function refreshFromLiveKit(): Promise<void> {
-  const ids = CHANNEL_LIST.map((channel) => channel.id);
+  const channels = await getVoiceChannels();
+  const ids = channels.map((channel) => channel.id);
+  store.channelIds = ids;
   const rooms = await livekitApi().room.listRooms(ids);
   const populated = new Map(rooms.map((room) => [room.name, room.numParticipants]));
 
@@ -306,9 +321,9 @@ export function dropParticipant(channelId: string, identity: string): void {
 }
 
 /** Alimenta o store a partir de /api/rtc/webhook — ver applyPresenceWebhook lá. */
-export function applyPresenceWebhook(event: WebhookEvent): void {
+export async function applyPresenceWebhook(event: WebhookEvent): Promise<void> {
   const channelId = event.room?.name;
-  if (!channelId || !getChannel(channelId)) return;
+  if (!channelId || !(await getVoiceChannel(channelId))) return;
 
   store.lastWebhookAt = Date.now();
 

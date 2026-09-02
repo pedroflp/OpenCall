@@ -8,7 +8,10 @@
     "build": "next build",
     "start": "next start",
     "lint": "next lint",
-    "postinstall": "prisma generate"
+    "postinstall": "prisma generate",
+    "docker:up": "docker compose up -d --wait postgres minio livekit && docker compose up minio-init",
+    "docker:down": "docker compose down",
+    "dev:docker": "pnpm docker:up && pnpm prisma migrate dev && pnpm dev"
   },
   "dependencies": {
     "@aws-sdk/client-s3": "^3.906.0",
@@ -26,6 +29,7 @@
     "@radix-ui/react-navigation-menu": "^1.2.9",
     "@radix-ui/react-popover": "^1.1.10",
     "@radix-ui/react-progress": "^1.1.4",
+    "@radix-ui/react-radio-group": "^1.4.7",
     "@radix-ui/react-scroll-area": "^1.2.5",
     "@radix-ui/react-select": "^2.2.2",
     "@radix-ui/react-separator": "^1.1.4",

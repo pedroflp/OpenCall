@@ -1,6 +1,8 @@
 import { auth } from '@/app/api/auth/[...nextauth]/auth';
 import { getAdminGroups } from '@/app/api/admin/groups/actions';
 import { getAdminUsers } from '@/app/api/admin/users/actions';
+import { getAdminChannels } from '@/app/api/admin/channels/actions';
+import { getAdminInvites } from '@/app/api/admin/invites/actions';
 import { getStreamSettings } from '@/lib/rtc/channelsConfig';
 import { getMetricsSeries } from '@/lib/metrics/series';
 import { computeForecast } from '@/lib/metrics/forecast';
@@ -18,9 +20,11 @@ export default async function AdminChannelsPageFlow() {
   // currentUser vem da sessão (isAdmin/isChannelsAdmin já resolvidos no jwt de
   // authOptions.ts) — sem isso era mais uma query no Postgres só pra repetir o
   // que o page.tsx acima já tinha checado.
-  const [groups, users, session, streamSettings, metricsSeries, forecast] = await Promise.all([
+  const [groups, users, channels, invites, session, streamSettings, metricsSeries, forecast] = await Promise.all([
     getAdminGroups(),
     getAdminUsers(),
+    getAdminChannels(),
+    getAdminInvites(),
     auth(),
     getStreamSettings(),
     INFRA_ENABLED ? getMetricsSeries('day') : Promise.resolve(null),
@@ -31,6 +35,8 @@ export default async function AdminChannelsPageFlow() {
     <AdminTabsView
       groups={groups}
       users={users}
+      channels={channels}
+      invites={invites}
       streamSettings={streamSettings}
       metricsSeries={metricsSeries}
       forecast={forecast}

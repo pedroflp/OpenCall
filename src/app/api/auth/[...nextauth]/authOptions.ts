@@ -1,24 +1,19 @@
 import { AuthOptions } from "next-auth"
 import DiscordProvider from "next-auth/providers/discord"
+import { ChannelType } from "@prisma/client"
 import { prisma } from "@/services/prisma"
 import { UserRoles } from "@/app/api/user/types"
 import { hasCanalAccess, hasChannelsAdminAccess, mapPrismaRoles, rolesCacheInvalidatedAfter } from "@/lib/access"
+import { invalidateChannelsCache } from "@/lib/rtc/channels"
 
 /** Evita reler o Postgres em toda checagem de sessão — só quando o cache expira. */
 const ROLES_CACHE_TTL_MS = 15 * 60 * 1000;
 
-/**
- * IDs de usuário do Discord que, no primeiro login, já entram com role ADMIN —
- * resolve o problema de ovo-e-galinha de uma instalação nova (ninguém tem
- * ADMIN pra conceder ADMIN a alguém via /admin/channels). Só importa na
- * criação do usuário (upsert abaixo): depois do primeiro login de cada ID
- * listado, a env var pode ser removida sem efeito nenhum em quem já foi
- * promovido. Ver docs/opencall/README.md (gap de bootstrap do admin).
- */
-function isBootstrapAdmin(discordId: string): boolean {
-  const ids = process.env.BOOTSTRAP_ADMIN_DISCORD_IDS?.split(',').map((id) => id.trim()).filter(Boolean) ?? [];
-  return ids.includes(discordId);
-}
+// /api/rtc/join recusa entrada em canal de voz com maxParticipants null
+// (CHANNEL_MISCONFIGURED) — não existe "sem limite" no produto hoje, então o
+// canal de voz seedado no bootstrap usa um teto bem folgado em vez de deixar
+// vazio.
+const DEFAULT_VOICE_MAX_PARTICIPANTS = 99;
 
 export const authOptions: AuthOptions = {
   providers: [
@@ -42,22 +37,41 @@ export const authOptions: AuthOptions = {
 
       try {
         // upsert: cria com os defaults do schema (roles=[], etc.) na primeira
-        // vez, ou só sincroniza username/avatar do Discord depois. Um usuário
-        // listado em BOOTSTRAP_ADMIN_DISCORD_IDS entra com roles: [ADMIN] já
-        // na criação — updates seguintes não mexem em roles.
+        // vez, ou só sincroniza username/avatar do Discord depois. O primeiro
+        // usuário já cadastrado no banco (count === 0) entra com roles:
+        // [ADMIN] — resolve o ovo-e-galinha de uma instalação nova (ninguém
+        // tem ADMIN pra conceder ADMIN a alguém via /admin/channels) — e junto
+        // com ele nascem um canal de texto e um de voz "Geral", pra
+        // instalação nova não abrir sem nenhum canal pra ninguém entrar.
         const existing = await prisma.user.findUnique({ where: { id: discordId }, select: { id: true } });
+        const isFirstUser = !existing && (await prisma.user.count()) === 0;
 
-        await prisma.user.upsert({
-          where: { id: discordId },
-          create: {
-            id: discordId,
-            email: `${discordId}@opencall.local`,
-            avatar,
-            username,
-            roles: !existing && isBootstrapAdmin(discordId) ? ['ADMIN'] : [],
-          },
-          update: { username, avatar },
-        });
+        if (isFirstUser) {
+          await prisma.$transaction([
+            prisma.user.create({
+              data: { id: discordId, email: `${discordId}@opencall.local`, avatar, username, roles: ['ADMIN'] },
+            }),
+            prisma.channel.create({
+              data: { type: ChannelType.TEXT, name: 'Geral', sortIndex: 0, createdById: discordId },
+            }),
+            prisma.channel.create({
+              data: {
+                type: ChannelType.VOICE,
+                name: 'Geral',
+                maxParticipants: DEFAULT_VOICE_MAX_PARTICIPANTS,
+                sortIndex: 0,
+                createdById: discordId,
+              },
+            }),
+          ]);
+          invalidateChannelsCache();
+        } else {
+          await prisma.user.upsert({
+            where: { id: discordId },
+            create: { id: discordId, email: `${discordId}@opencall.local`, avatar, username, roles: [] },
+            update: { username, avatar },
+          });
+        }
       } catch (error) {
         console.error('[signIn] Postgres sync error:', error);
         return false;

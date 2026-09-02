@@ -1,0 +1,19 @@
+# Config mínima do LiveKit pro docker-compose de desenvolvimento local (ver
+# ../docker-compose.yml). Não use isso em produção — chave/secret fixos e
+# port range reduzido só pra caber no port mapping do compose.
+port: 7880
+keys:
+  devkey: secret
+rtc:
+  tcp_port: 7881
+  # Range pequeno de propósito: precisa bater 1:1 com o port mapping UDP do
+  # serviço `livekit` no compose. O default do LiveKit é 50000-60000, largo
+  # demais pra mapear porta a porta num container.
+  port_range_start: 50000
+  port_range_end: 50019
+  use_external_ip: false
+  # Testado assumindo browser e `pnpm dev` rodando no host, LiveKit no
+  # container — anuncia loopback como candidato ICE pra bater com o port
+  # mapping (host:porta -> container:mesma porta). Voz/vídeo de outra
+  # máquina na rede não funciona com esse valor.
+  node_ip: 127.0.0.1

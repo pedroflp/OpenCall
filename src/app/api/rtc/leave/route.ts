@@ -1,7 +1,7 @@
 import { NextRequest, NextResponse } from 'next/server';
 import { ServerError } from 'livekit-server-sdk';
 import { getUser } from '@/app/api/auth/[...nextauth]/auth';
-import { getChannel } from '@/lib/rtc/channels';
+import { getVoiceChannel } from '@/lib/rtc/channels';
 import { livekitApi } from '@/lib/rtc/server';
 import { dropParticipant, loadPresence } from '@/lib/rtc/presence';
 import { checkRateLimit } from '@/lib/rtc/rateLimit';
@@ -39,7 +39,7 @@ export async function POST(req: NextRequest) {
   const channelId = (body as { channelId?: unknown } | null)?.channelId;
   if (typeof channelId !== 'string') return err(400, 'INVALID_CHANNEL');
 
-  const channel = getChannel(channelId);
+  const channel = await getVoiceChannel(channelId);
   if (!channel) return err(404, 'CHANNEL_NOT_FOUND');
 
   // Tira do store na hora, sem reler o LiveKit. A versão anterior invalidava o

@@ -1,8 +1,6 @@
-/**
- * Canal único da v1 (ver D1 na RFC-008) — `channel_id` já existe no schema
- * pra não exigir backfill + recriação de índice quando virar multi-canal.
- */
-export const TEXT_CHANNEL_ID = 'global';
+// Constantes puras — importado também por componentes client (MessageComposer,
+// useChatAttachment, useChatUnread), então nada aqui pode puxar Prisma. As
+// funções de leitura de canal de texto (DB-backed) ficam em ./textChannels.
 
 export const MESSAGE_MAX_LENGTH = 2000;
 export const MESSAGES_DEFAULT_PAGE_SIZE = 50;

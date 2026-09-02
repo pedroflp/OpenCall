@@ -1,7 +1,7 @@
 import { NextRequest, NextResponse } from 'next/server';
 import { UserRole } from '@prisma/client';
 import { auth } from '@/app/api/auth/[...nextauth]/auth';
-import { getChannel } from '@/lib/rtc/channels';
+import { getVoiceChannel } from '@/lib/rtc/channels';
 import { livekitApi } from '@/lib/rtc/server';
 import { isRtcEnabled } from '@/lib/rtc/channelsConfig';
 import { prisma } from '@/services/prisma';
@@ -24,7 +24,7 @@ export async function POST(req: NextRequest) {
   const identity = (body as { identity?: unknown } | null)?.identity;
   if (typeof channelId !== 'string' || typeof identity !== 'string') return err(400, 'INVALID_BODY');
 
-  const channel = getChannel(channelId);
+  const channel = await getVoiceChannel(channelId);
   if (!channel) return err(404, 'CHANNEL_NOT_FOUND');
 
   // Um channels_admin sem ser ADMIN completo não pode desconectar um ADMIN —

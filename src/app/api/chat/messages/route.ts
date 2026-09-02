@@ -5,13 +5,13 @@ import { checkRateLimit } from '@/lib/rtc/rateLimit';
 import { MESSAGE_INCLUDE, toMessageDTO } from '@/lib/chat/dto';
 import { encodeCursor, decodeCursor } from '@/lib/chat/cursor';
 import { publishToChannel } from '@/lib/chat/signal';
+import { getTextChannel } from '@/lib/chat/textChannels';
 import {
   MAX_MENTIONS_PER_MESSAGE,
   MESSAGE_MAX_LENGTH,
   MESSAGES_DEFAULT_PAGE_SIZE,
   MESSAGES_MAX_PAGE_SIZE,
   SEND_MESSAGE_RATE_LIMIT,
-  TEXT_CHANNEL_ID,
 } from '@/lib/chat/channel';
 
 export const runtime = 'nodejs';
@@ -25,9 +25,13 @@ export async function GET(req: NextRequest) {
   const user = await getUser();
   if (!user) return err(401, 'UNAUTHENTICATED');
 
+  const url = new URL(req.url);
+  const channelId = url.searchParams.get('channelId');
+  if (!channelId) return err(400, 'MISSING_CHANNEL');
+  if (!(await getTextChannel(channelId))) return err(404, 'CHANNEL_NOT_FOUND');
+
   const me = await prisma.user.findUnique({ where: { id: user.id }, select: { chatBlocked: true } });
 
-  const url = new URL(req.url);
   const rawCursor = url.searchParams.get('cursor');
   const rawLimit = url.searchParams.get('limit');
 
@@ -38,7 +42,7 @@ export async function GET(req: NextRequest) {
 
   const rows = await prisma.textMessage.findMany({
     where: {
-      channelId: TEXT_CHANNEL_ID,
+      channelId,
       deletedAt: null,
       ...(cursor && {
         OR: [{ createdAt: { lt: cursor.createdAt } }, { createdAt: cursor.createdAt, id: { lt: cursor.id } }],
@@ -61,6 +65,7 @@ export async function GET(req: NextRequest) {
 }
 
 interface PostBody {
+  channelId?: unknown;
   content?: unknown;
   image?: unknown;
   replyToId?: unknown;
@@ -112,6 +117,10 @@ export async function POST(req: NextRequest) {
   const body = (await req.json().catch(() => null)) as PostBody | null;
   if (!body) return err(400, 'INVALID_BODY');
 
+  if (typeof body.channelId !== 'string' || !body.channelId) return err(400, 'MISSING_CHANNEL');
+  if (!(await getTextChannel(body.channelId))) return err(404, 'CHANNEL_NOT_FOUND');
+  const channelId = body.channelId;
+
   if (typeof body.clientNonce !== 'string' || !body.clientNonce) return err(400, 'MISSING_CLIENT_NONCE');
 
   const content = typeof body.content === 'string' ? body.content.trim() : null;
@@ -129,7 +138,7 @@ export async function POST(req: NextRequest) {
       where: { id: body.replyToId },
       select: { id: true, channelId: true, deletedAt: true },
     });
-    if (!replyTarget || replyTarget.channelId !== TEXT_CHANNEL_ID || replyTarget.deletedAt) return err(400, 'REPLY_NOT_FOUND');
+    if (!replyTarget || replyTarget.channelId !== channelId || replyTarget.deletedAt) return err(400, 'REPLY_NOT_FOUND');
     replyToId = replyTarget.id;
   }
 
@@ -138,7 +147,7 @@ export async function POST(req: NextRequest) {
 
   const created = await prisma.textMessage.create({
     data: {
-      channelId: TEXT_CHANNEL_ID,
+      channelId,
       authorId: user.id,
       content: content || null,
       imageKey: image?.key,
@@ -155,8 +164,9 @@ export async function POST(req: NextRequest) {
   const clientNonce = body.clientNonce;
 
   // Broadcast pra todos, inclusive o autor — o autor deduplica pelo nonce
-  // contra a mensagem otimista já renderizada (ver useChatMessages).
-  publishToChannel({ type: 'message', message: dto, clientNonce });
+  // contra a mensagem otimista já renderizada (ver useChatMessages). O
+  // client filtra pelo channelId (ver ADR-0006 — sem SSE por canal).
+  publishToChannel({ type: 'message', channelId, message: dto, clientNonce });
 
   return NextResponse.json({ ...dto, clientNonce });
 }

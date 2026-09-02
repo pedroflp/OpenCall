@@ -6,9 +6,7 @@ import type { ChatEvent } from '@/lib/chat/signal';
 import { subscribeToChatConnection, subscribeToChatResync } from '@/lib/chat/realtime';
 import type { ClientMessage, CurrentUser, SendMessageInput, SendMessageResult } from './types';
 
-const MESSAGES_URL = '/api/chat/messages';
 const UPLOADS_URL = '/api/chat/uploads';
-const CLEAR_URL = '/api/chat/messages/clear';
 
 export interface ClearMessagesResult {
   ok: boolean;
@@ -61,7 +59,7 @@ interface MessagesPage {
   blocked: boolean;
 }
 
-export function useChatMessages(currentUser: CurrentUser | null) {
+export function useChatMessages(channelId: string, currentUser: CurrentUser | null) {
   const [messages, setMessages] = useState<ClientMessage[]>([]);
   const [loadingInitial, setLoadingInitial] = useState(true);
   const [loadingOlder, setLoadingOlder] = useState(false);
@@ -70,11 +68,12 @@ export function useChatMessages(currentUser: CurrentUser | null) {
   const nextCursorRef = useRef<string | null>(null);
   const loadingOlderRef = useRef(false);
   const pendingInputsRef = useRef<Map<string, SendMessageInput>>(new Map());
+  const messagesUrl = `/api/chat/messages?channelId=${encodeURIComponent(channelId)}`;
 
   const loadInitial = useCallback(async () => {
     setLoadingInitial(true);
     try {
-      const response = await fetch(MESSAGES_URL);
+      const response = await fetch(messagesUrl);
       if (!response.ok) return;
       const data = (await response.json()) as MessagesPage;
       setMessages(sortByCreatedAt(data.messages.map((message) => ({ ...message, status: 'sent' as const }))));
@@ -84,14 +83,14 @@ export function useChatMessages(currentUser: CurrentUser | null) {
     } finally {
       setLoadingInitial(false);
     }
-  }, []);
+  }, [messagesUrl]);
 
   const loadOlder = useCallback(async () => {
     if (!nextCursorRef.current || loadingOlderRef.current) return;
     loadingOlderRef.current = true;
     setLoadingOlder(true);
     try {
-      const response = await fetch(`${MESSAGES_URL}?cursor=${encodeURIComponent(nextCursorRef.current)}`);
+      const response = await fetch(`${messagesUrl}&cursor=${encodeURIComponent(nextCursorRef.current)}`);
       if (!response.ok) return;
       const data = (await response.json()) as MessagesPage;
       const older = sortByCreatedAt(data.messages.map((message) => ({ ...message, status: 'sent' as const })));
@@ -102,11 +101,11 @@ export function useChatMessages(currentUser: CurrentUser | null) {
       loadingOlderRef.current = false;
       setLoadingOlder(false);
     }
-  }, []);
+  }, [messagesUrl]);
 
   const resync = useCallback(async () => {
     try {
-      const response = await fetch(MESSAGES_URL);
+      const response = await fetch(messagesUrl);
       if (!response.ok) return;
       const data = (await response.json()) as MessagesPage;
       setMessages((prev) => {
@@ -118,27 +117,31 @@ export function useChatMessages(currentUser: CurrentUser | null) {
     } catch {
       // Próxima reconexão tenta de novo.
     }
-  }, []);
+  }, [messagesUrl]);
 
   useEffect(() => {
     void loadInitial();
-    // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, []);
+  }, [loadInitial]);
 
   useEffect(() => {
     return subscribeToChatConnection((event: ChatEvent) => {
+      // Uma única conexão SSE por aba cobre todos os canais (ver realtime.ts)
+      // — cada hook filtra pelo canal que está exibindo.
       if (event.type === 'message') {
+        if (event.channelId !== channelId) return;
         setMessages((prev) => upsertFromServer(prev, event.message, event.clientNonce));
       } else if (event.type === 'deleted') {
+        if (event.channelId !== channelId) return;
         setMessages((prev) => prev.filter((m) => m.id !== event.id));
       } else if (event.type === 'cleared') {
+        if (event.channelId !== channelId) return;
         const clearedIds = new Set(event.ids);
         setMessages((prev) => prev.filter((m) => !clearedIds.has(m.id)));
       } else if (event.type === 'blocked' && event.userId === currentUser?.id) {
         setBlocked(event.blocked);
       }
     });
-  }, [currentUser?.id]);
+  }, [channelId, currentUser?.id]);
 
   useEffect(() => subscribeToChatResync(() => void resync()), [resync]);
 
@@ -150,6 +153,7 @@ export function useChatMessages(currentUser: CurrentUser | null) {
       pendingInputsRef.current.set(clientNonce, input);
       const optimistic: ClientMessage = {
         id: clientNonce,
+        channelId,
         content: input.content,
         // Preview local (blob:) — a key real só existe depois do upload logo
         // abaixo, então ainda não há URL pública pra apontar.
@@ -177,10 +181,11 @@ export function useChatMessages(currentUser: CurrentUser | null) {
           uploadedKey = uploaded.key;
         }
 
-        const response = await fetch(MESSAGES_URL, {
+        const response = await fetch('/api/chat/messages', {
           method: 'POST',
           headers: { 'Content-Type': 'application/json' },
           body: JSON.stringify({
+            channelId,
             content: input.content,
             image: uploadedKey && input.image ? { key: uploadedKey, width: input.image.width, height: input.image.height, bytes: input.image.file.size } : null,
             replyToId: input.replyToId,
@@ -207,7 +212,7 @@ export function useChatMessages(currentUser: CurrentUser | null) {
         return { ok: false, error: 'NETWORK_ERROR' };
       }
     },
-    [currentUser],
+    [channelId, currentUser],
   );
 
   const discardMessage = useCallback((clientNonce: string) => {
@@ -224,10 +229,10 @@ export function useChatMessages(currentUser: CurrentUser | null) {
 
   const clearMessages = useCallback(async (count: number): Promise<ClearMessagesResult> => {
     try {
-      const response = await fetch(CLEAR_URL, {
+      const response = await fetch('/api/chat/messages/clear', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ count }),
+        body: JSON.stringify({ channelId, count }),
       });
       if (!response.ok) {
         const data = (await response.json().catch(() => null)) as { error?: string } | null;
@@ -240,7 +245,7 @@ export function useChatMessages(currentUser: CurrentUser | null) {
     } catch {
       return { ok: false, error: 'NETWORK_ERROR' };
     }
-  }, []);
+  }, [channelId]);
 
   const retryMessage = useCallback(
     (clientNonce: string) => {

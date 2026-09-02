@@ -1,7 +1,7 @@
 import { NextRequest, NextResponse } from 'next/server';
 import { ServerError } from 'livekit-server-sdk';
 import { isCurrentUserAdmin } from '@/app/api/auth/[...nextauth]/auth';
-import { buildRtcConfig, CHANNEL_LIST } from '@/lib/rtc/channels';
+import { buildRtcConfig, getVoiceChannels } from '@/lib/rtc/channels';
 import { encodeRoomMetadata } from '@/lib/rtc/roomMetadata';
 import { parseStreamSettings, type StreamSettings } from '@/lib/rtc/streamQuality';
 import { getStreamSettings, setStreamSettings } from '@/lib/rtc/channelsConfig';
@@ -19,9 +19,10 @@ function err(status: number, code: string) {
 // o push pega a config nova no próximo join.
 async function pushConfigToChannels(settings: StreamSettings): Promise<void> {
   const metadata = encodeRoomMetadata(buildRtcConfig(settings));
+  const channels = await getVoiceChannels();
 
   await Promise.all(
-    CHANNEL_LIST.map(async (channel) => {
+    channels.map(async (channel) => {
       try {
         await livekitApi().room.updateRoomMetadata(channel.id, metadata);
       } catch (error) {

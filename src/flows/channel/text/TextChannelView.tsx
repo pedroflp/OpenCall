@@ -20,16 +20,23 @@ import { useChatAttachment } from './useChatAttachment';
 import type { ClientMessage } from './types';
 
 const TYPING_EXPIRY_MS = 6_000;
-const CHANNEL_NAME = 'Bate-papo';
 
-export default function TextChannelView({ user }: { user: UserAuthDTO }) {
+export default function TextChannelView({
+  channelId,
+  channelName,
+  user,
+}: {
+  channelId: string;
+  channelName: string;
+  user: UserAuthDTO;
+}) {
   const { data: session } = useSession();
   const { toast } = useToast();
   const canDeleteAny = Boolean(session?.user?.isChannelsAdmin);
 
   const currentUser = { id: user.id, username: user.username, avatar: user.avatar };
   const { messages, loadingInitial, loadingOlder, hasMore, blocked, loadOlder, sendMessage, retryMessage, discardMessage, removeMessage, clearMessages } =
-    useChatMessages(currentUser);
+    useChatMessages(channelId, currentUser);
   const { attachment, startAttach, retry: retryAttachment, clear: clearAttachment, release: releaseAttachment } = useChatAttachment();
 
   const [replyTarget, setReplyTarget] = useState<ClientMessage | null>(null);
@@ -43,7 +50,7 @@ export default function TextChannelView({ user }: { user: UserAuthDTO }) {
 
   useEffect(() => {
     return subscribeToChatConnection((event: ChatEvent) => {
-      if (event.type !== 'typing') return;
+      if (event.type !== 'typing' || event.channelId !== channelId) return;
 
       const existing = typingTimeoutsRef.current.get(event.user.id);
       if (existing) clearTimeout(existing);
@@ -58,7 +65,7 @@ export default function TextChannelView({ user }: { user: UserAuthDTO }) {
         }, TYPING_EXPIRY_MS),
       );
     });
-  }, []);
+  }, [channelId]);
 
   useEffect(() => {
     const timeouts = typingTimeoutsRef.current;
@@ -141,10 +148,11 @@ export default function TextChannelView({ user }: { user: UserAuthDTO }) {
           <HugeIcon name="arrow-left-01" size={19} />
         </Link>
         <HugeIcon name="hashtag" size={19} className="shrink-0 text-muted-foreground" />
-        <span className="text-md font-bold">{CHANNEL_NAME}</span>
+        <span className="text-md font-bold">{channelName}</span>
       </div>
 
       <MessageList
+        channelId={channelId}
         messages={messages}
         loadingInitial={loadingInitial}
         loadingOlder={loadingOlder}
@@ -162,6 +170,7 @@ export default function TextChannelView({ user }: { user: UserAuthDTO }) {
       <TypingIndicator users={typingUsers} />
 
       <MessageComposer
+        channelId={channelId}
         onSend={sendMessage}
         replyTarget={replyTarget}
         onCancelReply={() => setReplyTarget(null)}

@@ -4,12 +4,15 @@ import { getToken } from 'next-auth/jwt';
 import { routeNames } from '@/app/route.names';
 
 // A experiência de canais é a própria home agora (ver src/app/(channels)) —
-// cobre "/", "/<channelId>" e "/text" (todo path de 1 segmento só, exceto
-// /admin e /convite, tratados antes de chegar aqui) e as rotas de backend em
-// /api/rtc/* e /api/chat/*. Restritos à mesma flag `canalAccess` (roles.CANAL_ACCESS
-// ou ADMIN no Postgres, resolvida no callback jwt de authOptions.ts).
-const CHANNEL_PAGE_MATCHER = /^\/[^/]*$/;
-const CHANNEL_API_MATCHER = /^\/api\/rtc(\/|$)|^\/api\/chat(\/|$)/;
+// cobre "/", "/<channelId>", "/text" e "/text/<channelId>" (todo path de 1
+// segmento só, exceto /admin e /convite tratados antes de chegar aqui, mais o
+// caso de 2 segmentos do texto) e as rotas de backend em
+// /api/rtc/*, /api/chat/* e /api/channels/* (leitura pública da lista de
+// canais, usada pelos hooks de sidebar). Restritos à mesma flag `canalAccess`
+// (roles.CANAL_ACCESS ou ADMIN no Postgres, resolvida no callback jwt de
+// authOptions.ts).
+const CHANNEL_PAGE_MATCHER = /^\/[^/]*$|^\/text\/[^/]+$/;
+const CHANNEL_API_MATCHER = /^\/api\/rtc(\/|$)|^\/api\/chat(\/|$)|^\/api\/channels(\/|$)/;
 const CHANNEL_ROUTE_MATCHER = new RegExp(`${CHANNEL_PAGE_MATCHER.source}|${CHANNEL_API_MATCHER.source}`);
 
 // Página pública (ver routeNames.INVITE) — não passa pelo gate de canalAccess

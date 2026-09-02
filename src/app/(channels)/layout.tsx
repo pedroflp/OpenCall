@@ -1,3 +1,4 @@
+import { Suspense } from 'react'
 import { ToastProvider } from '@/components/ui/toast'
 import { getUser, isCurrentUserCanalAccess } from '@/app/api/auth/[...nextauth]/auth'
 import { getUserAccountData } from '@/app/api/user/actions'
@@ -6,19 +7,8 @@ import { VoiceChannelStageSkeleton } from '@/components/VoiceDock/VoiceChannelSt
 import PlatformUsersSidebar from '@/components/PlatformUsersSidebar'
 import { PlatformUsersSidebarSkeleton } from '@/components/PlatformUsersSidebar/Skeleton'
 import InstallAppButton from '@/components/InstallAppButton'
-import { HugeIcon } from '@/components/HugeIcon'
-
-/** Autenticado, mas sem a role canalAccess liberada — mesmo texto que a antiga home mostrava, só que agora dentro do palco central em vez de uma página própria. */
-function NoCanalAccessMessage() {
-  return (
-    <div className="flex h-full flex-col items-center justify-center gap-3 p-10 text-center">
-      <HugeIcon name="lock-01" size={48} className="text-muted-foreground" />
-      <p className="max-w-sm text-sm text-muted-foreground">
-        Sua conta ainda não tem acesso aos canais. Peça pra um admin liberar em /admin/channels.
-      </p>
-    </div>
-  );
-}
+import LoginPopover from '@/components/LoginPopover'
+import NoAccessPopover from '@/components/NoAccessPopover'
 
 /**
  * Layout raiz da experiência de canais — hoje é a própria home do app, sem
@@ -26,16 +16,24 @@ function NoCanalAccessMessage() {
  * cobre navegação + login no próprio rodapé). Resolve 3 estados aqui, antes
  * de decidir se `children` chega a renderizar:
  *
- * 1. Sem sessão: sidebar real (rodapé mostra QR/Discord), palco e lista de
- *    usuários em skeleton — não há canal real pra buscar ainda.
- * 2. Sessão sem canalAccess: sidebar e lista de usuários reais, palco com o
- *    aviso de acesso pendente.
+ * 1. Sem sessão de verdade (sem cookie, ou cookie válido mas sem linha no
+ *    Postgres — ver nota em `user` abaixo): sidebar real (rodapé mostra
+ *    QR/Discord), palco e lista de usuários em skeleton, com o LoginPopover
+ *    por cima (não fecha: não há nada de público atrás dele).
+ * 2. Sessão sem canalAccess: sidebar e lista de usuários reais, palco em
+ *    skeleton, com o NoAccessPopover por cima (código de convite).
  * 3. Acesso liberado: experiência completa, `children` renderiza a página.
  */
 export default async function ChannelsLayout({ children }: { children: React.ReactNode }) {
   const authUser = await getUser();
-  const canalAccess = authUser ? await isCurrentUserCanalAccess() : false;
+  // `authUser` (getUser) só lê o JWT — um cookie de sessão válido sobrevive a
+  // um reset de banco (dev) ou a um usuário apagado (prod) mesmo sem conta de
+  // verdade. `user` (getUserAccountData) bate no Postgres e é quem decide se
+  // a sessão é "real" pro resto deste layout — mesmo motivo do fix em
+  // VoiceChannelSidebar (authenticated exige user !== null, não só o status
+  // do NextAuth).
   const user = authUser ? await getUserAccountData() : null;
+  const canalAccess = user ? await isCurrentUserCanalAccess() : false;
 
   return (
     <ToastProvider>
@@ -44,13 +42,20 @@ export default async function ChannelsLayout({ children }: { children: React.Rea
           <div className="dark flex h-full w-full overflow-hidden bg-card text-foreground">
             <VoiceChannelSidebar user={user} />
             <div className="relative m-auto h-[calc(100vh-1rem)] w-full flex-1 overflow-hidden rounded-2xl">
-              {!authUser ? <VoiceChannelStageSkeleton /> : canalAccess ? children : <NoCanalAccessMessage />}
+              {user && canalAccess ? children : <VoiceChannelStageSkeleton />}
             </div>
-            {authUser && canalAccess ? <PlatformUsersSidebar /> : <PlatformUsersSidebarSkeleton />}
+            {user && canalAccess ? <PlatformUsersSidebar /> : <PlatformUsersSidebarSkeleton />}
             {user && !user.isMobileDownloaded && <InstallAppButton />}
           </div>
         </main>
       </main>
+      {!user && <LoginPopover />}
+      {user && !canalAccess && (
+        // useSearchParams (auto-resgate por ?convite=) exige boundary de Suspense.
+        <Suspense fallback={null}>
+          <NoAccessPopover />
+        </Suspense>
+      )}
     </ToastProvider>
   )
 }
