@@ -1,6 +1,6 @@
 # RFC: Migração das atualizações do TDC para o OpenCall
 
-**Status**: Proposto
+**Status**: Executada — as quatro frentes de §5 estão em `feat/migracao-tdc` (commits 3b667c4, f3d8667, 23bf74c, 976809a, 821b554). O §9 abaixo é o plano original; o que a execução mudou está anotado em cada frente.
 **Decisões relacionadas**: [ADR-0007](./adr/0007-opencall-e-a-base-da-migracao.md) (Aceita), [ADR-0008](./adr/0008-liquid-glass-fica-no-opencall-plus.md) (Aceita), [ADR-0009](./adr/0009-noise-gate-proprio-substitui-krisp.md) (Aceita), [ADR-0010](./adr/0010-opencall-plus-e-repo-separado.md) (Aceita)
 
 ## 1. Contexto
@@ -215,12 +215,12 @@ Repositório separado, consumindo o deploy do OpenCall (ADR-0010).
 
 ## 9. Plano de rollout
 
-0. **Commitar os canais dinâmicos** (73 arquivos do working tree) — pré-requisito, ver §4.5.
-1. **Frente A** — máscara de perfil + `SettingsDialog` reduzido. Migration + camada de identidade + 3 abas.
-2. **Frente B** — chat rico. Depende do `channelsIdentity` da frente A no `dto.ts`.
-3. **Frente C** — noise gate. Remove o Krisp, faz cirurgia no `VoiceProvider`.
-4. **Frente D** — correções web + patch do `livekit-client`.
-5. **Passe de branding** — nenhum arquivo portado deve chegar com string "TDC"/"TDCall" visível na interface.
+0. ~~**Commitar os canais dinâmicos**~~ — feito em `ba86b50` (126 arquivos), junto com convites por link, pareamento de dispositivo e o docker-compose que também estavam soltos no working tree.
+1. ~~**Frente A**~~ — feita. O `SettingsDialog` saiu com **duas** abas, não três: Áudio e vídeo foi junto com a frente C, que é quem traz os campos que a justificam.
+2. ~~**Frente B**~~ — feita. A dependência do `channelsIdentity` no `dto.ts` se confirmou: as duas frentes tocam o mesmo arquivo, e fazê-las em ordem evitou o conflito.
+3. ~~**Frente C**~~ — feita. O `MicSettingsFields` (534L) do `tdc` **não** foi portado: está entrelaçado com push to talk em cinco pontos, e adaptar o popover que o OpenCall já tinha custou menos e arriscou menos. Áudio e vídeo virou aba aqui.
+4. ~~**Frente D**~~ — feita. A correção do áudio de sistema trouxe junto o `windowAudio`, que precisa do mesmo patch do `livekit-client` — os dois hunks entraram no mesmo arquivo de patch.
+5. ~~**Passe de branding**~~ — feito junto da frente D.
 
 Cada frente é um PR próprio. As frentes A e B não podem ser paralelizadas (§8).
 
