@@ -1,5 +1,8 @@
 'use client';
 
+import { useEffect, useState } from 'react';
+import { createPortal } from 'react-dom';
+
 import Image from 'next/image';
 import { HugeIcon } from '@/components/HugeIcon';
 
@@ -9,11 +12,30 @@ interface LightboxImage {
   height: number;
 }
 
-/** Overlay simples sobre a lista — fechar não mexe no scroll de baixo, então a posição é preservada de graça (ver A10 da RFC-008). */
+/**
+ * Vai pro body via portal: dentro da coluna do canal o overlay ficava preso ao
+ * `overflow-hidden` do container e passava por baixo das sidebars (canais e
+ * atividade), que são irmãs na mesma stacking order. Fechar não mexe no scroll
+ * da lista, então a posição continua preservada de graça (ver A10 da RFC-008).
+ */
 export default function ImageLightbox({ image, onClose }: { image: LightboxImage; onClose: () => void }) {
-  return (
+  const [mounted, setMounted] = useState(false);
+
+  useEffect(() => setMounted(true), []);
+
+  useEffect(() => {
+    const onKeyDown = (event: KeyboardEvent) => {
+      if (event.key === 'Escape') onClose();
+    };
+    window.addEventListener('keydown', onKeyDown);
+    return () => window.removeEventListener('keydown', onKeyDown);
+  }, [onClose]);
+
+  if (!mounted) return null;
+
+  return createPortal(
     <div
-      className="absolute inset-0 z-30 flex items-center justify-center bg-background/90 backdrop-blur-sm"
+      className="fixed inset-0 z-[200] flex items-center justify-center bg-background/90 backdrop-blur-sm"
       onClick={onClose}
       role="dialog"
       aria-modal="true"
@@ -37,6 +59,7 @@ export default function ImageLightbox({ image, onClose }: { image: LightboxImage
           unoptimized
         />
       </div>
-    </div>
+    </div>,
+    document.body,
   );
 }

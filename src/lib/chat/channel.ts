@@ -30,3 +30,8 @@ export function isAllowedImageContentType(contentType: string): boolean {
 export const SEND_MESSAGE_RATE_LIMIT = { windowMs: 10_000, max: 10 };
 export const UPLOAD_RATE_LIMIT = { windowMs: 60_000, max: 20 };
 export const TYPING_RATE_LIMIT = { windowMs: 2_000, max: 1 };
+
+/** Busca de GIF sai a cada tecla (com debounce) — teto mais folgado que o de envio. */
+export const GIPHY_SEARCH_RATE_LIMIT = { windowMs: 10_000, max: 20 };
+/** Um oEmbed por link do YouTube citado — teto folgado, mesma faixa da busca de GIF. */
+export const YOUTUBE_OEMBED_RATE_LIMIT = { windowMs: 10_000, max: 20 };

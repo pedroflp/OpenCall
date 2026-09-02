@@ -31,5 +31,15 @@ export default async function TextChannelPage({ channelId }: { channelId?: strin
     </main>
   );
 
-  return <TextChannelView channelId={channel.id} channelName={channel.name} user={authUser} />;
+  return (
+    <TextChannelView
+      channelId={channel.id}
+      channelName={channel.name}
+      user={authUser}
+      // Lido no servidor: a chave do GIPHY é secreta e nunca chega no browser
+      // (ver lib/chat/giphy.ts). Sem ela o botão de GIF some — quem
+      // self-hospeda não precisa de conta na Giphy pra ter chat.
+      gifPickerEnabled={Boolean(process.env.GIPHY_API_KEY)}
+    />
+  );
 }

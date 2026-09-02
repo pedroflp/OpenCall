@@ -1,53 +1,19 @@
 'use client';
 
-import { Fragment, useState } from 'react';
+import { useState } from 'react';
 import Image from 'next/image';
 import { format } from 'date-fns';
 import { ptBR } from 'date-fns/locale';
 import { Popover, PopoverContent, PopoverTrigger } from '@/components/ui/popover';
+import { Tooltip, TooltipContent, TooltipTrigger } from '@/components/ui/tooltip';
 import { Avatar, AvatarImage, AvatarFallback } from '@/components/ui/avatar';
 import AvatarCircleSmall from '@/components/Avatar';
 import { cn } from '@/lib/utils';
 import { avatarColorFor } from './avatarColor';
 import { HugeIcon } from '@/components/HugeIcon';
+import { MessageContent } from './messageContent';
 import type { ClientMessage } from './types';
-import type { MessageDTO } from '@/lib/chat/dto';
 
-function escapeRegExp(value: string): string {
-  return value.replace(/[.*+?^${}()|[\]\\]/g, '\\$&');
-}
-
-function MentionChip({ mention }: { mention: MessageDTO['mentions'][number] }) {
-  return (
-    <span className="mx-0.5 inline-flex translate-y-[3px] items-center gap-1 rounded-full bg-primary/15 px-1.5 py-0.5 align-baseline text-[13px] font-semibold text-primary">
-      <AvatarCircleSmall image={mention.avatar} fallback={mention.username.slice(0, 2)} size={4} />
-      {mention.username}
-    </span>
-  );
-}
-
-/** Troca cada "@username" mencionado por um chip com avatar — o resto do texto continua como string simples. */
-function renderMessageContent(content: string, mentions: MessageDTO['mentions']) {
-  if (mentions.length === 0) return content;
-
-  const byUsername = new Map(mentions.map((mention) => [mention.username, mention]));
-  const pattern = new RegExp(`@(${mentions.map((mention) => escapeRegExp(mention.username)).join('|')})\\b`, 'g');
-
-  const parts: React.ReactNode[] = [];
-  let lastIndex = 0;
-  let match: RegExpExecArray | null;
-  let key = 0;
-
-  while ((match = pattern.exec(content))) {
-    if (match.index > lastIndex) parts.push(content.slice(lastIndex, match.index));
-    const mention = byUsername.get(match[1]);
-    if (mention) parts.push(<MentionChip key={key++} mention={mention} />);
-    lastIndex = match.index + match[0].length;
-  }
-  if (lastIndex < content.length) parts.push(content.slice(lastIndex));
-
-  return <Fragment>{parts}</Fragment>;
-}
 
 function AvatarCircle({ userId, username, avatar }: { userId: string; username: string; avatar: string }) {
   return (
@@ -92,14 +58,16 @@ function ReplyPreviewStrip({ replyTo, onClick }: { replyTo: NonNullable<ClientMe
       <HugeIcon name="arrow-turn-backward" size={16} className="shrink-0" />
       <AvatarCircleSmall image={replyTo.authorAvatar} fallback={replyTo.authorUsername.slice(0, 2)} size={4} className="shrink-0" />
       <span className="shrink-0 text-[12.5px] font-semibold text-foreground/75">{replyTo.authorUsername}</span>
-      <span className="flex min-w-0 max-w-[280px] items-center gap-1 truncate text-[12.5px] text-muted-foreground">
+      {/* O truncate precisa ficar no elemento de texto, não no flex container: em flex o text-overflow não
+          se aplica ao conteúdo anônimo e a citação termina cortada no seco, sem reticências. */}
+      <span className="flex min-w-0 max-w-[280px] items-center gap-1 text-[12.5px] text-muted-foreground">
         {replyTo.hasImage ? (
           <>
             <HugeIcon name="image-01" size={12} className="shrink-0" />
-            Imagem
+            <span className="shrink-0">Imagem</span>
           </>
         ) : (
-          replyTo.excerpt
+          <span className="min-w-0 truncate">{replyTo.excerpt}</span>
         )}
       </span>
     </button>
@@ -140,7 +108,8 @@ function ImageBubble({ image, hasText, onClick }: { image: NonNullable<ClientMes
   );
 }
 
-function MessageActionsMenu({
+/** Responder fica atalho aqui fora e continua também dentro do popover — quem já conhece o menu não perde o caminho. */
+function MessageActions({
   canDelete,
   onReply,
   onDelete,
@@ -152,17 +121,35 @@ function MessageActionsMenu({
   const [open, setOpen] = useState(false);
 
   return (
-    <Popover open={open} onOpenChange={setOpen}>
-      <PopoverTrigger asChild>
-        <button
-          type="button"
-          aria-label="Mais opções"
-          className="absolute right-1.5 top-0.5 flex size-[26px] items-center justify-center rounded-md text-muted-foreground hover:bg-muted/60 hover:text-foreground"
-        >
-          <HugeIcon name="more-vertical" size={16} />
-        </button>
-      </PopoverTrigger>
-      <PopoverContent align="end" className="w-[220px] border-border bg-popover p-1 shadow-2xl">
+    <div className="absolute right-1.5 top-0.5 flex items-center gap-0.5">
+      <Tooltip>
+        <TooltipTrigger asChild>
+          <button
+            type="button"
+            aria-label="Responder"
+            onClick={onReply}
+            className="flex size-[26px] items-center justify-center rounded-md text-muted-foreground hover:bg-muted/60 hover:text-foreground"
+          >
+            <HugeIcon name="arrow-turn-backward" size={16} />
+          </button>
+        </TooltipTrigger>
+        <TooltipContent>Responder</TooltipContent>
+      </Tooltip>
+
+      <Tooltip>
+        <Popover open={open} onOpenChange={setOpen}>
+          <PopoverTrigger asChild>
+            <TooltipTrigger asChild>
+              <button
+                type="button"
+                aria-label="Mais opções"
+                className="flex size-[26px] items-center justify-center rounded-md text-muted-foreground hover:bg-muted/60 hover:text-foreground"
+              >
+                <HugeIcon name="more-vertical" size={16} />
+              </button>
+            </TooltipTrigger>
+          </PopoverTrigger>
+          <PopoverContent align="end" className="w-[220px] border-border bg-popover p-1 shadow-2xl">
         <p className="px-2.5 py-1.5 text-[11px] font-semibold uppercase tracking-wide text-muted-foreground">Ações da mensagem</p>
         <button
           type="button"
@@ -188,8 +175,11 @@ function MessageActionsMenu({
             Excluir mensagem
           </button>
         )}
-      </PopoverContent>
-    </Popover>
+          </PopoverContent>
+        </Popover>
+        <TooltipContent>Mais opções</TooltipContent>
+      </Tooltip>
+    </div>
   );
 }
 
@@ -270,16 +260,12 @@ export default function MessageItem({
           <UnavailableReplyStrip />
         ) : null}
 
-        {message.content && (
-          <p className="whitespace-pre-wrap break-words text-[14.5px] leading-[1.45] text-foreground/90">
-            {renderMessageContent(message.content, message.mentions)}
-          </p>
-        )}
+        {message.content && <MessageContent content={message.content} mentions={message.mentions} />}
         {message.image && <ImageBubble image={message.image} hasText={Boolean(message.content)} onClick={() => onImageClick(message.image!)} />}
         {isError && <MessageStatusBar onRetry={() => onRetry(message)} onDiscard={() => onDiscard(message)} />}
       </div>
 
-      {isSent && <MessageActionsMenu canDelete={canDelete} onReply={() => onReply(message)} onDelete={() => onDelete(message)} />}
+      {isSent && <MessageActions canDelete={canDelete} onReply={() => onReply(message)} onDelete={() => onDelete(message)} />}
     </div>
   );
 }

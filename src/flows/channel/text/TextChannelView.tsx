@@ -22,10 +22,13 @@ import type { ClientMessage } from './types';
 const TYPING_EXPIRY_MS = 6_000;
 
 export default function TextChannelView({
+  gifPickerEnabled,
   channelId,
   channelName,
   user,
 }: {
+  /** Vem do servidor (ver flows/channel/text/index.tsx): sem GIPHY_API_KEY o botão de GIF não aparece. */
+  gifPickerEnabled: boolean;
   channelId: string;
   channelName: string;
   user: UserAuthDTO;
@@ -170,6 +173,7 @@ export default function TextChannelView({
       <TypingIndicator users={typingUsers} />
 
       <MessageComposer
+          gifPickerEnabled={gifPickerEnabled}
         channelId={channelId}
         onSend={sendMessage}
         replyTarget={replyTarget}

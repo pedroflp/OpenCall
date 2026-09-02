@@ -1,7 +1,8 @@
 import type { MetadataRoute } from 'next';
 
-// TODO(branding): troque nome/ícones pelos da sua instalação — ver
-// public/README.md.
+// Ícones gerados a partir de public/logo.png, o ícone oficial do OpenCall
+// (ver public/README.md). Numa instalação com marca própria, troque
+// nome/ícones aqui.
 export default function manifest(): MetadataRoute.Manifest {
   return {
     name: 'OpenCall',

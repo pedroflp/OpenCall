@@ -14,10 +14,9 @@ import "./globals.css";
 
 const primaryFont = Bricolage_Grotesque({ subsets: ["latin"] });
 
-// TODO(branding): troque título/descrição/ícones pelos da sua instalação —
-// ver public/README.md. Os paths de ícone abaixo ainda apontam pra assets que
-// não existem neste repo de propósito (são marca própria de cada instalação,
-// não fazem parte do OpenCall).
+// Ícones gerados a partir de public/logo.png, o ícone oficial do OpenCall
+// (ver public/README.md). Numa instalação com marca própria, troque
+// título/descrição/ícones aqui.
 export const metadata: Metadata = {
   title: "OpenCall",
   description: "Voz, vídeo e chat de comunidade — self-hosted.",

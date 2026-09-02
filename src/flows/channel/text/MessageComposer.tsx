@@ -2,10 +2,13 @@
 
 import { useCallback, useEffect, useMemo, useRef, useState } from 'react';
 import { Popover, PopoverAnchor, PopoverContent } from '@/components/ui/popover';
+import EmojiPickerPopover from '@/components/EmojiPicker/EmojiPickerPopover';
+import GifPickerPopover from './GifPickerPopover';
 import { Tooltip, TooltipContent, TooltipProvider, TooltipTrigger } from '@/components/ui/tooltip';
 import Avatar from '@/components/Avatar';
 import { cn } from '@/lib/utils';
 import { CLEAR_COMMAND_MAX_COUNT, MESSAGE_MAX_LENGTH } from '@/lib/chat/channel';
+import { replyExcerpt } from '@/lib/chat/replyExcerpt';
 import { usePlatformPresenceUsers } from '@/hooks/usePlatformPresenceUsers';
 import type { PlatformPresenceUser } from '@/lib/presence/platformPresence';
 import { HugeIcon } from '@/components/HugeIcon';
@@ -61,6 +64,22 @@ function escapeRegExp(value: string): string {
   return value.replace(/[.*+?^${}()|[\]\\]/g, '\\$&');
 }
 
+/** Preview otimista da citação — o servidor recalcula o mesmo excerpt em toMessageDTO. */
+function replyPreviewFor(target: ClientMessage | null): SendMessageInput['replyToPreview'] {
+  if (!target) return null;
+  return {
+    id: target.id,
+    // Mesmo id que o DTO do servidor manda — a citação otimista precisa dele
+    // pra também reagir ao evento `profile`, senão ela é a única linha da tela
+    // com o nome antigo.
+    authorId: target.author.id,
+    authorUsername: target.author.username,
+    authorAvatar: target.author.avatar,
+    excerpt: replyExcerpt(target.content),
+    hasImage: Boolean(target.image),
+  };
+}
+
 function ReplyBar({ target, onCancel }: { target: ClientMessage; onCancel: () => void }) {
   return (
     <div className="flex items-center gap-2 border-b border-border/40 px-3.5 py-2 text-xs">
@@ -68,14 +87,14 @@ function ReplyBar({ target, onCancel }: { target: ClientMessage; onCancel: () =>
       <span className="text-muted-foreground">
         Respondendo <span className="font-semibold text-foreground">{target.author.username}</span>
       </span>
-      <span className="flex min-w-0 flex-1 items-center gap-1 truncate text-muted-foreground">
+      <span className="flex min-w-0 flex-1 items-center gap-1 text-muted-foreground">
         {target.image ? (
           <>
             <HugeIcon name="image-01" size={12} className="shrink-0" />
-            Imagem
+            <span className="shrink-0">Imagem</span>
           </>
         ) : (
-          target.content
+          <span className="min-w-0 truncate">{target.content}</span>
         )}
       </span>
       <button type="button" onClick={onCancel} aria-label="Cancelar resposta" className="shrink-0 text-muted-foreground hover:text-foreground">
@@ -116,6 +135,7 @@ export default function MessageComposer({
   replyTarget,
   onCancelReply,
   attachment,
+  gifPickerEnabled,
   onAttachFile,
   onRemoveAttachment,
   onRetryAttachment,
@@ -130,6 +150,8 @@ export default function MessageComposer({
   replyTarget: ClientMessage | null;
   onCancelReply: () => void;
   attachment: PendingAttachment | null;
+  /** false quando o servidor não tem GIPHY_API_KEY — o botão de GIF some em vez de abrir um popover que só sabe falhar. */
+  gifPickerEnabled: boolean;
   onAttachFile: (file: File) => void;
   onRemoveAttachment: () => void;
   onRetryAttachment: () => void;
@@ -266,19 +288,7 @@ export default function MessageComposer({
       content,
       image,
       replyToId: replyTarget?.id ?? null,
-      replyToPreview: replyTarget
-        ? {
-            id: replyTarget.id,
-            // Mesmo id que o DTO do servidor manda (ver toMessageDTO) — a
-            // citação otimista precisa dele pra também reagir ao evento
-            // `profile`, senão ela é a única linha da tela com o nome antigo.
-            authorId: replyTarget.author.id,
-            authorUsername: replyTarget.author.username,
-            authorAvatar: replyTarget.author.avatar,
-            excerpt: (replyTarget.content ?? '').slice(0, 120),
-            hasImage: Boolean(replyTarget.image),
-          }
-        : null,
+      replyToPreview: replyPreviewFor(replyTarget),
       mentions,
     });
   }, [
@@ -296,6 +306,38 @@ export default function MessageComposer({
     onCancelReply,
     resizeTextarea,
   ]);
+
+  /** GIF escolhido no popover vai direto como mensagem — a URL é o conteúdo, e o render reconhece e mostra o GIF (ver gifUrl.ts). */
+  const handleSendGif = useCallback(
+    async (url: string) => {
+      const target = replyTarget;
+      onCancelReply();
+      await onSend({ content: url, image: null, replyToId: target?.id ?? null, replyToPreview: replyPreviewFor(target), mentions: [] });
+    },
+    [replyTarget, onCancelReply, onSend],
+  );
+
+  /** Emoji escolhido no picker vai pro texto, na posição do cursor — igual a inserir um caractere digitado. */
+  const insertEmoji = useCallback(
+    (emoji: string) => {
+      const before = text.slice(0, caretPosition);
+      const after = text.slice(caretPosition);
+      const nextText = `${before}${emoji}${after}`.slice(0, MESSAGE_MAX_LENGTH);
+      const caret = Math.min(before.length + emoji.length, nextText.length);
+
+      setText(nextText);
+      setCaretPosition(caret);
+
+      requestAnimationFrame(() => {
+        resizeTextarea();
+        const el = textareaRef.current;
+        if (!el) return;
+        el.focus();
+        el.setSelectionRange(caret, caret);
+      });
+    },
+    [text, caretPosition, resizeTextarea],
+  );
 
   const selectCommand = useCallback((command: SlashCommand) => {
     const nextText = `/${command.name} `;
@@ -463,6 +505,18 @@ export default function MessageComposer({
                   )}
                 />
               </div>
+
+              <EmojiPickerPopover onSelect={insertEmoji} side="top" align="end">
+                <button
+                  type="button"
+                  aria-label="Inserir emoji"
+                  className="shrink-0 text-muted-foreground opacity-70 transition-opacity hover:opacity-100"
+                >
+                  <HugeIcon name="smile" size={20} />
+                </button>
+              </EmojiPickerPopover>
+
+              {gifPickerEnabled && <GifPickerPopover onPick={(url) => void handleSendGif(url)} />}
 
               {canSend && (
                 <TooltipProvider delayDuration={300}>

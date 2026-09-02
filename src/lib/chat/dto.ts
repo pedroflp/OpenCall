@@ -1,8 +1,7 @@
 import { Prisma } from '@prisma/client';
 import { publicImageUrl } from '@/lib/chat/imageUrl';
 import { channelsIdentity, PROFILE_MASK_SELECT } from '@/lib/profile/identity';
-
-const REPLY_EXCERPT_LENGTH = 120;
+import { replyExcerpt } from '@/lib/chat/replyExcerpt';
 
 /**
  * Autor, autor da citação e mencionados carregam os campos da MÁSCARA DE
@@ -59,7 +58,7 @@ export function toMessageDTO(row: MessageWithRelations): MessageDTO {
           authorId: row.replyTo.author.id,
           authorUsername: replyAuthor.username,
           authorAvatar: replyAuthor.avatar,
-          excerpt: (row.replyTo.content ?? '').slice(0, REPLY_EXCERPT_LENGTH),
+          excerpt: replyExcerpt(row.replyTo.content),
           hasImage: Boolean(row.replyTo.imageKey),
         }
       : null;
