@@ -10,9 +10,10 @@ import { NOISE_GATE_MAX_DB, NOISE_GATE_MIN_DB } from '@/lib/rtc/noiseSuppression
 import { useVoice } from '@/providers/VoiceProvider';
 
 /**
- * Entrada, saída, câmera e sensibilidade do microfone — os mesmos controles do
- * VoiceDeviceSettingsPopover, que continua existindo como atalho no rodapé da
- * sidebar. Aqui eles cabem sem espremer.
+ * Entrada, saída, câmera e sensibilidade do microfone. Vieram do popover da
+ * engrenagem no rodapé da sidebar, que empilhava tudo numa coluna só — já
+ * estava alto demais e não tinha pra onde crescer. A engrenagem agora abre
+ * esta aba (ver UserMenuPopover).
  *
  * `active` desliga a enumeração de dispositivos e o preview de câmera quando a
  * aba não está à vista: abrir a câmera atrás de outra aba acende o LED por

@@ -14,8 +14,8 @@ import "./globals.css";
 
 const primaryFont = Bricolage_Grotesque({ subsets: ["latin"] });
 
-// Ícones gerados a partir de public/logo.png, o ícone oficial do OpenCall
-// (ver public/README.md). Numa instalação com marca própria, troque
+// Ícones gerados a partir de public/opencall-logo.png, o ícone oficial do
+// OpenCall (ver public/README.md). Numa instalação com marca própria, troque
 // título/descrição/ícones aqui.
 export const metadata: Metadata = {
   title: "OpenCall",

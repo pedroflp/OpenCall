@@ -1,5 +1,6 @@
 'use client';
 
+import { useState } from 'react';
 import type { UserDTO } from '@/app/api/user/types';
 import { useSelfIdentity } from '@/hooks/useSelfIdentity';
 import Avatar from '@/components/Avatar';
@@ -13,7 +14,8 @@ import { cn } from '@/lib/utils';
 import CameraDeviceButton from './CameraDeviceButton';
 import ConnectionQualityIndicator from './ConnectionQualityIndicator';
 import MicSettingsPopover from './MicSettingsPopover';
-import VoiceDeviceSettingsPopover from './VoiceDeviceSettingsPopover';
+import SettingsDialog from '@/components/SettingsDialog';
+import UserMenuPopover from './UserMenuPopover';
 
 function SelfButton({
   label,
@@ -72,6 +74,16 @@ export default function SelfControlCard({ channelName, user }: { channelName: st
   // Server Component e só renova no router.refresh() — o evento `profile` chega
   // antes (ver useSelfIdentity).
   const identity = useSelfIdentity(user);
+  // Mesmas entradas do rodapé desconectado: quem entra num canal não pode
+  // perder o caminho pras Configurações (era o que acontecia — este cartão
+  // substitui o rodapé inteiro enquanto a chamada está de pé).
+  const [settingsOpen, setSettingsOpen] = useState(false);
+  const [settingsTab, setSettingsTab] = useState<'profile' | 'audio-video'>('profile');
+
+  function openSettings(tab: 'profile' | 'audio-video') {
+    setSettingsTab(tab);
+    setSettingsOpen(true);
+  }
   const name = identity?.username || 'Você';
 
   return (
@@ -204,10 +216,20 @@ export default function SelfControlCard({ channelName, user }: { channelName: st
         </div>
 
         <div className="flex items-center gap-2">
-          <div className="relative shrink-0">
-            <Avatar image={identity?.avatar} fallback={name.slice(0, 2)} size={10} />
-            <span className="absolute -bottom-0.5 -right-0.5 size-2.5 rounded-full bg-green-500 ring-2 ring-background" aria-hidden />
-          </div>
+          <Tooltip>
+            <TooltipTrigger asChild>
+              <button
+                type="button"
+                aria-label="Editar perfil"
+                onClick={() => openSettings('profile')}
+                className="relative shrink-0 rounded-full transition-opacity hover:opacity-80"
+              >
+                <Avatar image={identity?.avatar} fallback={name.slice(0, 2)} size={10} />
+                <span className="absolute -bottom-0.5 -right-0.5 size-2.5 rounded-full bg-green-500 ring-2 ring-background" aria-hidden />
+              </button>
+            </TooltipTrigger>
+            <TooltipContent>Editar perfil</TooltipContent>
+          </Tooltip>
           <div className="min-w-0 flex-1">
             <div className="truncate text-[13.5px] font-bold text-green-500">{name}</div>
             <div className="text-[11.5px] text-muted-foreground">Em voz</div>
@@ -223,10 +245,10 @@ export default function SelfControlCard({ channelName, user }: { channelName: st
             <SelfButton label={deafened ? 'Voltar a ouvir' : 'Silenciar tudo'} active={deafened} onClick={() => toggleDeafen()}>
               <HugeIcon name={deafened ? 'headphone-mute' : 'headphones'} size={19} />
             </SelfButton>
-            <VoiceDeviceSettingsPopover
-              tooltip="Configurações de dispositivos"
+            <UserMenuPopover
+              onOpenSettings={() => openSettings('audio-video')}
               trigger={
-                <Button type="button" size="icon" variant="secondary" aria-label="Dispositivos de áudio">
+                <Button type="button" size="icon" variant="secondary" aria-label="Configurações">
                   <HugeIcon name="settings-01" size={19} />
                 </Button>
               }
@@ -234,6 +256,8 @@ export default function SelfControlCard({ channelName, user }: { channelName: st
           </div>
         </div>
       </div>
+
+      <SettingsDialog open={settingsOpen} onOpenChange={setSettingsOpen} user={user} initialTab={settingsTab} />
     </div>
   );
 }

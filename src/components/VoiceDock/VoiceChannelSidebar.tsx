@@ -40,7 +40,7 @@ import { useProfileBroadcast } from '@/hooks/useProfileBroadcast';
 import ParticipantTile from './ParticipantTile';
 import PreviewParticipantsList from './PreviewParticipantsList';
 import SelfControlCard from './SelfControlCard';
-import VoiceDeviceSettingsPopover from './VoiceDeviceSettingsPopover';
+import UserMenuPopover from './UserMenuPopover';
 
 /**
  * Popover de clique secundário num canal (só pra channels_admin), com editar
@@ -739,7 +739,13 @@ function SidebarFooter({
   joining: boolean;
 }) {
   const [settingsOpen, setSettingsOpen] = useState(false);
+  const [settingsTab, setSettingsTab] = useState<'profile' | 'audio-video'>('profile');
   const identity = useSelfIdentity(user);
+
+  function openSettings(tab: 'profile' | 'audio-video') {
+    setSettingsTab(tab);
+    setSettingsOpen(true);
+  }
 
   if (!authenticated) {
     return (
@@ -769,7 +775,7 @@ function SidebarFooter({
               type="button"
               aria-label="Editar perfil"
               className="rounded-full transition-opacity hover:opacity-80"
-              onClick={() => setSettingsOpen(true)}
+              onClick={() => openSettings('profile')}
             >
               <Avatar image={identity?.avatar} fallback={name.slice(0, 2)} size={10} />
             </button>
@@ -783,17 +789,17 @@ function SidebarFooter({
             {joining && 'Conectando…'}
           </div>
         </div>
-        <VoiceDeviceSettingsPopover
-          tooltip="Configurações de dispositivos"
+        <UserMenuPopover
+          onOpenSettings={() => openSettings('audio-video')}
           trigger={
-            <Button type="button" size="icon" variant="secondary" aria-label="Dispositivos de áudio">
+            <Button type="button" size="icon" variant="secondary" aria-label="Configurações">
               <HugeIcon name="settings-01" size={19} />
             </Button>
           }
         />
       </div>
 
-      <SettingsDialog open={settingsOpen} onOpenChange={setSettingsOpen} user={user} initialTab="profile" />
+      <SettingsDialog open={settingsOpen} onOpenChange={setSettingsOpen} user={user} initialTab={settingsTab} />
     </div>
   );
 }

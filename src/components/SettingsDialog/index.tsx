@@ -22,8 +22,9 @@ import ProfileTab from './ProfileTab';
  * TabsContent inativo por padrão, mas `active` deixa a intenção explícita e
  * sobrevive a um `forceMount` no futuro.
  *
- * O `VoiceDeviceSettingsPopover` do rodapé da sidebar continua existindo como
- * atalho pros mesmos controles de Áudio e vídeo — aqui eles cabem sem espremer.
+ * Alcançável dos dois estados do rodapé da sidebar (em voz e fora dela), pelo
+ * avatar (aba Perfil) e pela engrenagem (aba Áudio e vídeo) — ver
+ * UserMenuPopover.
  */
 const TABS = [
   { id: 'profile', label: 'Perfil', icon: 'user-circle' },
