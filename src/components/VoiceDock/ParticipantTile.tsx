@@ -38,7 +38,7 @@ function ParticipantVolumeControl({ identity }: { identity: string }) {
           disabled={muted}
           onValueChange={([next]) => setParticipantVolume(identity, next / 100)}
           className={cn(
-            '[&_[data-slot=slider-track]]:h-8 [&_[data-slot=slider-thumb]]:hover:cursor-grab [&_[data-slot=slider-thumb]]:rounded-[2px] [&_[data-slot=slider-thumb]]:w-[4px] [&_[data-slot=slider-track]]:rounded-[0.7rem] [&_[data-slot=slider-thumb]]:bg-primary [&_[data-slot=slider-thumb]]:border-primary [&_[data-slot=slider-range]]:bg-primary/10 [&_[data-slot=slider-mark]]:border-primary/40',
+            '[&_[data-slot=slider-mark]]:border-primary/40',
             muted && 'opacity-50'
           )}
         />

@@ -13,7 +13,7 @@ import { useVoice } from '@/providers/VoiceProvider';
  * Entrada, saída, câmera e sensibilidade do microfone. Vieram do popover da
  * engrenagem no rodapé da sidebar, que empilhava tudo numa coluna só — já
  * estava alto demais e não tinha pra onde crescer. A engrenagem agora abre
- * esta aba (ver UserMenuPopover).
+ * esta aba direto.
  *
  * `active` desliga a enumeração de dispositivos e o preview de câmera quando a
  * aba não está à vista: abrir a câmera atrás de outra aba acende o LED por

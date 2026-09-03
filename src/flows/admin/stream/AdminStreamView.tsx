@@ -1,7 +1,7 @@
 'use client';
 
 import { useState } from 'react';
-import { useRouter } from 'next/navigation';
+import { useAdminRefresh } from '@/flows/admin/refresh';
 import { Button } from '@/components/ui/button';
 import { Label } from '@/components/ui/label';
 import { Switch } from '@/components/ui/switch';
@@ -49,7 +49,7 @@ function summarize(height: number, frameRate: number, maxBitrateKbps: number) {
 }
 
 export default function AdminStreamView({ settings }: { settings: StreamSettings }) {
-  const router = useRouter();
+  const refresh = useAdminRefresh();
   const { toast } = useToast();
 
   const [advanced, setAdvanced] = useState(settings.preset === 'custom');
@@ -103,7 +103,7 @@ export default function AdminStreamView({ settings }: { settings: StreamSettings
       title: 'Qualidade atualizada!',
       description: 'Lives em andamento já mudaram; quem abrir agora começa na config nova.',
     });
-    router.refresh();
+    refresh();
   }
 
   const dirty =

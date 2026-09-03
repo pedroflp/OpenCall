@@ -5,6 +5,12 @@ import * as SliderPrimitive from "@radix-ui/react-slider"
 
 import { cn } from "@/lib/utils"
 
+/**
+ * Poço alto (h-8) com haste fina no lugar do puxador redondo — era o visual
+ * que cada call site remontava à mão com um bloco de `[&_[data-slot=...]]`
+ * repetido. Como todos os sliders do app querem a mesma forma, ela é o padrão
+ * daqui; quem quiser outra coisa sobrescreve pelo `className`.
+ */
 interface SliderProps extends React.ComponentPropsWithoutRef<typeof SliderPrimitive.Root> {
   /** Valor (na escala de min/max) onde desenhar uma linha vertical tracejada — ex: a marca dos 100% num slider de volume/ganho. */
   markValue?: number
@@ -38,8 +44,11 @@ const Slider = React.forwardRef<React.ElementRef<typeof SliderPrimitive.Root>, S
         )}
         {...props}
       >
-        <SliderPrimitive.Track data-slot="slider-track" className="relative h-1.5 w-full grow overflow-hidden rounded-full bg-secondary">
-          <SliderPrimitive.Range data-slot="slider-range" className="absolute h-full bg-primary" />
+        <SliderPrimitive.Track
+          data-slot="slider-track"
+          className="relative h-8 w-full grow overflow-hidden rounded-[0.7rem] bg-secondary"
+        >
+          <SliderPrimitive.Range data-slot="slider-range" className="absolute h-full bg-primary/10" />
           {markPercent !== null && (
             <span
               aria-hidden
@@ -51,7 +60,7 @@ const Slider = React.forwardRef<React.ElementRef<typeof SliderPrimitive.Root>, S
         </SliderPrimitive.Track>
         <SliderPrimitive.Thumb
           data-slot="slider-thumb"
-          className="block h-4 w-4 rounded-full border border-primary/50 bg-background shadow transition-colors focus-visible:outline-none focus-visible:ring-1 focus-visible:ring-ring disabled:pointer-events-none disabled:opacity-50"
+          className="block h-full w-[4px] rounded-[2px] border border-primary bg-primary shadow transition-colors hover:cursor-grab focus-visible:outline-none focus-visible:ring-1 focus-visible:ring-ring disabled:pointer-events-none disabled:opacity-50"
         />
       </SliderPrimitive.Root>
     )

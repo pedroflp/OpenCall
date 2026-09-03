@@ -1,4 +1,13 @@
 import { fetchApi } from '@/services/api/fetchApi';
+import type { GroupDTO } from '@/app/api/groups/types';
+
+/** Mesmo motivo do fetchAdminChannels: o modal de Configurações não é Server Component. */
+export async function fetchAdminGroups(): Promise<GroupDTO[] | null> {
+  const response = await fetchApi('admin/groups');
+  if (!response.ok) return null;
+  return (await response.json()).groups;
+}
+
 
 export type GroupInput = { title: string; textColor: string; sortIndex: number };
 

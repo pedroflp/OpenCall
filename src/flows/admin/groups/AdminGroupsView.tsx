@@ -1,7 +1,7 @@
 'use client';
 
 import { useEffect, useState } from 'react';
-import { useRouter } from 'next/navigation';
+import { useAdminRefresh } from '@/flows/admin/refresh';
 import { Button } from '@/components/ui/button';
 import { HugeIcon } from '@/components/HugeIcon';
 import type { GroupDTO } from '@/app/api/groups/types';
@@ -14,9 +14,9 @@ function sortGroups(groups: GroupDTO[]) {
 }
 
 export default function AdminGroupsView({ groups: initialGroups, users: initialUsers }: { groups: GroupDTO[]; users: AdminUserDTO[] }) {
-  const router = useRouter();
+  const refresh = useAdminRefresh();
   // Estado local otimista: a UI reflete a mudança na hora, sem esperar o
-  // round-trip completo do router.refresh() (que refaz auth + 3 queries em
+  // round-trip completo do refresh (que refaz auth + 3 queries em
   // paralelo). O refresh ainda roda em background só pra manter os props do
   // Server Component em dia; os efeitos abaixo resincronizam quando ele chega.
   const [groups, setGroups] = useState(() => sortGroups(initialGroups));
@@ -27,29 +27,29 @@ export default function AdminGroupsView({ groups: initialGroups, users: initialU
 
   function handleGroupCreated(group: GroupDTO) {
     setGroups((prev) => sortGroups([...prev, group]));
-    router.refresh();
+    refresh();
   }
 
   function handleGroupUpdated(group: GroupDTO) {
     setGroups((prev) => sortGroups(prev.map((g) => (g.id === group.id ? group : g))));
-    router.refresh();
+    refresh();
   }
 
   function handleGroupDeleted(groupId: string) {
     setGroups((prev) => prev.filter((g) => g.id !== groupId));
-    router.refresh();
+    refresh();
   }
 
   function handleMembersAdded(groupId: string, userIds: string[]) {
     setUsers((prev) =>
       prev.map((user) => (userIds.includes(user.id) && !user.groups.includes(groupId) ? { ...user, groups: [...user.groups, groupId] } : user)),
     );
-    router.refresh();
+    refresh();
   }
 
   function handleMemberRemoved(groupId: string, userId: string) {
     setUsers((prev) => prev.map((user) => (user.id === userId ? { ...user, groups: user.groups.filter((id) => id !== groupId) } : user)));
-    router.refresh();
+    refresh();
   }
 
   return (

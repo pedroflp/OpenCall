@@ -1,5 +1,14 @@
 import { fetchApi } from '@/services/api/fetchApi';
+import type { AdminChannelDTO } from './types';
 import type { ChannelType } from '@prisma/client';
+
+/** Lista de canais pro host CLIENT do admin (o modal de Configurações) — a página `/admin` usa `getAdminChannels` direto no servidor. */
+export async function fetchAdminChannels(): Promise<AdminChannelDTO[] | null> {
+  const response = await fetchApi('admin/channels');
+  if (!response.ok) return null;
+  return (await response.json()).channels;
+}
+
 
 /** `maxParticipants: null` é canal de voz sem limite; ausente, pra texto, é o campo não se aplicar (ADR-0001). */
 export type ChannelCreateInput = { type: ChannelType; name: string; maxParticipants?: number | null };

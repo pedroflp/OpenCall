@@ -26,7 +26,7 @@ export default function AccountLinkTab({ active }: { active: boolean }) {
 
       {/* `max-w-xs` é a largura do modal irmão: o QR tem 240px fixos, e num vão
           largo ele ficaria boiando no meio de uma coluna vazia. */}
-      <DevicePairingPanel active={active} className="max-w-xs" />
+      <DevicePairingPanel active={active} autoStart={false} className="max-w-xs" />
     </div>
   );
 }

@@ -1,4 +1,12 @@
 import { fetchApi } from '@/services/api/fetchApi';
+import type { AdminInviteDTO } from './types';
+
+export async function fetchAdminInvites(): Promise<AdminInviteDTO[] | null> {
+  const response = await fetchApi('admin/invites');
+  if (!response.ok) return null;
+  return (await response.json()).invites;
+}
+
 
 export async function createInvite() {
   const response = await fetchApi('admin/invites', { method: 'POST' });

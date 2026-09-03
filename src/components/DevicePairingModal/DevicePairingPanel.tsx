@@ -8,17 +8,31 @@ import { Separator } from '@/components/ui/separator';
 import { formatAccessCode } from '@/lib/auth/accessCode';
 import { cn } from '@/lib/utils';
 
-type Phase = 'loading' | 'ready' | 'connected' | 'error';
+type Phase = 'idle' | 'loading' | 'ready' | 'connected' | 'error';
 
 const POLL_INTERVAL_MS = 1500;
 
 /**
- * Corpo do pareamento de dispositivo: cria assim que monta (abrir o modal
- * "Entrar em outro dispositivo" já é o pedido), mostra QR e código juntos, e
- * faz polling até o outro dispositivo confirmar.
+ * Corpo do pareamento de dispositivo: mostra QR e código juntos e faz polling
+ * até o outro dispositivo confirmar.
+ *
+ * `autoStart` decide QUANDO o código nasce, e os dois hosts querem coisas
+ * diferentes. No modal "Entrar em outro dispositivo", abrir JÁ É o pedido. Na
+ * aba das Configurações não é: passar por ela indo pra outra criaria um código
+ * que ninguém pediu — e criar DERRUBA o anterior (um vivo por usuário, ver
+ * `POST /api/auth/qr`), então uma passada de olho invalidaria o código que
+ * ainda está na tela do celular. Ali o repouso é um botão.
  */
-export default function DevicePairingPanel({ active, className }: { active: boolean; className?: string }) {
-  const [phase, setPhase] = useState<Phase>('loading');
+export default function DevicePairingPanel({
+  active,
+  autoStart = true,
+  className,
+}: {
+  active: boolean;
+  autoStart?: boolean;
+  className?: string;
+}) {
+  const [phase, setPhase] = useState<Phase>(autoStart ? 'loading' : 'idle');
   const [qrDataUrl, setQrDataUrl] = useState<string | null>(null);
   const [code, setCode] = useState<string | null>(null);
   const pollRef = useRef<ReturnType<typeof setInterval> | null>(null);
@@ -69,13 +83,20 @@ export default function DevicePairingPanel({ active, className }: { active: bool
   }, [stopPolling]);
 
   useEffect(() => {
-    if (active) void createPairing();
-    else stopPolling();
+    if (active && autoStart) void createPairing();
+    else if (!active) stopPolling();
     return stopPolling;
-  }, [active, createPairing, stopPolling]);
+  }, [active, autoStart, createPairing, stopPolling]);
 
   return (
     <div className={cn('flex flex-col items-center gap-3 py-2', className)}>
+      {phase === 'idle' && (
+        <Button type="button" variant="secondary" className="w-full gap-2" onClick={() => void createPairing()}>
+          <HugeIcon name="qr-code-01" size={16} />
+          Gerar código
+        </Button>
+      )}
+
       {phase === 'loading' && <PairingSkeleton />}
 
       {phase === 'ready' && qrDataUrl && code && (

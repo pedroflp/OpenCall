@@ -1,7 +1,7 @@
 'use client';
 
 import { useEffect, useState } from 'react';
-import { useRouter } from 'next/navigation';
+import { useAdminRefresh } from '@/flows/admin/refresh';
 import Avatar from '@/components/Avatar';
 import { Switch } from '@/components/ui/switch';
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from '@/components/ui/table';
@@ -10,7 +10,7 @@ import { useToast } from '@/components/ui/use-toast';
 import type { AdminUserDTO } from '@/app/api/admin/users/types';
 import { UserRoles } from '@/app/api/user/types';
 
-/** Otimista: sem isso o Switch só reflete o clique depois de dois round-trips (o PATCH em si, e o router.refresh() que o segue). */
+/** Otimista: sem isso o Switch só reflete o clique depois de dois round-trips (o PATCH em si, e o refresh que o segue). */
 function useRoleToggle(endpoint: string, serverChecked: boolean, onChanged: () => void) {
   const { toast } = useToast();
   const [pending, setPending] = useState(false);
@@ -146,7 +146,7 @@ export default function AdminUsersView({
   currentUserId?: string;
   currentUserIsAdmin: boolean;
 }) {
-  const router = useRouter();
+  const refresh = useAdminRefresh();
 
   return (
     <main className="mx-auto flex w-full max-w-3xl flex-1 flex-col gap-6 overflow-y-auto px-6 py-10">
@@ -172,7 +172,7 @@ export default function AdminUsersView({
               user={user}
               isSelf={user.id === currentUserId}
               currentUserIsAdmin={currentUserIsAdmin}
-              onChanged={() => router.refresh()}
+              onChanged={() => refresh()}
             />
           ))}
         </TableBody>

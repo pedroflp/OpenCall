@@ -110,3 +110,26 @@ export default function AdminTabsView({
     </Tabs>
   );
 }
+
+/**
+ * Placeholder da carga no host CLIENT (o modal de Configurações), onde os dados
+ * chegam por fetch e não descem prontos do servidor. Skeleton e não spinner: a
+ * barra de abas e o corpo já nascem no lugar em que vão ficar, então a aba não
+ * salta quando o fetch volta.
+ */
+export function AdminTabsViewSkeleton() {
+  return (
+    <div className="flex flex-1 flex-col gap-6 p-6">
+      <div className="mx-auto flex gap-1 rounded-lg bg-muted p-1">
+        {[64, 56, 64, 72].map((width) => (
+          <div key={width} className="h-8 animate-pulse rounded-md bg-muted-foreground/15" style={{ width }} />
+        ))}
+      </div>
+      <div className="flex flex-col gap-2">
+        {Array.from({ length: 6 }).map((_, index) => (
+          <div key={index} className="h-12 animate-pulse rounded-lg bg-muted" />
+        ))}
+      </div>
+    </div>
+  );
+}

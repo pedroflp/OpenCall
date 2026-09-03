@@ -218,7 +218,7 @@ export function LiveVolumeButton({
               markValue={100}
               snapToMark
               onValueChange={([next]) => setStreamVolume(identity, next / 100)}
-              className="[&_[data-slot=slider-track]]:h-8 [&_[data-slot=slider-thumb]]:hover:cursor-grab [&_[data-slot=slider-thumb]]:rounded-[2px] [&_[data-slot=slider-thumb]]:w-[4px] [&_[data-slot=slider-track]]:rounded-[0.7rem] [&_[data-slot=slider-thumb]]:bg-primary [&_[data-slot=slider-thumb]]:border-primary [&_[data-slot=slider-range]]:bg-primary/10 [&_[data-slot=slider-mark]]:border-primary/40"
+              className="[&_[data-slot=slider-mark]]:border-primary/40"
             />
             <span className="pointer-events-none absolute left-3 top-1/2 -translate-y-1/2 text-xs tabular-nums">
               {percent}%

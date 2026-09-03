@@ -40,7 +40,6 @@ import { useProfileBroadcast } from '@/hooks/useProfileBroadcast';
 import ParticipantTile from './ParticipantTile';
 import PreviewParticipantsList from './PreviewParticipantsList';
 import SelfControlCard from './SelfControlCard';
-import UserMenuPopover from './UserMenuPopover';
 
 /**
  * Popover de clique secundário num canal (só pra channels_admin), com editar
@@ -725,14 +724,31 @@ function TextChannelsSection({
  * sessão e conectado num canal mostra o SelfControlCard; com sessão e fora
  * de um canal mostra o card de avatar + configurações de dispositivo.
  */
+/** Linhas de canal em repouso, do mesmo tamanho das reais — a lista não salta quando a sessão resolve. */
+function ChannelListSkeleton({ rows }: { rows: number }) {
+  return (
+    <div className="flex animate-pulse flex-col gap-0.5">
+      {Array.from({ length: rows }).map((_, index) => (
+        <div key={index} className="flex items-center gap-2 rounded-lg px-2 py-1.5">
+          <div className="size-[19px] shrink-0 rounded bg-muted" />
+          <div className="h-4 flex-1 rounded bg-muted" />
+        </div>
+      ))}
+    </div>
+  );
+}
+
 function SidebarFooter({
   authenticated,
+  loading,
   user,
   voiceChannels,
   connectedChannelId,
   joining,
 }: {
   authenticated: boolean;
+  /** true enquanto o NextAuth ainda não respondeu — o rodapé fica em skeleton, não em "entre". */
+  loading: boolean;
   user: UserDTO | null;
   voiceChannels: Channel[];
   connectedChannelId: string | null;
@@ -745,6 +761,17 @@ function SidebarFooter({
   function openSettings(tab: 'profile' | 'audio-video') {
     setSettingsTab(tab);
     setSettingsOpen(true);
+  }
+
+  // O SKELETON É O PADRÃO. Mostrar "entrar com Discord" enquanto a sessão
+  // ainda está sendo resolvida é afirmar que a pessoa está deslogada antes de
+  // saber — e quem está logado via o botão de login piscar a cada carga.
+  if (loading) {
+    return (
+      <div className="flex shrink-0 animate-pulse flex-col gap-2 p-2">
+        <div className="h-10 rounded-2xl bg-muted" />
+      </div>
+    );
   }
 
   if (!authenticated) {
@@ -789,14 +816,20 @@ function SidebarFooter({
             {joining && 'Conectando…'}
           </div>
         </div>
-        <UserMenuPopover
-          onOpenSettings={() => openSettings('audio-video')}
-          trigger={
-            <Button type="button" size="icon" variant="secondary" aria-label="Configurações">
+        <Tooltip>
+          <TooltipTrigger asChild>
+            <Button
+              type="button"
+              size="icon"
+              variant="secondary"
+              aria-label="Configurações"
+              onClick={() => openSettings('audio-video')}
+            >
               <HugeIcon name="settings-01" size={19} />
             </Button>
-          }
-        />
+          </TooltipTrigger>
+          <TooltipContent>Configurações</TooltipContent>
+        </Tooltip>
       </div>
 
       <SettingsDialog open={settingsOpen} onOpenChange={setSettingsOpen} user={user} initialTab={settingsTab} />
@@ -816,6 +849,9 @@ export default function VoiceChannelSidebar({ user }: { user: UserDTO | null }) 
   // a linha em `user` não tem conta de verdade pra mostrar — só o botão de
   // login de novo, não o card autenticado com nome "Você" de fallback.
   const authenticated = sessionStatus === 'authenticated' && user !== null;
+  // O NextAuth começa em 'loading' em toda montagem no client — é essa janela
+  // que fazia a sidebar inteira piscar o estado deslogado antes de saber.
+  const sessionLoading = sessionStatus === 'loading';
   const pathname = usePathname();
   const isMobile = useIsMobile();
   const isAdmin = Boolean(session?.user?.isAdmin);
@@ -862,10 +898,14 @@ export default function VoiceChannelSidebar({ user }: { user: UserDTO | null }) 
         <RtcHeader isAdmin={isAdmin} isChannelsAdmin={isChannelsAdmin} rtcEnabled={rtcEnabled} onToggleRtc={setRtcEnabled} user={user} />
 
         <div className="px-2 mt-4 pb-2 text-[11px] font-bold uppercase tracking-wider text-muted-foreground">Canais de texto</div>
-        <TextChannelsSection channels={textChannels} pendingIds={pendingTextIds} isChannelsAdmin={isChannelsAdmin} />
+        {sessionLoading ? <ChannelListSkeleton rows={2} /> : (
+          <TextChannelsSection channels={textChannels} pendingIds={pendingTextIds} isChannelsAdmin={isChannelsAdmin} />
+        )}
 
         <div className="mt-6 px-2 pb-2 text-[11px] font-bold uppercase tracking-wider text-muted-foreground">Canais de voz</div>
-        {rtcEnabled ? (
+        {sessionLoading ? (
+          <ChannelListSkeleton rows={3} />
+        ) : rtcEnabled ? (
           <VoiceChannelsSection
             channels={voiceChannels}
             pendingIds={pendingVoiceIds}
@@ -881,6 +921,7 @@ export default function VoiceChannelSidebar({ user }: { user: UserDTO | null }) 
 
       <SidebarFooter
         authenticated={authenticated}
+        loading={sessionLoading}
         user={user}
         voiceChannels={voiceChannels}
         connectedChannelId={connectedChannelId}

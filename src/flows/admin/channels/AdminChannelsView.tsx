@@ -1,7 +1,7 @@
 'use client';
 
 import { useEffect, useState } from 'react';
-import { useRouter } from 'next/navigation';
+import { useAdminRefresh } from '@/flows/admin/refresh';
 import { ChannelType } from '@prisma/client';
 import { Button } from '@/components/ui/button';
 import { HugeIcon } from '@/components/HugeIcon';
@@ -42,7 +42,7 @@ function ChannelSection({
 }
 
 export default function AdminChannelsView({ channels: initialChannels }: { channels: AdminChannelDTO[] }) {
-  const router = useRouter();
+  const refresh = useAdminRefresh();
   // Estado local otimista — mesmo padrão de AdminGroupsView.
   const [channels, setChannels] = useState(() => sortChannels(initialChannels));
 
@@ -50,17 +50,17 @@ export default function AdminChannelsView({ channels: initialChannels }: { chann
 
   function handleChannelCreated(channel: AdminChannelDTO) {
     setChannels((prev) => sortChannels([...prev, channel]));
-    router.refresh();
+    refresh();
   }
 
   function handleChannelUpdated(channel: AdminChannelDTO) {
     setChannels((prev) => sortChannels(prev.map((c) => (c.id === channel.id ? channel : c))));
-    router.refresh();
+    refresh();
   }
 
   function handleChannelDeleted(channelId: string) {
     setChannels((prev) => prev.filter((c) => c.id !== channelId));
-    router.refresh();
+    refresh();
   }
 
   const voiceChannels = channels.filter((channel) => channel.type === ChannelType.VOICE);

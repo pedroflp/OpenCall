@@ -15,7 +15,6 @@ import CameraDeviceButton from './CameraDeviceButton';
 import ConnectionQualityIndicator from './ConnectionQualityIndicator';
 import MicSettingsPopover from './MicSettingsPopover';
 import SettingsDialog from '@/components/SettingsDialog';
-import UserMenuPopover from './UserMenuPopover';
 
 function SelfButton({
   label,
@@ -245,14 +244,20 @@ export default function SelfControlCard({ channelName, user }: { channelName: st
             <SelfButton label={deafened ? 'Voltar a ouvir' : 'Silenciar tudo'} active={deafened} onClick={() => toggleDeafen()}>
               <HugeIcon name={deafened ? 'headphone-mute' : 'headphones'} size={19} />
             </SelfButton>
-            <UserMenuPopover
-              onOpenSettings={() => openSettings('audio-video')}
-              trigger={
-                <Button type="button" size="icon" variant="secondary" aria-label="Configurações">
+            <Tooltip>
+              <TooltipTrigger asChild>
+                <Button
+                  type="button"
+                  size="icon"
+                  variant="secondary"
+                  aria-label="Configurações"
+                  onClick={() => openSettings('audio-video')}
+                >
                   <HugeIcon name="settings-01" size={19} />
                 </Button>
-              }
-            />
+              </TooltipTrigger>
+              <TooltipContent>Configurações</TooltipContent>
+            </Tooltip>
           </div>
         </div>
       </div>
