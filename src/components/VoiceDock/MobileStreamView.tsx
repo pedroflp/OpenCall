@@ -185,7 +185,7 @@ function MobileStreamViewInner({ active, room }: { active: boolean; room: Room }
         style={{ bottom: 'max(1rem, env(safe-area-inset-bottom))' }}
       >
         <StreamControlButton
-          label={micEnabled ? 'Desligar microfone' : 'Ligar microfone'}
+          label={micEnabled ? t('micOff') : t('micOn')}
           active={!micEnabled}
           onClick={() => toggleMic()}
         >
@@ -193,7 +193,7 @@ function MobileStreamViewInner({ active, room }: { active: boolean; room: Room }
         </StreamControlButton>
 
         <StreamControlButton
-          label={deafened ? 'Voltar a ouvir' : 'Silenciar tudo'}
+          label={deafened ? t('deafenOff') : t('deafenOn')}
           active={deafened}
           onClick={() => toggleDeafen()}
         >

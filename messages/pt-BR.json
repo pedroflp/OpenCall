@@ -192,7 +192,12 @@
       "leaveStream": "Sair da transmissão",
       "settings": "Configurações",
       "leaveChannel": "Sair do canal",
-      "soundEffects": "Efeitos sonoros"
+      "soundEffects": "Efeitos sonoros",
+      "micOn": "Ligar microfone",
+      "micOff": "Desligar microfone",
+      "micMutedByAdmin": "Silenciado por um administrador de canais",
+      "deafenOn": "Silenciar tudo",
+      "deafenOff": "Voltar a ouvir"
     },
     "sidebar": {
       "channelOptions": "Opções do canal",
