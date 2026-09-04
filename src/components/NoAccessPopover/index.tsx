@@ -2,6 +2,7 @@
 
 import { useEffect, useRef, useState } from 'react';
 import { useRouter, useSearchParams } from 'next/navigation';
+import { useSession } from 'next-auth/react';
 import { useTranslations } from 'next-intl';
 import { HugeIcon } from '@/components/HugeIcon';
 import { Button } from '@/components/ui/button';
@@ -14,6 +15,15 @@ type State = 'idle' | 'checking' | 'error' | 'blocked' | 'success';
 
 /** Quanto o selo de "acesso liberado" fica na tela antes do refresh. */
 const SUCCESS_HOLD_MS = 1400;
+
+/**
+ * Se tanto tempo depois do refresh este popover ainda estiver montado, o
+ * refresh não resolveu — o servidor continua dizendo que não há acesso.
+ * Recarregar do zero é o último recurso, e é o que impede o estado que motivou
+ * tudo isto: "Acesso liberado / Carregando os canais…" parado para sempre. Sem
+ * risco de loop: a página volta em `idle`, não em `success`.
+ */
+const RELOAD_FALLBACK_MS = 3_000;
 
 async function redeemInviteCode(code: string): Promise<void> {
   const res = await fetch('/api/invite/redeem', {
@@ -40,9 +50,14 @@ export default function NoAccessPopover() {
   const t = useTranslations('auth.noAccess');
   const router = useRouter();
   const searchParams = useSearchParams();
+  const { update: updateSession } = useSession();
   const [code, setCode] = useState('');
   const [state, setState] = useState<State>('idle');
   const autoTriedRef = useRef(false);
+  // A identidade de `update` muda junto com a sessão; numa dependência de
+  // effect ela reiniciaria o timer do selo no meio do caminho.
+  const updateSessionRef = useRef(updateSession);
+  updateSessionRef.current = updateSession;
 
   function redeem(rawCode: string) {
     const normalized = normalizeInviteCode(rawCode);
@@ -68,10 +83,40 @@ export default function NoAccessPopover() {
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [searchParams]);
 
+  /**
+   * `router.refresh()` sozinho não bastava. `canalAccess` vive no JWT da
+   * sessão, e o resgate acontece numa rota de API — que não tem como reescrever
+   * o cookie do navegador. Sem reemitir o token:
+   *
+   * - o middleware (que lê o cookie CRU, sem passar pelo callback jwt) continua
+   *   respondendo 403 em /api/rtc, /api/chat e /api/channels: os canais até
+   *   apareceriam, mas vazios;
+   * - e, até a correção do `globalThis` em lib/access.ts, nem apareciam — o
+   *   sinal de invalidação ficava na camada de módulo errada e o layout seguia
+   *   lendo `canalAccess: false` até o TTL de 15min do token.
+   *
+   * `updateSession()` bate em /api/auth/session, que roda o callback jwt COM
+   * `trigger: 'update'` (força a releitura das roles) e devolve o Set-Cookie.
+   * Só depois disso o refresh tem o que ver.
+   */
   useEffect(() => {
     if (state !== 'success') return;
-    const timer = setTimeout(() => router.refresh(), SUCCESS_HOLD_MS);
-    return () => clearTimeout(timer);
+
+    const hold = setTimeout(() => {
+      void updateSessionRef
+        .current()
+        .then(() => router.refresh())
+        .catch(() => {});
+    }, SUCCESS_HOLD_MS);
+
+    // No caminho feliz este componente desmonta assim que o layout enxerga o
+    // acesso, e o cleanup mata os dois timers antes do reload.
+    const fallback = setTimeout(() => window.location.reload(), SUCCESS_HOLD_MS + RELOAD_FALLBACK_MS);
+
+    return () => {
+      clearTimeout(hold);
+      clearTimeout(fallback);
+    };
   }, [state, router]);
 
   function handleSubmit() {

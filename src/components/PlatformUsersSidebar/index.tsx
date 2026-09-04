@@ -13,7 +13,6 @@ import { Tooltip, TooltipContent, TooltipTrigger } from '@/components/ui/tooltip
 import { HugeIcon } from '@/components/HugeIcon';
 import { PlatformUsersSidebarSkeleton } from './Skeleton';
 import { usePlatformPresenceUsers } from '@/hooks/usePlatformPresenceUsers';
-import { useCallAction, type CallStatus } from '@/hooks/useCallAction';
 import { useRingAction, type RingStatus } from '@/hooks/useRingAction';
 import { useChatBlockAction } from '@/hooks/useChatBlockAction';
 import type { PresenceStatus, PlatformPresenceUser } from '@/lib/presence/platformPresence';
@@ -86,43 +85,10 @@ function PresenceAvatar({ avatar, username, status }: { avatar: string; username
   );
 }
 
-function CallAction({ targetUserId }: { targetUserId: string }) {
-  const t = useTranslations('presence.call');
-  const { status, remainingMs, call } = useCallAction(targetUserId);
-  const disabled = status !== 'idle';
-
-  const button = (
-    <button
-      type="button"
-      onClick={() => void call()}
-      aria-disabled={disabled}
-      className={cn(
-        'flex w-full items-center gap-2 rounded-sm px-2 py-1.5 text-left text-sm transition-colors hover:bg-secondary',
-        disabled && 'cursor-not-allowed opacity-50 hover:bg-transparent',
-      )}
-    >
-      <HugeIcon name="waving-hand-01" size={16} />
-      {/* `CallStatus` e as chaves de `presence.call` têm os mesmos nomes de
-          propósito — um `Record` no meio só seria uma tabela identidade. */}
-      {t(status)}
-    </button>
-  );
-
-  if (status !== 'cooldown') return button;
-
-  return (
-    <Tooltip>
-      <TooltipTrigger asChild>{button}</TooltipTrigger>
-      <TooltipContent side="left">{t('cooldownTooltip', { seconds: Math.ceil(remainingMs / 1000) })}</TooltipContent>
-    </Tooltip>
-  );
-}
-
 /**
  * Três estados diferentes mostram o MESMO rótulo ("Ligar para entrar") — o que
- * muda entre eles é só o tooltip que explica por que o botão está apagado. Por
- * isso aqui a tabela continua existindo: ela colapsa seis estados em quatro
- * chaves, e não é identidade como a do `CallAction`.
+ * muda entre eles é só o tooltip que explica por que o botão está apagado, e é
+ * por isso que essa tabela existe: ela colapsa seis estados em quatro chaves.
  */
 const RING_LABEL = {
   idle: 'idle',
@@ -220,7 +186,10 @@ function PlatformUserRow({
   const t = useTranslations('presence');
   const dateFnsLocale = useDateFnsLocale();
   const [menuOpen, setMenuOpen] = useState(false);
-  const showMenu = user.id !== currentUserId;
+  // Sem ação nenhuma dentro, o popover seria só o cabeçalho com o nome que a
+  // linha já mostra — por isso o menu depende de haver ao menos uma: ligar
+  // (só pra quem não está offline) ou bloquear o chat (só pra channels_admin).
+  const showMenu = user.id !== currentUserId && (user.activeStatus !== 'offline' || viewerIsChannelsAdmin);
   const lastActiveLabel = formatLastActive(user.lastActiveAt, dateFnsLocale);
   // Só reflete o estado da MINHA própria ligação (outgoingCallTargetId vive no
   // CallProvider deste client) — quem recebe a ligação nunca vê isso na lista.
@@ -284,15 +253,16 @@ function PlatformUserRow({
           <Separator className="my-1" />
 
           {user.activeStatus !== 'offline' && (
-            <RingToJoinAction targetUserId={user.id} targetVoiceChannelId={user.voiceChannelId} />
+            <>
+              <RingToJoinAction targetUserId={user.id} targetVoiceChannelId={user.voiceChannelId} />
+              {/* Separador só entre DUAS seções — com o alvo offline o bloqueio
+                  de chat é o único item, e ele já vem logo abaixo do cabeçalho. */}
+              {viewerIsChannelsAdmin && <Separator className="my-1" />}
+            </>
           )}
-          <CallAction targetUserId={user.id} />
 
           {viewerIsChannelsAdmin && (
-            <>
-              <Separator className="my-1" />
-              <ChatBlockAction targetUserId={user.id} blocked={user.chatBlocked} onDone={() => setMenuOpen(false)} />
-            </>
+            <ChatBlockAction targetUserId={user.id} blocked={user.chatBlocked} onDone={() => setMenuOpen(false)} />
           )}
         </PopoverContent>
       )}

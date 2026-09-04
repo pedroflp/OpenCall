@@ -30,7 +30,9 @@ Reativar (`archivedAt = null`) é uma operação normal de update, exposta na UI
 
 ## Atualização (pedido de produto, pós-implementação)
 
-Decisão revertida: o produto pediu explicitamente um hard-delete exposto na UI pra canais de voz e de texto, em vez de só arquivar. `DELETE /api/admin/channels/[channelId]` agora remove a linha de `Channel` de verdade (`prisma.channel.delete`), dentro de uma transação que também limpa `VoiceChannelAlert` (sem FK pro canal, então não cascade automático).
+Decisão revertida: o produto pediu explicitamente um hard-delete exposto na UI pra canais de voz e de texto, em vez de só arquivar. `DELETE /api/admin/channels/[channelId]` agora remove a linha de `Channel` de verdade (`prisma.channel.delete`).
+
+> Nota posterior: a rota chegou a fazer isso dentro de uma transação que também limpava `VoiceChannelAlert` (a tabela não tinha FK pro canal, então não havia cascade automático). Com a saída do bot do Discord — só o OAuth ficou — a tabela deixou de existir (migration `20260904120000_drop_voice_channel_alerts`) e o delete voltou a ser uma chamada só. Toda menção a `VoiceChannelAlert` acima é histórica.
 
 O trade-off original entre `CASCADE` (perde histórico sem aviso) e `RESTRICT` (trava o delete na prática) foi resolvido assim: `TextMessage.channel`/`TextChannelRead.channel` viraram `onDelete: Cascade`, mas a **UI força um double confirm antes de chamar a rota** — o diálogo mostra a contagem de mensagens que seriam apagadas (`messageCount`, calculado em `listAdminChannels`) e exige digitar o nome exato do canal pra habilitar o botão. Isso troca a proteção que estava no banco (impedir a perda de dados) por uma proteção na UI (garantir que o admin viu o tamanho do estrago antes de confirmar) — aceitável porque a ação só é alcançável por `isCurrentUserChannelsAdmin`.
 

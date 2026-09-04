@@ -42,8 +42,7 @@ enum AttachmentKind {
 /// já existente (ver ADR-0001).
 ///
 /// Sem soft-delete (ver ADR-0003, revisada): excluir um canal remove a linha
-/// de verdade. TextMessage/TextChannelRead cascade junto; VoiceChannelAlert
-/// (sem FK) é limpo manualmente na mesma transação da rota DELETE.
+/// de verdade, e TextMessage/TextChannelRead cascadeiam junto.
 model Channel {
   id              String      @id @default(cuid())
   type            ChannelType
@@ -164,21 +163,6 @@ model ChannelsConfig {
   updatedAt      DateTime @updatedAt @map("updated_at")
 
   @@map("channels_config")
-}
-
-/**
- * Alerta "fulano entrou no canal" postado no Discord — guardado pra não mandar
- * outro enquanto o anterior vale e pra saber qual mensagem apagar quando o
- * canal esvaziar. Precisa ser durável (não um Map em memória) porque o
- * processo pode reiniciar no meio da janela do TTL e a mensagem ficaria órfã
- * no Discord pra sempre.
- */
-model VoiceChannelAlert {
-  channelId        String   @id @map("channel_id")
-  discordMessageId String   @map("discord_message_id")
-  expiresAt        DateTime @map("expires_at")
-
-  @@map("voice_channel_alerts")
 }
 
 model TextMessage {

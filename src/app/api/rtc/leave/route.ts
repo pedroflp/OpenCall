@@ -3,9 +3,8 @@ import { ServerError } from 'livekit-server-sdk';
 import { getUser } from '@/app/api/auth/[...nextauth]/auth';
 import { getVoiceChannel } from '@/lib/rtc/channels';
 import { livekitApi } from '@/lib/rtc/server';
-import { dropParticipant, loadPresence } from '@/lib/rtc/presence';
+import { dropParticipant } from '@/lib/rtc/presence';
 import { checkRateLimit } from '@/lib/rtc/rateLimit';
-import { notifyChannelEmpty } from '@/lib/discord/voiceChannelAlert';
 
 export const runtime = 'nodejs';
 export const dynamic = 'force-dynamic';
@@ -42,23 +41,13 @@ export async function POST(req: NextRequest) {
   const channel = await getVoiceChannel(channelId);
   if (!channel) return err(404, 'CHANNEL_NOT_FOUND');
 
-  // Tira do store na hora, sem reler o LiveKit. A versão anterior invalidava o
-  // cache e logo em seguida disparava um loadPresence pra decidir sobre o
-  // alerta do Discord — e essa leitura, feita no exato instante do
-  // removeParticipant, frequentemente ainda trazia o participante e
-  // re-populava o cache com o fantasma por mais 3s. Aqui a remoção é local e
+  // Tira do store na hora, sem reler o LiveKit. Reler no exato instante do
+  // removeParticipant frequentemente ainda traria o participante e
+  // re-popularia o cache com o fantasma por mais 3s. Aqui a remoção é local e
   // autoritativa (o removeParticipant abaixo já foi aceito pelo LiveKit), e
   // quem estiver olhando de fora recebe a mudança pelo SSE no mesmo tick.
   function forgetParticipant() {
     dropParticipant(channel!.id, user!.id);
-  }
-
-  // Fire-and-forget: só apaga o alerta do Discord se o canal ficou vazio de
-  // fato — se ainda tem gente, a mensagem "bora participar" continua valendo.
-  function clearAlertIfEmpty() {
-    loadPresence(channel!.id)
-      .then((participants) => (participants.length === 0 ? notifyChannelEmpty(channel!.id) : undefined))
-      .catch((error) => console.error('[rtc/leave] failed to check/clear channel alert', error));
   }
 
   try {
@@ -68,14 +57,12 @@ export async function POST(req: NextRequest) {
     // exatamente o estado que queríamos alcançar, não um erro.
     if (error instanceof ServerError && error.status === 404) {
       forgetParticipant();
-      clearAlertIfEmpty();
       return NextResponse.json({ ok: true });
     }
     return err(502, 'LIVEKIT_ERROR');
   }
 
   forgetParticipant();
-  clearAlertIfEmpty();
 
   return NextResponse.json({ ok: true });
 }

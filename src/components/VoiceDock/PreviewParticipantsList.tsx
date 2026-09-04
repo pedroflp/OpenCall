@@ -7,6 +7,7 @@ import Avatar from '@/components/Avatar';
 import { Badge } from '@/components/ui/badge';
 import { Popover, PopoverAnchor, PopoverContent } from '@/components/ui/popover';
 import { useVoice } from '@/providers/VoiceProvider';
+import { useSelfIdentity } from '@/hooks/useSelfIdentity';
 import type { PresenceParticipant } from '@/lib/rtc/presence';
 import type { UserDTO } from '@/app/api/user/types';
 import { cn } from '@/lib/utils';
@@ -116,7 +117,11 @@ export default function PreviewParticipantsList({
   isFullAdmin?: boolean;
 }) {
   const tCommon = useTranslations('common');
-  const selfName = user?.username || tCommon('you');
+  // Mesma máscara do card otimista do palco (ver OptimisticSelfTile): a linha
+  // "entrando" da sidebar e o card do centro são a mesma pessoa no mesmo
+  // instante, e não podem discordar sobre que nome e foto ela usa.
+  const identity = useSelfIdentity(user ?? null);
+  const selfName = identity?.username || tCommon('you');
 
   return (
     <ul className={className}>
@@ -134,7 +139,7 @@ export default function PreviewParticipantsList({
       {/* Otimista: o próprio usuário ainda não está no LiveKit, só entrando. Mesmo tratamento de opacidade + shine da versão no palco. */}
       {joining && (
         <li className="relative flex items-center gap-2 rounded-md px-2 py-1.5 opacity-50">
-          <Avatar image={user?.avatar} fallback={selfName.slice(0, 2)} size={8} className="shrink-0" />
+          <Avatar image={identity?.avatar} fallback={selfName.slice(0, 2)} size={8} className="shrink-0" />
           <span className="flex-1 truncate text-sm font-medium">{selfName}</span>
           <span
             aria-hidden

@@ -1,7 +1,7 @@
-// Fonte da verdade de fato é o servidor (COOLDOWN_MS em api/rtc/invite) — esse
-// Map só existe pra sobreviver ao remount do CallAction quando o popover fecha
-// e abre de novo (Radix desmonta o PopoverContent, o que zerava o useState do
-// cooldown e fazia o botão parecer disponível antes da hora).
+// Fonte da verdade de fato é o servidor (o COOLDOWN_MS de api/rtc/call) — esse
+// Map só existe pra sobreviver ao remount do RingToJoinAction quando o popover
+// fecha e abre de novo (Radix desmonta o PopoverContent, o que zerava o
+// useState do cooldown e fazia o botão parecer disponível antes da hora).
 const cooldownUntil = new Map<string, number>();
 // Só usado pelo namespace `ring:` (useRingAction) pra saber se o cooldown
 // atual é de uma recusa — decide se a linha do usuário mostra "Recusado".
