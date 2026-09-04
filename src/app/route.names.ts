@@ -13,5 +13,5 @@ export const routeNames = {
   // Página pública (sem canalAccess) — só existe pra dar uma prévia rica
   // (imagem, título) quando o link é colado no Discord; quem clica cai no
   // fluxo normal de /, com login exigido lá.
-  INVITE: '/convite',
+  INVITE: '/invite',
 }

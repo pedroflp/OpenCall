@@ -3,6 +3,7 @@
 import { useEffect, useState } from 'react';
 import { useSession } from 'next-auth/react';
 import { signOut } from 'next-auth/react';
+import { useTranslations } from 'next-intl';
 import { HugeIcon } from '@/components/HugeIcon';
 import { Dialog, DialogContent, DialogTitle } from '@/components/ui/dialog';
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
@@ -11,6 +12,7 @@ import { cn } from '@/lib/utils';
 import AccountLinkTab from './AccountLinkTab';
 import AdminTab from './AdminTab';
 import AudioVideoTab from './AudioVideoTab';
+import LanguageTab from './LanguageTab';
 import ProfileTab from './ProfileTab';
 
 /**
@@ -34,11 +36,17 @@ import ProfileTab from './ProfileTab';
  * comum é justamente não pertencerem ao grupo de cima. Um título ali daria nome
  * a uma sobra.
  */
+/**
+ * `label` é a CHAVE dentro de `settings.tabs`, não o texto: a lista é montada
+ * fora do componente (é constante), e `useTranslations` só existe durante o
+ * render — quem traduz é o `renderTrigger` lá embaixo.
+ */
 const TABS = [
-  { id: 'profile', label: 'Perfil', icon: 'user-circle', adminOnly: false, section: 'account' },
-  { id: 'account-link', label: 'Conexão e dispositivos', icon: 'qr-code-01', adminOnly: false, section: 'account' },
-  { id: 'audio-video', label: 'Áudio e vídeo', icon: 'mic-02', adminOnly: false, section: 'account' },
-  { id: 'admin', label: 'Administração', icon: 'shield-01', adminOnly: true, section: null },
+  { id: 'profile', label: 'profile', icon: 'user-circle', adminOnly: false, section: 'account' },
+  { id: 'account-link', label: 'accountLink', icon: 'qr-code-01', adminOnly: false, section: 'account' },
+  { id: 'audio-video', label: 'audioVideo', icon: 'mic-02', adminOnly: false, section: 'account' },
+  { id: 'language', label: 'language', icon: 'translate', adminOnly: false, section: 'account' },
+  { id: 'admin', label: 'admin', icon: 'shield-01', adminOnly: true, section: null },
 ] as const;
 
 type TabId = (typeof TABS)[number]['id'];
@@ -56,6 +64,8 @@ export default function SettingsDialog({
   /** Em que aba abrir — o avatar do rodapé entra direto em Perfil, a engrenagem em Áudio e vídeo. */
   initialTab?: TabId;
 }) {
+  const t = useTranslations('settings');
+  const tCommon = useTranslations('common');
   const [tab, setTab] = useState<TabId>(initialTab);
   const { data: session } = useSession();
 
@@ -92,7 +102,7 @@ export default function SettingsDialog({
       )}
     >
       <HugeIcon name={item.icon} size={16} className="shrink-0" />
-      {item.label}
+      {t(`tabs.${item.label}`)}
     </TabsTrigger>
   );
 
@@ -113,7 +123,7 @@ export default function SettingsDialog({
               não pode ser irmão dos gatilhos lá dentro. */}
           <div className="flex w-56 shrink-0 flex-col gap-3 border-r bg-muted p-3">
             <DialogTitle className="mb-2 px-2 pt-1 text-xs font-bold uppercase tracking-wide text-muted-foreground">
-              Configurações
+              {t('title')}
             </DialogTitle>
 
             <TabsList className="h-auto flex-1 flex-col items-stretch justify-start gap-0.5 rounded-none bg-transparent p-0">
@@ -141,7 +151,7 @@ export default function SettingsDialog({
               )}
             >
               <HugeIcon name="logout-01" size={16} className="shrink-0" />
-              Sair
+              {tCommon('signOut')}
             </button>
           </div>
 
@@ -164,6 +174,10 @@ export default function SettingsDialog({
 
             <TabsContent value="audio-video" className="mt-0">
               <AudioVideoTab active={activeTab === 'audio-video'} />
+            </TabsContent>
+
+            <TabsContent value="language" className="mt-0">
+              <LanguageTab />
             </TabsContent>
 
             {/* `-m-5` cancela o padding desta coluna só aqui: o AdminTabsView

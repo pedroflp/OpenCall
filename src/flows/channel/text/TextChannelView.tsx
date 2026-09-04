@@ -1,4 +1,5 @@
 'use client';
+import { useTranslations } from 'next-intl';
 
 import { useCallback, useEffect, useRef, useState } from 'react';
 import { useSession } from 'next-auth/react';
@@ -9,6 +10,7 @@ import { Dialog, DialogContent, DialogDescription, DialogFooter, DialogHeader, D
 import { useToast } from '@/components/ui/use-toast';
 import { subscribeToChatConnection } from '@/lib/chat/realtime';
 import type { ChatEvent } from '@/lib/chat/signal';
+import type { AttachmentDTO } from '@/lib/chat/dto';
 import type { UserAuthDTO } from '@/app/api/auth/[...nextauth]/types';
 import { routeNames } from '@/app/route.names';
 import ImageLightbox from './ImageLightbox';
@@ -34,16 +36,18 @@ export default function TextChannelView({
   user: UserAuthDTO;
 }) {
   const { data: session } = useSession();
+  const t = useTranslations('chat.view');
+  const tCommon = useTranslations('common');
   const { toast } = useToast();
   const canDeleteAny = Boolean(session?.user?.isChannelsAdmin);
 
   const currentUser = { id: user.id, username: user.username, avatar: user.avatar };
   const { messages, loadingInitial, loadingOlder, hasMore, blocked, loadOlder, sendMessage, retryMessage, discardMessage, removeMessage, clearMessages } =
     useChatMessages(channelId, currentUser);
-  const { attachment, startAttach, retry: retryAttachment, clear: clearAttachment, release: releaseAttachment } = useChatAttachment();
+  const { attachment, startAttach, clear: clearAttachment, release: releaseAttachment } = useChatAttachment();
 
   const [replyTarget, setReplyTarget] = useState<ClientMessage | null>(null);
-  const [lightboxImage, setLightboxImage] = useState<NonNullable<ClientMessage['image']> | null>(null);
+  const [lightboxImage, setLightboxImage] = useState<AttachmentDTO | null>(null);
   const [deleteTarget, setDeleteTarget] = useState<ClientMessage | null>(null);
   const [deleting, setDeleting] = useState(false);
   const [typingUsers, setTypingUsers] = useState<{ id: string; username: string }[]>([]);
@@ -110,10 +114,10 @@ export default function TextChannelView({
       if (response.ok || response.status === 404) {
         removeMessage(deleteTarget.id);
       } else {
-        toast({ title: 'Não deu pra apagar a mensagem', description: 'Tenta de novo.', variant: 'destructive' });
+        toast({ title: t('deleteFailed'), description: t('deleteFailedRetry'), variant: 'destructive' });
       }
     } catch {
-      toast({ title: 'Não deu pra apagar a mensagem', description: 'Verifica sua conexão e tenta de novo.', variant: 'destructive' });
+      toast({ title: t('deleteFailed'), description: t('deleteFailedNetwork'), variant: 'destructive' });
     } finally {
       setDeleting(false);
       setDeleteTarget(null);
@@ -124,12 +128,12 @@ export default function TextChannelView({
     async (count: number) => {
       const result = await clearMessages(count);
       if (!result.ok) {
-        toast({ title: 'Não deu pra apagar as mensagens', description: 'Tenta de novo.', variant: 'destructive' });
+        toast({ title: t('clearFailed'), description: t('deleteFailedRetry'), variant: 'destructive' });
         return;
       }
       const deleted = result.count ?? 0;
       if (deleted === 0) return;
-      toast({ title: deleted === 1 ? 'A última mensagem foi apagada' : `As ${deleted} últimas mensagens foram apagadas` });
+      toast({ title: t('cleared', { count: deleted }) });
     },
     [clearMessages, toast],
   );
@@ -145,7 +149,7 @@ export default function TextChannelView({
       <div className="flex h-[52px] shrink-0 items-center gap-2 border-b border-border/40 px-[18px] shadow-[0_1px_0_rgba(0,0,0,0.2)]">
         <Link
           href={routeNames.CHANNELS}
-          aria-label="Voltar"
+          aria-label={t('back')}
           className="-ml-1.5 flex size-8 shrink-0 items-center justify-center rounded-md text-muted-foreground transition-colors hover:bg-muted/40 hover:text-foreground min-[900px]:hidden"
         >
           <HugeIcon name="arrow-left-01" size={19} />
@@ -181,7 +185,6 @@ export default function TextChannelView({
         attachment={attachment}
         onAttachFile={startAttach}
         onRemoveAttachment={clearAttachment}
-        onRetryAttachment={retryAttachment}
         onAttachmentSent={releaseAttachment}
         currentUser={currentUser}
         canClear={canDeleteAny}
@@ -191,7 +194,7 @@ export default function TextChannelView({
 
       {isDragging && (
         <div className="pointer-events-none absolute inset-0 z-20 flex items-center justify-center border-2 border-dashed border-primary bg-background/80 backdrop-blur-sm">
-          <p className="text-lg font-semibold text-primary">Solte a imagem aqui</p>
+          <p className="text-lg font-semibold text-primary">{t('dropFileHere')}</p>
         </div>
       )}
 
@@ -200,15 +203,15 @@ export default function TextChannelView({
       <Dialog open={Boolean(deleteTarget)} onOpenChange={(open) => !open && setDeleteTarget(null)}>
         <DialogContent className="max-w-sm">
           <DialogHeader>
-            <DialogTitle>Apagar mensagem?</DialogTitle>
-            <DialogDescription>Isso não pode ser desfeito. A mensagem some pra todo mundo no canal.</DialogDescription>
+            <DialogTitle>{t('deleteTitle')}</DialogTitle>
+            <DialogDescription>{t('deleteDescription')}</DialogDescription>
           </DialogHeader>
           <DialogFooter>
             <Button type="button" variant="outline" onClick={() => setDeleteTarget(null)} disabled={deleting}>
-              Cancelar
+              {tCommon('cancel')}
             </Button>
             <Button type="button" variant="destructive" loading={deleting} onClick={() => void confirmDelete()}>
-              Apagar
+              {t('delete')}
             </Button>
           </DialogFooter>
         </DialogContent>

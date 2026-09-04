@@ -2,6 +2,7 @@
 
 import { useRef, useState, type ReactNode } from 'react';
 import { ConnectionQuality } from 'livekit-client';
+import { useTranslations } from 'next-intl';
 import { Area, AreaChart, CartesianGrid, YAxis } from 'recharts';
 import { HugeIcon } from '@/components/HugeIcon';
 import { Popover, PopoverContent, PopoverTrigger } from '@/components/ui/popover';
@@ -21,12 +22,13 @@ const PING_EXCELLENT_MAX_MS = 40;
 const PING_GOOD_MAX_MS = 80;
 const PING_OK_MAX_MS = 120;
 
-function pingLabel(ms: number | null): string {
-  if (ms === null) return 'Conectando…';
-  if (ms <= PING_EXCELLENT_MAX_MS) return 'Excelente';
-  if (ms <= PING_GOOD_MAX_MS) return 'Bom';
-  if (ms <= PING_OK_MAX_MS) return 'Mediano';
-  return 'Ruim';
+/** Devolve a CHAVE da faixa em `voice.quality`; quem traduz é o componente. */
+function pingLabelKey(ms: number | null): 'connecting' | 'excellent' | 'good' | 'fair' | 'poor' {
+  if (ms === null) return 'connecting';
+  if (ms <= PING_EXCELLENT_MAX_MS) return 'excellent';
+  if (ms <= PING_GOOD_MAX_MS) return 'good';
+  if (ms <= PING_OK_MAX_MS) return 'fair';
+  return 'poor';
 }
 
 function pingColorClass(ms: number | null): string {
@@ -47,14 +49,14 @@ function pingColorHex(ms: number | null): string {
 // mostrado como valor real (sem tooltip), é puro "carregando".
 const MOCK_LOADING_DATA = [32, 40, 30, 44, 34, 42, 33].map((ping, i) => ({ i, ping }));
 
-const mockChartConfig = {
-  ping: { label: 'Ping', color: 'hsl(var(--muted-foreground))' },
-} satisfies ChartConfig;
-
 function PingHistoryChart({ history, ping }: { history: number[]; ping: number | null }) {
+  const t = useTranslations('voice.quality');
   const hasData = history.length >= 2;
   const data = hasData ? history.map((ping, i) => ({ i, ping })) : MOCK_LOADING_DATA;
-  const pingChartConfig = { ping: { label: 'Ping', color: pingColorHex(ping) } } satisfies ChartConfig;
+  const pingChartConfig = { ping: { label: t('pingLabel'), color: pingColorHex(ping) } } satisfies ChartConfig;
+  const mockChartConfig = {
+    ping: { label: t('pingLabel'), color: 'hsl(var(--muted-foreground))' },
+  } satisfies ChartConfig;
 
   return (
     <ChartContainer config={hasData ? pingChartConfig : mockChartConfig} className="aspect-auto h-20 w-full">
@@ -78,6 +80,7 @@ function PingHistoryChart({ history, ping }: { history: number[]; ping: number |
 }
 
 export default function ConnectionQualityIndicator({ children }: { children?: ReactNode }) {
+  const t = useTranslations('voice.quality');
   const { quality, ping, history } = useConnectionQuality();
   const [open, setOpen] = useState(false);
   const closeTimer = useRef<ReturnType<typeof setTimeout> | null>(null);
@@ -98,7 +101,7 @@ export default function ConnectionQualityIndicator({ children }: { children?: Re
   };
 
   const icon = SIGNAL_ICON[quality];
-  const label = pingLabel(ping);
+  const label = t(pingLabelKey(ping));
   const colorClass = pingColorClass(ping);
 
   return (
@@ -107,7 +110,7 @@ export default function ConnectionQualityIndicator({ children }: { children?: Re
         <div
           role="button"
           tabIndex={0}
-          aria-label={`Qualidade da conexão: ${label}`}
+          aria-label={t('ariaLabel', { label })}
           className="flex min-w-0 cursor-default items-start gap-2 rounded-md outline-none"
           onMouseEnter={openNow}
           onMouseLeave={scheduleClose}
@@ -134,7 +137,7 @@ export default function ConnectionQualityIndicator({ children }: { children?: Re
             <p className={cn('text-[13px] font-bold', colorClass)}>{label}</p>
           </div>
           <p className="text-[11.5px] text-muted-foreground">
-            Ping: <span className="font-semibold text-foreground">{ping !== null ? `${ping}ms` : '—'}</span>
+            {t('pingPrefix')} <span className="font-semibold text-foreground">{ping !== null ? `${ping}ms` : '—'}</span>
           </p>
         </div>
         <PingHistoryChart history={history} ping={ping} />

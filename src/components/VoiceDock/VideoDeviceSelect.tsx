@@ -2,6 +2,7 @@
 
 import { useEffect, useRef } from 'react';
 import { HugeIcon } from '@/components/HugeIcon';
+import { useTranslations } from 'next-intl';
 import { Label } from '@/components/ui/label';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
 import { useVoice } from '@/providers/VoiceProvider';
@@ -9,6 +10,7 @@ import { useVideoInputDevices } from '@/hooks/useVideoInputDevices';
 import { videoDeviceConstraint } from '@/lib/rtc/cameraQuality';
 
 export default function VideoDeviceSelect({ active }: { active: boolean }) {
+  const t = useTranslations('voice.devices');
   const { videoDeviceId, setVideoDeviceId } = useVoice();
   const devices = useVideoInputDevices(active);
   const videoRef = useRef<HTMLVideoElement>(null);
@@ -44,18 +46,18 @@ export default function VideoDeviceSelect({ active }: { active: boolean }) {
     <div className="space-y-2">
       <Label className="flex items-center gap-1.5">
         <HugeIcon name="camera-01" size={14} />
-        Câmera
+        {t('camera')}
       </Label>
       <Select value={videoDeviceId || undefined} onValueChange={setVideoDeviceId}>
         <SelectTrigger>
-          <SelectValue placeholder="Padrão do sistema" />
+          <SelectValue placeholder={t('systemDefault')} />
         </SelectTrigger>
         <SelectContent>
           {devices
             .filter((device) => device.deviceId)
             .map((device) => (
               <SelectItem key={device.deviceId} value={device.deviceId}>
-                {device.label || 'Câmera'}
+                {device.label || t('camera')}
               </SelectItem>
             ))}
         </SelectContent>

@@ -1,3 +1,31 @@
+import createNextIntlPlugin from 'next-intl/plugin';
+
+// Aponta pro módulo que resolve idioma + catálogo por request (src/i18n/request.ts).
+const withNextIntl = createNextIntlPlugin('./src/i18n/request.ts');
+
+/**
+ * `next/image` recusa qualquer src que não bata com um remotePattern — e recusa
+ * lançando, o que derruba a árvore inteira (o chat some, não só a imagem). O
+ * curinga https abaixo cobre R2/CDN em produção, mas não o storage de
+ * desenvolvimento: o MinIO do docker-compose serve em http://localhost:9000.
+ * Em vez de fixar localhost, deriva do mesmo env que monta as URLs
+ * (lib/r2/publicUrl) — quem apontar a base pra outro host http continua
+ * funcionando.
+ */
+function padraoDaBasePublica() {
+  const base = process.env.NEXT_PUBLIC_R2_PUBLIC_BASE_URL;
+  if (!base) return [];
+
+  try {
+    const { protocol, hostname, port } = new URL(base);
+    if (protocol !== 'http:') return [];
+    return [{ protocol: 'http', hostname, port, pathname: '/**' }];
+  } catch {
+    // Base inválida: publicR2Url já grita em runtime, aqui só não há o que liberar.
+    return [];
+  }
+}
+
 /** @type {import('next').NextConfig} */
 const nextConfig = {
   // ssh2 (usado pelo refresh sob demanda de métricas via SSH, ver
@@ -15,6 +43,7 @@ const nextConfig = {
         port: '',
         pathname: '**',
       },
+      ...padraoDaBasePublica(),
     ],
   },
   async headers() {
@@ -33,4 +62,4 @@ const nextConfig = {
   }
 };
 
-export default nextConfig;
+export default withNextIntl(nextConfig);

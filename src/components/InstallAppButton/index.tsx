@@ -3,6 +3,7 @@
 import { useEffect, useState } from 'react';
 import Image from 'next/image';
 import { useRouter } from 'next/navigation';
+import { useTranslations } from 'next-intl';
 import { HugeIcon } from '@/components/HugeIcon';
 import { Button } from '@/components/ui/button';
 import { Dialog, DialogContent, DialogDescription, DialogHeader, DialogTitle } from '@/components/ui/dialog';
@@ -40,6 +41,8 @@ function isIOS(): boolean {
  * até ele marcar "Não mostrar novamente", que persiste a flag no Postgres.
  */
 export default function InstallAppButton() {
+  const t = useTranslations('install');
+  const tCommon = useTranslations('common');
   const router = useRouter();
   const isMobile = useIsMobile();
   const [deferredPrompt, setDeferredPrompt] = useState<BeforeInstallPromptEvent | null>(null);
@@ -115,13 +118,9 @@ export default function InstallAppButton() {
           <DialogHeader>
             <DialogTitle className="flex items-center gap-2">
               <Image src="/icons/opencall-192.png" width={24} height={24} alt="" className="rounded-[6px]" />
-              Instalar o OpenCall
+              {t('title')}
             </DialogTitle>
-            <DialogDescription>
-              {ios
-                ? 'Adiciona o OpenCall na tela de início pra abrir como um app, sem precisar do navegador.'
-                : 'Instala o OpenCall como um app — abre direto, sem a barra do navegador.'}
-            </DialogDescription>
+            <DialogDescription>{ios ? t('descriptionIos') : t('description')}</DialogDescription>
           </DialogHeader>
 
           {ios ? (
@@ -131,7 +130,7 @@ export default function InstallAppButton() {
                   <HugeIcon name="more-horizontal" size={18} />
                 </span>
                 <span className="pt-1 text-sm leading-snug text-foreground">
-                  Toque nos <strong>•••</strong> na barra do Safari
+                  {t.rich('iosStep1', { b: (chunks) => <strong>{chunks}</strong> })}
                 </span>
               </li>
               <li className="flex items-start gap-3">
@@ -139,7 +138,7 @@ export default function InstallAppButton() {
                   <HugeIcon name="share-08" size={18} />
                 </span>
                 <span className="pt-1 text-sm leading-snug text-foreground">
-                  Toque em <strong>Compartilhar</strong>
+                  {t.rich('iosStep2', { b: (chunks) => <strong>{chunks}</strong> })}
                 </span>
               </li>
               <li className="flex items-start gap-3">
@@ -147,21 +146,17 @@ export default function InstallAppButton() {
                   <HugeIcon name="screen-add-to-home" size={18} />
                 </span>
                 <span className="pt-1 text-sm leading-snug text-foreground">
-                  Role para baixo e toque em <strong>Adicionar à Tela de Início</strong>
+                  {t.rich('iosStep3', { b: (chunks) => <strong>{chunks}</strong> })}
                 </span>
               </li>
             </ol>
           ) : (
             <Button type="button" onClick={() => void handleInstallClick()} className="w-full">
-              Instalar
+              {t('action')}
             </Button>
           )}
 
-          <p className="text-xs text-muted-foreground">
-            {ios
-              ? 'Depois de adicionar à tela de início, esse aviso não aparece mais.'
-              : 'Depois de instalar, esse aviso não aparece mais.'}
-          </p>
+          <p className="text-xs text-muted-foreground">{ios ? t('afterInstallIos') : t('afterInstall')}</p>
 
           <label className="flex items-center gap-2 text-sm text-muted-foreground">
             <input
@@ -170,11 +165,11 @@ export default function InstallAppButton() {
               onChange={(e) => setDontShowAgain(e.target.checked)}
               className="h-3.5 w-3.5 shrink-0 accent-primary"
             />
-            Não mostrar novamente
+            {t('dontShowAgain')}
           </label>
 
           <Button type="button" variant="outline" onClick={handleClose} className="w-full">
-            Fechar
+            {tCommon('close')}
           </Button>
         </DialogContent>
       </Dialog>

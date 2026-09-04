@@ -1,4 +1,5 @@
 'use client';
+import { useTranslations } from 'next-intl';
 
 import { useState } from 'react';
 import type { Participant } from 'livekit-client';
@@ -15,6 +16,7 @@ import { cn } from '@/lib/utils';
 const MAX_VISIBLE_AVATARS = 4;
 
 function ViewerAvatar({ viewer, canModerate }: { viewer: Participant; canModerate: boolean }) {
+  const t = useTranslations('voice.participant');
   const { removeSpectator } = useVoice();
   const [menuOpen, setMenuOpen] = useState(false);
   const name = participantDisplayName(viewer);
@@ -55,7 +57,7 @@ function ViewerAvatar({ viewer, canModerate }: { viewer: Participant; canModerat
             className="flex w-full items-center gap-2 rounded-sm px-2 py-1.5 text-left text-sm text-destructive transition-colors hover:bg-destructive/10"
           >
             <HugeIcon name="view-off-slash" size={16} />
-            Remover da live
+            {t('removeFromStream')}
           </button>
         </PopoverContent>
       )}

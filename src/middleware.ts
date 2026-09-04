@@ -5,7 +5,7 @@ import { routeNames } from '@/app/route.names';
 
 // A experiência de canais é a própria home agora (ver src/app/(channels)) —
 // cobre "/", "/<channelId>", "/text" e "/text/<channelId>" (todo path de 1
-// segmento só, exceto /admin e /convite tratados antes de chegar aqui, mais o
+// segmento só, exceto /admin e /invite tratados antes de chegar aqui, mais o
 // caso de 2 segmentos do texto) e as rotas de backend em
 // /api/rtc/*, /api/chat/* e /api/channels/* (leitura pública da lista de
 // canais, usada pelos hooks de sidebar). Restritos à mesma flag `canalAccess`
@@ -18,7 +18,7 @@ const CHANNEL_ROUTE_MATCHER = new RegExp(`${CHANNEL_PAGE_MATCHER.source}|${CHANN
 // Página pública (ver routeNames.INVITE) — não passa pelo gate de canalAccess
 // mesmo sendo um path de 1 segmento só, então precisa sair antes do check
 // genérico acima.
-const PUBLIC_ROUTE_MATCHER = /^\/convite(\/|$)/;
+const PUBLIC_ROUTE_MATCHER = /^\/invite(\/|$)/;
 
 // Quem chama é o servidor do LiveKit, que não tem sessão nenhuma — a rota se
 // autentica sozinha pelo header assinado com o API secret (ver WebhookReceiver

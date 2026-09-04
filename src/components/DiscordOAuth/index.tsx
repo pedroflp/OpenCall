@@ -2,10 +2,13 @@
 
 import { signIn } from 'next-auth/react';
 import Image from 'next/image';
+import { useTranslations } from 'next-intl';
 import { Button } from '../ui/button';
 import { Tooltip, TooltipContent, TooltipTrigger } from '@/components/ui/tooltip';
 
 export default function DiscordOAuth({ collapsed = false }: { collapsed?: boolean }) {
+  const t = useTranslations('auth');
+
   if (collapsed) {
     return (
       <Tooltip>
@@ -13,13 +16,13 @@ export default function DiscordOAuth({ collapsed = false }: { collapsed?: boolea
           <Button
             onClick={() => signIn('discord')}
             size="icon"
-            aria-label="Entrar com Discord"
+            aria-label={t('signInWithDiscord')}
             className='bg-[#7289da] hover:bg-[#677bc4] text-white'
           >
             <img src="/assets/icons/discord.svg" width={24} height={24} alt="" className="size-5" />
           </Button>
         </TooltipTrigger>
-        <TooltipContent side="right">Entrar com Discord</TooltipContent>
+        <TooltipContent side="right">{t('signInWithDiscord')}</TooltipContent>
       </Tooltip>
     );
   }
@@ -30,7 +33,7 @@ export default function DiscordOAuth({ collapsed = false }: { collapsed?: boolea
       className='bg-[#7289da] hover:bg-[#677bc4] py-6 w-full text-white gap-2'
     >
       <Image src="/assets/icons/discord.svg" width={24} height={24} alt="" className="size-5" />
-      <span>Entrar com Discord</span>
+      <span>{t('signInWithDiscord')}</span>
     </Button>
   )
 }

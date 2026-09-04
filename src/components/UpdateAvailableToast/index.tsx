@@ -1,5 +1,6 @@
 'use client';
 
+import { useTranslations } from 'next-intl';
 import { HugeIcon } from '@/components/HugeIcon';
 import { Button } from '@/components/ui/button';
 import { Card, CardContent } from '@/components/ui/card';
@@ -17,6 +18,7 @@ function refreshApp() {
  * flutuante e não-bloqueante de propósito, nunca centralizado nem modal.
  */
 export default function UpdateAvailableToast() {
+  const t = useTranslations('update');
   const { updateAvailable } = useAppVersion();
 
   if (!updateAvailable) return null;
@@ -28,17 +30,17 @@ export default function UpdateAvailableToast() {
           <div className="flex items-center gap-3">
             <HugeIcon name="download-02" size={30} className="shrink-0 text-primary/60" />
             <div className="min-w-0">
-              <p className="font-semibold leading-snug text-primary text-lg">Atualização disponível</p>
+              <p className="font-semibold leading-snug text-primary text-lg">{t('title')}</p>
             </div>
           </div>
           <p className="text-sm text-muted-foreground mt-1 leading-snug">
-            O OpenCall recebeu uma atualização enquanto você estava aqui.
+            {t('description')}
             <br />
-            <b>Atualize a página pra pegar a versão mais recente.</b>
+            <b>{t('callToAction')}</b>
           </p>
           <Button className="w-full bg-primary/20 hover:bg-primary/25 text-primary gap-2" onClick={refreshApp}>
             <HugeIcon name="arrow-reload-horizontal" size={16} />
-            Atualizar para nova versão
+            {t('action')}
           </Button>
         </CardContent>
       </Card>

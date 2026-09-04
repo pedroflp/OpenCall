@@ -2,6 +2,7 @@
 
 import { useEffect, useRef, useState } from 'react';
 import jsQR from 'jsqr';
+import { useTranslations } from 'next-intl';
 import { HugeIcon } from '@/components/HugeIcon';
 import { cn } from '@/lib/utils';
 
@@ -42,6 +43,7 @@ function isLoginQrUrl(text: string): URL | null {
  * (montar o componente escondido não pode acender a luz da webcam).
  */
 export default function QrLoginCamera({ active, className }: { active: boolean; className?: string }) {
+  const t = useTranslations('auth.camera');
   const videoRef = useRef<HTMLVideoElement>(null);
   const [state, setState] = useState<ScanState>('requesting');
 
@@ -109,14 +111,12 @@ export default function QrLoginCamera({ active, className }: { active: boolean; 
 
   if (state === 'denied') {
     return (
-      <p className="text-sm text-muted-foreground">
-        Sem acesso à câmera. Permite o acesso nas configurações do navegador e tenta de novo.
-      </p>
+      <p className="text-sm text-muted-foreground">{t('denied')}</p>
     );
   }
 
   if (state === 'unsupported') {
-    return <p className="text-sm text-muted-foreground">Esse navegador não dá acesso à câmera.</p>;
+    return <p className="text-sm text-muted-foreground">{t('unsupported')}</p>;
   }
 
   return (

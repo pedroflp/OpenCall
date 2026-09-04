@@ -6,6 +6,8 @@ import { MESSAGE_INCLUDE, toMessageDTO } from '@/lib/chat/dto';
 import { encodeCursor, decodeCursor } from '@/lib/chat/cursor';
 import { publishToChannel } from '@/lib/chat/signal';
 import { getTextChannel } from '@/lib/chat/textChannels';
+import { headAttachment } from '@/lib/chat/storage';
+import { MAX_ATTACHMENT_BYTES, MAX_ATTACHMENT_DURATION_MS } from '@/lib/chat/attachments';
 import {
   MAX_MENTIONS_PER_MESSAGE,
   MESSAGE_MAX_LENGTH,
@@ -16,6 +18,9 @@ import {
 
 export const runtime = 'nodejs';
 export const dynamic = 'force-dynamic';
+
+/** Teto de sanidade pra dimensão vinda do cliente — 8K de lado cobre qualquer mídia real. */
+const MAX_MEDIA_DIMENSION = 8192;
 
 function err(status: number, code: string, extra?: Record<string, unknown>) {
   return NextResponse.json({ error: code, ...extra }, { status });
@@ -67,7 +72,7 @@ export async function GET(req: NextRequest) {
 interface PostBody {
   channelId?: unknown;
   content?: unknown;
-  image?: unknown;
+  attachment?: unknown;
   replyToId?: unknown;
   clientNonce?: unknown;
   mentionedUserIds?: unknown;
@@ -85,23 +90,37 @@ async function resolveMentionedUserIds(raw: unknown): Promise<string[] | 'INVALI
   return existing.map((user) => user.id);
 }
 
-interface ImageInput {
+interface AttachmentInput {
   key: string;
-  width: number;
-  height: number;
-  bytes: number;
+  width: number | null;
+  height: number | null;
+  durationMs: number | null;
 }
 
-function parseImage(raw: unknown, authorId: string): ImageInput | null | 'INVALID' {
+/** Inteiro positivo abaixo do teto, ou null — qualquer outra coisa (negativo, NaN, string) é descartada em silêncio, não invalida a mensagem. */
+function optionalDimension(raw: unknown, max: number): number | null {
+  if (typeof raw !== 'number' || !Number.isFinite(raw) || raw <= 0) return null;
+  return Math.min(Math.round(raw), max);
+}
+
+/**
+ * Do corpo só saem a chave e os metadados de APRESENTAÇÃO (dimensão e
+ * duração): espécie, mime, tamanho e nome vêm do HeadObject logo abaixo, do
+ * objeto de verdade (ver §5.4 da RFC de anexos).
+ */
+function parseAttachment(raw: unknown, authorId: string): AttachmentInput | null | 'INVALID' {
   if (raw === undefined || raw === null) return null;
   if (typeof raw !== 'object') return 'INVALID';
 
-  const { key, width, height, bytes } = raw as Record<string, unknown>;
+  const { key, width, height, durationMs } = raw as Record<string, unknown>;
   if (typeof key !== 'string' || !key.startsWith(`chat/${authorId}/`)) return 'INVALID';
-  if (typeof width !== 'number' || typeof height !== 'number' || typeof bytes !== 'number') return 'INVALID';
-  if (width <= 0 || height <= 0 || bytes <= 0) return 'INVALID';
 
-  return { key, width, height, bytes };
+  return {
+    key,
+    width: optionalDimension(width, MAX_MEDIA_DIMENSION),
+    height: optionalDimension(height, MAX_MEDIA_DIMENSION),
+    durationMs: optionalDimension(durationMs, MAX_ATTACHMENT_DURATION_MS),
+  };
 }
 
 export async function POST(req: NextRequest) {
@@ -126,10 +145,20 @@ export async function POST(req: NextRequest) {
   const content = typeof body.content === 'string' ? body.content.trim() : null;
   if (content && content.length > MESSAGE_MAX_LENGTH) return err(400, 'CONTENT_TOO_LONG');
 
-  const image = parseImage(body.image, user.id);
-  if (image === 'INVALID') return err(400, 'INVALID_IMAGE');
+  const attachmentInput = parseAttachment(body.attachment, user.id);
+  if (attachmentInput === 'INVALID') return err(400, 'INVALID_ATTACHMENT');
 
-  if (!content && !image) return err(400, 'EMPTY_MESSAGE');
+  if (!content && !attachmentInput) return err(400, 'EMPTY_MESSAGE');
+
+  // A espécie e o tamanho de verdade só se sabem aqui — e o Head também é o que
+  // confirma que a chave existe mesmo (chave inventada com o prefixo certo
+  // viraria anexo quebrado pra sempre).
+  const attachment = attachmentInput ? await headAttachment(attachmentInput.key) : null;
+  if (attachmentInput && !attachment) return err(400, 'ATTACHMENT_NOT_FOUND');
+  if (attachment && attachment.bytes > MAX_ATTACHMENT_BYTES[attachment.kind]) return err(400, 'ATTACHMENT_TOO_LARGE');
+
+  const hasSize = attachment?.kind === 'IMAGE' || attachment?.kind === 'VIDEO';
+  const hasDuration = attachment?.kind === 'VIDEO' || attachment?.kind === 'AUDIO';
 
   let replyToId: string | null = null;
   if (body.replyToId !== undefined && body.replyToId !== null) {
@@ -150,10 +179,14 @@ export async function POST(req: NextRequest) {
       channelId,
       authorId: user.id,
       content: content || null,
-      imageKey: image?.key,
-      imageWidth: image?.width,
-      imageHeight: image?.height,
-      imageBytes: image?.bytes,
+      attachmentKind: attachment?.kind,
+      attachmentKey: attachmentInput?.key,
+      attachmentName: attachment?.name,
+      attachmentMime: attachment?.mime,
+      attachmentBytes: attachment?.bytes,
+      attachmentWidth: hasSize ? attachmentInput?.width : null,
+      attachmentHeight: hasSize ? attachmentInput?.height : null,
+      attachmentDurationMs: hasDuration ? attachmentInput?.durationMs : null,
       replyToId,
       mentions: mentionedUserIds.length ? { create: mentionedUserIds.map((userId) => ({ userId })) } : undefined,
     },

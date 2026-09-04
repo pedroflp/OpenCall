@@ -2,14 +2,13 @@
 
 import { useEffect, useState } from 'react';
 import { useToast } from '@/components/ui/use-toast';
+import { useTranslations } from 'next-intl';
 import { useCall } from '@/providers/CallProvider';
 import { useVoice } from '@/providers/VoiceProvider';
 import { getCallCooldownOutcome, getCallCooldownRemaining, setCallCooldown } from '@/lib/rtc/callCooldown';
 
-const RING_ERROR_MESSAGE: Record<string, string> = {
-  TARGET_OFFLINE: 'Essa pessoa não está online.',
-  CHANNEL_NOT_FOUND: 'Canal inválido.',
-};
+/** Códigos que a rota devolve com frase própria em `presence.actions.ringErrors`. */
+const RING_ERRORS = ['TARGET_OFFLINE', 'CHANNEL_NOT_FOUND'] as const;
 
 export type RingStatus = 'idle' | 'no-channel' | 'already-in-room' | 'ringing' | 'cooldown' | 'rejected';
 
@@ -21,6 +20,7 @@ export type RingStatus = 'idle' | 'no-channel' | 'already-in-room' | 'ringing' |
  * useCallAction (chamada via DM do Discord), que é uma ação independente.
  */
 export function useRingAction(targetUserId: string, targetVoiceChannelId?: string) {
+  const t = useTranslations('presence.actions');
   const { toast } = useToast();
   const { channel } = useVoice();
   const { outgoingCallTargetId, startRingCall } = useCall();
@@ -70,9 +70,12 @@ export function useRingAction(targetUserId: string, targetVoiceChannelId?: strin
       return;
     }
 
+    const code = result.error ?? '';
     toast({
-      title: 'Não deu pra ligar',
-      description: (result.error && RING_ERROR_MESSAGE[result.error]) || 'Tenta de novo daqui a pouco.',
+      title: t('ringFailed'),
+      description: (RING_ERRORS as readonly string[]).includes(code)
+        ? t(`ringErrors.${code as (typeof RING_ERRORS)[number]}`)
+        : t('tryAgainSoon'),
       variant: 'destructive',
     });
   }

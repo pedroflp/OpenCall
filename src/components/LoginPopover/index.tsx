@@ -2,6 +2,7 @@
 
 import { useEffect, useState } from 'react';
 import { REGEXP_ONLY_DIGITS_AND_CHARS } from 'input-otp';
+import { useTranslations } from 'next-intl';
 import { HugeIcon } from '@/components/HugeIcon';
 import { Button } from '@/components/ui/button';
 import { Dialog, DialogContent, DialogDescription, DialogTitle } from '@/components/ui/dialog';
@@ -60,6 +61,7 @@ async function verifyAccessCode(code: string): Promise<void> {
  * não há o que dispensar pra ver.
  */
 export default function LoginPopover() {
+  const t = useTranslations('auth');
   const [step, setStep] = useState<Step>('choose');
   const [code, setCode] = useState('');
   const [codeState, setCodeState] = useState<CodeState>('idle');
@@ -114,8 +116,8 @@ export default function LoginPopover() {
         >
           <HugeIcon name="shield-01" size={44} className="relative text-primary" />
           <div className="relative space-y-2">
-            <p className="text-sm text-foreground/70">Bem-vindo ao OpenCall</p>
-            <p className="text-2xl font-bold leading-tight text-foreground">Faça login para usar toda a experiência da plataforma.</p>
+            <p className="text-sm text-foreground/70">{t('welcomeTitle')}</p>
+            <p className="text-2xl font-bold leading-tight text-foreground">{t('welcomeSubtitle')}</p>
           </div>
         </div>
 
@@ -124,8 +126,8 @@ export default function LoginPopover() {
             <>
               <div className="space-y-2">
                 <HugeIcon name="shield-01" size={36} className="text-primary md:hidden" />
-                <DialogTitle className="text-2xl font-bold">Entrar no OpenCall</DialogTitle>
-                <DialogDescription>A conta do Discord libera os canais de voz e o bate-papo.</DialogDescription>
+                <DialogTitle className="text-2xl font-bold">{t('signInTitle')}</DialogTitle>
+                <DialogDescription>{t('signInDescription')}</DialogDescription>
               </div>
 
               <div className="flex flex-col gap-4">
@@ -133,7 +135,7 @@ export default function LoginPopover() {
 
                 <div className="flex items-center gap-3">
                   <Separator className="flex-1" />
-                  <span className="text-xs text-muted-foreground">ou</span>
+                  <span className="text-xs text-muted-foreground">{t('or')}</span>
                   <Separator className="flex-1" />
                 </div>
 
@@ -142,27 +144,30 @@ export default function LoginPopover() {
                     primeiro paint. */}
                 <Button type="button" variant="outline" className="w-full gap-2 py-6 md:hidden" onClick={() => setStep('qr')}>
                   <HugeIcon name="qr-code-scan" size={20} />
-                  <span>Ler QR Code</span>
+                  <span>{t('readQr')}</span>
                 </Button>
                 <Button type="button" variant="outline" className="hidden w-full gap-2 py-6 md:flex" onClick={() => setStep('code')}>
                   <HugeIcon name="password-validation" size={20} />
-                  <span>Inserir código de acesso</span>
+                  <span>{t('enterAccessCode')}</span>
                 </Button>
               </div>
 
+              {/* `t.rich` porque o negrito cai no MEIO da frase, e onde ele cai
+                  muda com a língua — deixar o <b> aqui fora obrigaria a quebrar
+                  a mensagem em três pedaços e remontar na ordem do português. */}
               <p className="text-xs text-muted-foreground md:hidden">
-                Já está logado no computador? Abre <b>Entrar em outro dispositivo</b> por lá e lê aqui — não precisa digitar nada.
+                {t.rich('hintMobile', { b: (chunks) => <b>{chunks}</b> })}
               </p>
               <p className="hidden text-xs text-muted-foreground md:block">
-                Já está logado em outro dispositivo? Abre <b>Entrar em outro dispositivo</b> por lá e digita aqui — não precisa de senha.
+                {t.rich('hintDesktop', { b: (chunks) => <b>{chunks}</b> })}
               </p>
             </>
           )}
 
           {step === 'qr' && (
             <>
-              <StepHeader title="Ler o QR Code" onBack={goToChoose}>
-                No dispositivo já logado, abre <b>Entrar em outro dispositivo</b> e aponta a câmera pro QR.
+              <StepHeader title={t('qrStep.title')} onBack={goToChoose}>
+                {t.rich('qrStep.description', { b: (chunks) => <b>{chunks}</b> })}
               </StepHeader>
               <QrLoginCamera active={step === 'qr'} />
             </>
@@ -170,8 +175,8 @@ export default function LoginPopover() {
 
           {step === 'code' && (
             <>
-              <StepHeader title="Código de acesso" onBack={goToChoose}>
-                No dispositivo já logado, abre <b>Entrar em outro dispositivo</b> e digita aqui os seis caracteres que aparecem lá.
+              <StepHeader title={t('codeStep.title')} onBack={goToChoose}>
+                {t.rich('codeStep.description', { b: (chunks) => <b>{chunks}</b> })}
               </StepHeader>
 
               <div className="flex flex-col gap-3">
@@ -200,14 +205,8 @@ export default function LoginPopover() {
                 </InputOTP>
 
                 {codeState === 'checking' && <div className="h-4 w-32 animate-pulse rounded-md bg-muted/60" />}
-                {codeState === 'error' && (
-                  <p className="text-xs text-destructive">
-                    Código inválido ou expirado. Gera um novo no dispositivo já logado — cada código vale 2 minutos.
-                  </p>
-                )}
-                {codeState === 'blocked' && (
-                  <p className="text-xs text-destructive">Muitas tentativas seguidas. Espera alguns minutos ou entra pelo Discord.</p>
-                )}
+                {codeState === 'error' && <p className="text-xs text-destructive">{t('codeStep.invalid')}</p>}
+                {codeState === 'blocked' && <p className="text-xs text-destructive">{t('codeStep.blocked')}</p>}
               </div>
             </>
           )}
@@ -221,6 +220,8 @@ export default function LoginPopover() {
 
 /** O fim do fluxo: cobre as duas colunas (o formulário já desfocou atrás, ver `veiled`) e segura a atenção enquanto o redirect sai. */
 function AuthenticatedSeal() {
+  const t = useTranslations('auth.authenticated');
+
   return (
     <div
       role="status"
@@ -230,8 +231,8 @@ function AuthenticatedSeal() {
         <HugeIcon name="tick-02" size={34} />
       </span>
       <div className="space-y-1.5">
-        <p className="text-xl font-bold text-foreground">Conta autenticada</p>
-        <p className="text-sm text-muted-foreground">Vamos te redirecionar para a melhor experiência…</p>
+        <p className="text-xl font-bold text-foreground">{t('title')}</p>
+        <p className="text-sm text-muted-foreground">{t('description')}</p>
       </div>
     </div>
   );
@@ -239,9 +240,11 @@ function AuthenticatedSeal() {
 
 /** O cabeçalho dos dois segundos passos: o mesmo par voltar + título nos dois, e o DialogTitle que o Radix exige em qualquer estado. */
 function StepHeader({ title, onBack, children }: { title: string; onBack: () => void; children: React.ReactNode }) {
+  const tCommon = useTranslations('common');
+
   return (
     <div className="flex items-start gap-2">
-      <Button type="button" variant="ghost" size="icon" onClick={onBack} className="-ml-2 shrink-0" aria-label="Voltar">
+      <Button type="button" variant="ghost" size="icon" onClick={onBack} className="-ml-2 shrink-0" aria-label={tCommon('back')}>
         <HugeIcon name="arrow-left-01" size={18} />
       </Button>
       <div className="space-y-1">

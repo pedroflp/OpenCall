@@ -22,6 +22,19 @@ enum ChannelType {
   @@map("channel_type")
 }
 
+/// Espécie do anexo de uma mensagem — derivada dos BYTES do arquivo no upload
+/// (ver sniffMediaContentType em lib/chat/storage.ts), nunca do Content-Type
+/// que o browser declarou. `FILE` é o complemento: tudo que não é mídia que
+/// browser toca (inclusive .mkv/.avi/.heic) cai aqui e vira card de download.
+enum AttachmentKind {
+  IMAGE
+  VIDEO
+  AUDIO
+  FILE
+
+  @@map("attachment_kind")
+}
+
 /// Canal dinâmico (voz ou texto), criado/editado/excluído por um admin em
 /// /admin/channels (ver RFC "Canais dinâmicos"). `geral`/`primos`/`global` são
 /// seedados com o mesmo id que já usavam como constante de código — trocar o
@@ -178,17 +191,35 @@ model TextMessage {
   authorId String @map("author_id")
   author   User   @relation("TextMessageAuthor", fields: [authorId], references: [id], onDelete: Cascade)
 
-  /// Null quando a mensagem é só imagem. Ao menos um entre content e imageKey é
-  /// obrigatório — invariante da rota de envio, não do banco (Postgres não
-  /// expressa "um dos dois" sem CHECK, e o CHECK escaparia do schema Prisma).
+  /// Null quando a mensagem é só anexo. Ao menos um entre content e
+  /// attachmentKey é obrigatório — invariante da rota de envio, não do banco
+  /// (Postgres não expressa "um dos dois" sem CHECK, e o CHECK escaparia do
+  /// schema Prisma).
   content String? @db.VarChar(2000)
 
-  /// Chave do objeto no R2. Ganha o prefixo [deleted-in-chat]/ quando a
-  /// mensagem é apagada (ver storage.ts) — a URL pública é derivada, nunca guardada.
-  imageKey    String? @map("image_key")
-  imageWidth  Int?    @map("image_width")
-  imageHeight Int?    @map("image_height")
-  imageBytes  Int?    @map("image_bytes")
+  /// Anexo único da mensagem (ver ADR-0012 — um por mensagem, em coluna da
+  /// própria linha e não em tabela filha).
+  ///
+  /// `attachmentKey` é a chave do objeto no R2, que ganha o prefixo
+  /// [deleted-in-chat]/ quando a mensagem é apagada (ver storage.ts) — a URL
+  /// pública é derivada, nunca guardada.
+  ///
+  /// `attachmentKind`/`attachmentMime`/`attachmentBytes` são a verdade do
+  /// objeto: saem de um HeadObject no envio, não do cliente (ver §5.4 da RFC de
+  /// anexos). `attachmentName` também, decodificado da metadata `original-name`.
+  ///
+  /// `attachmentWidth`/`attachmentHeight` (IMAGE/VIDEO) e `attachmentDurationMs`
+  /// (VIDEO/AUDIO) são os únicos que vêm do cliente: metadado de apresentação
+  /// que o servidor só teria decodificando o arquivo. Nulos nas outras espécies
+  /// — invariante da rota, pelo mesmo motivo do content acima.
+  attachmentKind       AttachmentKind? @map("attachment_kind")
+  attachmentKey        String?         @map("attachment_key")
+  attachmentName       String?         @map("attachment_name")
+  attachmentMime       String?         @map("attachment_mime")
+  attachmentBytes      Int?            @map("attachment_bytes")
+  attachmentWidth      Int?            @map("attachment_width")
+  attachmentHeight     Int?            @map("attachment_height")
+  attachmentDurationMs Int?            @map("attachment_duration_ms")
 
   /// SetNull, não Cascade: apagar a mensagem citada não pode apagar quem citou.
   /// A UI cai pro estado "mensagem original indisponível".

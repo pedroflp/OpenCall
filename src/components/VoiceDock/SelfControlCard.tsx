@@ -1,6 +1,7 @@
 'use client';
 
 import { useState } from 'react';
+import { useTranslations } from 'next-intl';
 import type { UserDTO } from '@/app/api/user/types';
 import { useSelfIdentity } from '@/hooks/useSelfIdentity';
 import Avatar from '@/components/Avatar';
@@ -47,6 +48,10 @@ function SelfButton({
 }
 
 export default function SelfControlCard({ channelName, user }: { channelName: string; user: UserDTO | null }) {
+  const t = useTranslations('voice.controls');
+  const tSidebar = useTranslations('voice.sidebar');
+  const tDevices = useTranslations('voice.devices');
+  const tCommon = useTranslations('common');
   const {
     channel,
     micEnabled,
@@ -83,7 +88,7 @@ export default function SelfControlCard({ channelName, user }: { channelName: st
     setSettingsTab(tab);
     setSettingsOpen(true);
   }
-  const name = identity?.username || 'Você';
+  const name = identity?.username || tCommon('you');
 
   return (
     <div className="max-[899px]:m-2 p-2 relative py-4 rounded-2xl overflow-hidden bg-gradient-to-tr to-emerald-600/10 from-accent/10">
@@ -92,14 +97,14 @@ export default function SelfControlCard({ channelName, user }: { channelName: st
         <div className="flex items-center justify-between gap-2 ml-1">
           <ConnectionQualityIndicator>
             <div className="min-w-0">
-              <div className="text-[13px] font-bold text-green-500">Voz conectada</div>
+              <div className="text-[13px] font-bold text-green-500">{tSidebar('voiceConnected')}</div>
               <div className="truncate text-[11.5px] text-muted-foreground">{channel?.name ?? channelName}</div>
             </div>
           </ConnectionQualityIndicator>
           <div className='flex items-center gap-1'>
             <MicSettingsPopover
               trigger={
-                <Button type="button" size="icon" variant="ghost" aria-label="Configurações do microfone">
+                <Button type="button" size="icon" variant="ghost" aria-label={tDevices('micSettings')}>
                   <HugeIcon name="audio-wave-02" size={19} />
                 </Button>
               }
@@ -110,14 +115,14 @@ export default function SelfControlCard({ channelName, user }: { channelName: st
                   type="button"
                   size="icon"
                   variant="ghost"
-                  aria-label="Sair do canal"
+                  aria-label={t('leaveChannel')}
                   onClick={() => leave()}
                   className="shrink-0 text-red-500 hover:text-red-600"
                 >
                   <HugeIcon name="call-end-01" size={20} />
                 </Button>
               </TooltipTrigger>
-              <TooltipContent>Sair do canal</TooltipContent>
+              <TooltipContent>{t('leaveChannel')}</TooltipContent>
             </Tooltip>
           </div>
         </div>
@@ -132,14 +137,14 @@ export default function SelfControlCard({ channelName, user }: { channelName: st
                       type="button"
                       variant="ghost"
                       size="icon"
-                      aria-label="Virar câmera"
+                      aria-label={t('flipCamera')}
                       className="shrink-0 border-0 bg-muted"
                       onClick={() => flipCamera()}
                     >
                       <HugeIcon name="switch-camera" size={18} />
                     </Button>
                   </TooltipTrigger>
-                  <TooltipContent>Virar câmera</TooltipContent>
+                  <TooltipContent>{t('flipCamera')}</TooltipContent>
                 </Tooltip>
               )}
               <div className="flex flex-1">
@@ -149,7 +154,7 @@ export default function SelfControlCard({ channelName, user }: { channelName: st
                       type="button"
                       variant="ghost"
                       size="icon"
-                      aria-label={cameraEnabled ? 'Desligar câmera' : 'Ligar câmera'}
+                      aria-label={cameraEnabled ? t('cameraOff') : t('cameraOn')}
                       aria-pressed={cameraEnabled}
                       className={cn(
                         'flex-1 gap-2 border-0',
@@ -163,7 +168,7 @@ export default function SelfControlCard({ channelName, user }: { channelName: st
                       <HugeIcon className='-mr-4' name={cameraEnabled ? 'camera-off-01' : 'camera-01'} size={20} />
                     </Button>
                   </TooltipTrigger>
-                  <TooltipContent>{cameraEnabled ? 'Desligar câmera' : 'Ligar câmera'}</TooltipContent>
+                  <TooltipContent>{cameraEnabled ? t('cameraOff') : t('cameraOn')}</TooltipContent>
                 </Tooltip>
                 {canSelectCameraDevice && <CameraDeviceButton active={cameraEnabled} />}
               </div>
@@ -178,7 +183,7 @@ export default function SelfControlCard({ channelName, user }: { channelName: st
               onClick={() => toggleScreenShare()}
             >
               <HugeIcon name="monitor-stop" size={20} />
-              Encerrar transmissão
+              {t('endStream')}
             </Button>
           ) : (
             !cameraEnabled && (
@@ -202,14 +207,14 @@ export default function SelfControlCard({ channelName, user }: { channelName: st
                 <Button
                   type="button"
                   size="icon"
-                  aria-label="Sair da transmissão"
+                  aria-label={t('leaveStream')}
                   onClick={() => leaveStream()}
                   className="w-full bg-red-950/40 text-red-700 hover:bg-red-950/40 hover:text-red-600"
                 >
                   <HugeIcon name="view-off-slash" size={20} />
                 </Button>
               </TooltipTrigger>
-              <TooltipContent>Sair da transmissão</TooltipContent>
+              <TooltipContent>{t('leaveStream')}</TooltipContent>
             </Tooltip>
           )}
         </div>
@@ -219,7 +224,7 @@ export default function SelfControlCard({ channelName, user }: { channelName: st
             <TooltipTrigger asChild>
               <button
                 type="button"
-                aria-label="Editar perfil"
+                aria-label={tSidebar('editProfile')}
                 onClick={() => openSettings('profile')}
                 className="relative shrink-0 rounded-full transition-opacity hover:opacity-80"
               >
@@ -227,11 +232,11 @@ export default function SelfControlCard({ channelName, user }: { channelName: st
                 <span className="absolute -bottom-0.5 -right-0.5 size-2.5 rounded-full bg-green-500 ring-2 ring-background" aria-hidden />
               </button>
             </TooltipTrigger>
-            <TooltipContent>Editar perfil</TooltipContent>
+            <TooltipContent>{tSidebar('editProfile')}</TooltipContent>
           </Tooltip>
           <div className="min-w-0 flex-1">
             <div className="truncate text-[13.5px] font-bold text-green-500">{name}</div>
-            <div className="text-[11.5px] text-muted-foreground">Em voz</div>
+            <div className="text-[11.5px] text-muted-foreground">{tSidebar('inVoice')}</div>
           </div>
           <div className="flex shrink-0 items-center gap-0.5">
             <SelfButton
@@ -250,13 +255,13 @@ export default function SelfControlCard({ channelName, user }: { channelName: st
                   type="button"
                   size="icon"
                   variant="secondary"
-                  aria-label="Configurações"
+                  aria-label={t('settings')}
                   onClick={() => openSettings('audio-video')}
                 >
                   <HugeIcon name="settings-01" size={19} />
                 </Button>
               </TooltipTrigger>
-              <TooltipContent>Configurações</TooltipContent>
+              <TooltipContent>{t('settings')}</TooltipContent>
             </Tooltip>
           </div>
         </div>

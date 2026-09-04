@@ -1,22 +1,21 @@
 'use client';
 
 import { useSession } from 'next-auth/react';
+import { useTranslations } from 'next-intl';
 import { ChannelType } from '@prisma/client';
 import { HugeIcon } from '@/components/HugeIcon';
 import ChannelDialog from '@/components/VoiceDock/ChannelDialog';
 import { cn } from '@/lib/utils';
 
-const COPY: Record<ChannelType, { icon: string; title: string; description: string }> = {
-  [ChannelType.VOICE]: {
-    icon: 'call-add-02',
-    title: 'Nenhum canal de voz ainda',
-    description: 'Crie o primeiro canal pra começar a chamar a turma.',
-  },
-  [ChannelType.TEXT]: {
-    icon: 'chat-add-01',
-    title: 'Nenhum canal de texto ainda',
-    description: 'Crie o primeiro canal pra começar a conversar.',
-  },
+/**
+ * Só o ícone sobrou aqui — título e descrição saíram pro catálogo, sob
+ * `channels.empty.<tipo>`, indexados pelo MESMO valor do enum do Prisma. Isso
+ * mantém a garantia que este `Record` dava: canal de um tipo novo no schema
+ * quebra o build enquanto não tiver texto.
+ */
+const ICONS: Record<ChannelType, string> = {
+  [ChannelType.VOICE]: 'call-add-02',
+  [ChannelType.TEXT]: 'chat-add-01',
 };
 
 /**
@@ -27,9 +26,10 @@ const COPY: Record<ChannelType, { icon: string; title: string; description: stri
  * dar 403 no clique.
  */
 export default function NoChannelsEmptyState({ type }: { type: ChannelType }) {
+  const t = useTranslations('channels');
   const { data: session } = useSession();
   const isChannelsAdmin = Boolean(session?.user?.isChannelsAdmin);
-  const { icon, title, description } = COPY[type];
+  const icon = ICONS[type];
 
   const card = (
     <div
@@ -45,14 +45,14 @@ export default function NoChannelsEmptyState({ type }: { type: ChannelType }) {
       </div>
 
       <div className="space-y-1">
-        <h1 className="text-xl font-bold">{title}</h1>
-        <p className="text-sm text-muted-foreground">{description}</p>
+        <h1 className="text-xl font-bold">{t(`empty.${type}.title`)}</h1>
+        <p className="text-sm text-muted-foreground">{t(`empty.${type}.description`)}</p>
       </div>
 
       {isChannelsAdmin && (
         <span className="mt-1 inline-flex items-center gap-1.5 rounded-full bg-primary px-4 py-2 text-sm font-semibold text-primary-foreground shadow-sm transition-transform duration-200 group-hover:scale-105">
           <HugeIcon name="add-01" size={16} />
-          Criar canal
+          {t('createChannel')}
         </span>
       )}
     </div>

@@ -14,16 +14,32 @@ export interface ClearMessagesResult {
   count?: number;
 }
 
-async function uploadImageFile(file: File): Promise<{ key: string }> {
-  const formData = new FormData();
-  formData.append('file', file);
-  const response = await fetch(UPLOADS_URL, { method: 'POST', body: formData });
-  if (!response.ok) throw new Error('UPLOAD_FAILED');
-  return response.json();
+/**
+ * XMLHttpRequest, não fetch: é a única API do browser que expõe progresso de
+ * upload (`upload.onprogress`), e sem barra de progresso um vídeo de 80MB
+ * parece travado. O arquivo vai como corpo cru — nome e tamanho na query (ver
+ * ADR-0011).
+ */
+function uploadAttachmentFile(file: File, onProgress: (fraction: number) => void): Promise<{ key: string }> {
+  return new Promise((resolve, reject) => {
+    const xhr = new XMLHttpRequest();
+    xhr.open('POST', `${UPLOADS_URL}?name=${encodeURIComponent(file.name)}&size=${file.size}`);
+    xhr.responseType = 'json';
+    xhr.upload.onprogress = (event) => {
+      if (event.lengthComputable) onProgress(event.loaded / event.total);
+    };
+    xhr.onload = () => {
+      if (xhr.status >= 200 && xhr.status < 300) resolve(xhr.response as { key: string });
+      else reject(new Error((xhr.response as { error?: string } | null)?.error ?? 'UPLOAD_FAILED'));
+    };
+    xhr.onerror = () => reject(new Error('UPLOAD_FAILED'));
+    xhr.onabort = () => reject(new Error('UPLOAD_FAILED'));
+    xhr.send(file);
+  });
 }
 
-/** Best-effort: upload terminou mas a mensagem nunca foi criada (ver deleteImage em storage.ts) — nunca deixa a UI esperando por isso. */
-function deleteOrphanImage(key: string): void {
+/** Best-effort: upload terminou mas a mensagem nunca foi criada (ver deleteAttachment em storage.ts) — nunca deixa a UI esperando por isso. */
+function deleteOrphanAttachment(key: string): void {
   fetch(`${UPLOADS_URL}?key=${encodeURIComponent(key)}`, { method: 'DELETE' }).catch(() => {});
 }
 
@@ -156,9 +172,20 @@ export function useChatMessages(channelId: string, currentUser: CurrentUser | nu
         channelId,
         content: input.content,
         // Preview local (blob:) — a key real só existe depois do upload logo
-        // abaixo, então ainda não há URL pública pra apontar.
-        image: input.image
-          ? { url: input.image.previewUrl, width: input.image.width, height: input.image.height, bytes: input.image.file.size }
+        // abaixo, então ainda não há URL pública pra apontar. `kind` e `mime`
+        // são o palpite do cliente; o DTO do servidor sobrescreve os dois na
+        // confirmação (ver ADR-0013).
+        attachment: input.attachment
+          ? {
+              kind: input.attachment.kind,
+              url: input.attachment.previewUrl,
+              name: input.attachment.file.name,
+              mime: input.attachment.file.type || 'application/octet-stream',
+              bytes: input.attachment.file.size,
+              width: input.attachment.width,
+              height: input.attachment.height,
+              durationMs: input.attachment.durationMs,
+            }
           : null,
         author: currentUser,
         hasReply: input.replyToId !== null,
@@ -167,17 +194,21 @@ export function useChatMessages(channelId: string, currentUser: CurrentUser | nu
         createdAt: new Date().toISOString(),
         clientNonce,
         status: 'sending',
+        uploadProgress: input.attachment ? 0 : undefined,
       };
 
       setMessages((prev) => sortByCreatedAt([...prev, optimistic]));
+
+      const trackProgress = (fraction: number) =>
+        setMessages((prev) => prev.map((m) => (m.clientNonce === clientNonce ? { ...m, uploadProgress: fraction } : m)));
 
       // Sobe o arquivo só agora — anexo descartado antes do envio nunca chega
       // a existir no R2 (ver useChatAttachment).
       let uploadedKey: string | null = null;
 
       try {
-        if (input.image) {
-          const uploaded = await uploadImageFile(input.image.file);
+        if (input.attachment) {
+          const uploaded = await uploadAttachmentFile(input.attachment.file, trackProgress);
           uploadedKey = uploaded.key;
         }
 
@@ -187,7 +218,17 @@ export function useChatMessages(channelId: string, currentUser: CurrentUser | nu
           body: JSON.stringify({
             channelId,
             content: input.content,
-            image: uploadedKey && input.image ? { key: uploadedKey, width: input.image.width, height: input.image.height, bytes: input.image.file.size } : null,
+            // Só a chave e o metadado de apresentação: espécie, mime, tamanho e
+            // nome o servidor tira do próprio objeto (ver §5.4 da RFC).
+            attachment:
+              uploadedKey && input.attachment
+                ? {
+                    key: uploadedKey,
+                    width: input.attachment.width,
+                    height: input.attachment.height,
+                    durationMs: input.attachment.durationMs,
+                  }
+                : null,
             replyToId: input.replyToId,
             mentionedUserIds: input.mentions.map((mention) => mention.id),
             clientNonce,
@@ -196,7 +237,7 @@ export function useChatMessages(channelId: string, currentUser: CurrentUser | nu
 
         if (!response.ok) {
           const data = (await response.json().catch(() => null)) as { error?: string; retryAfterMs?: number } | null;
-          if (uploadedKey) deleteOrphanImage(uploadedKey);
+          if (uploadedKey) deleteOrphanAttachment(uploadedKey);
           setMessages((prev) => prev.map((m) => (m.clientNonce === clientNonce ? { ...m, status: 'error' } : m)));
           return { ok: false, error: data?.error, retryAfterMs: data?.retryAfterMs };
         }
@@ -204,12 +245,12 @@ export function useChatMessages(channelId: string, currentUser: CurrentUser | nu
         const dto = (await response.json()) as MessageDTO & { clientNonce: string };
         pendingInputsRef.current.delete(clientNonce);
         setMessages((prev) => upsertFromServer(prev, dto, clientNonce));
-        if (input.image) URL.revokeObjectURL(input.image.previewUrl);
+        if (input.attachment) URL.revokeObjectURL(input.attachment.previewUrl);
         return { ok: true };
-      } catch {
-        if (uploadedKey) deleteOrphanImage(uploadedKey);
+      } catch (error) {
+        if (uploadedKey) deleteOrphanAttachment(uploadedKey);
         setMessages((prev) => prev.map((m) => (m.clientNonce === clientNonce ? { ...m, status: 'error' } : m)));
-        return { ok: false, error: 'NETWORK_ERROR' };
+        return { ok: false, error: error instanceof Error ? error.message : 'NETWORK_ERROR' };
       }
     },
     [channelId, currentUser],
@@ -218,7 +259,7 @@ export function useChatMessages(channelId: string, currentUser: CurrentUser | nu
   const discardMessage = useCallback((clientNonce: string) => {
     const input = pendingInputsRef.current.get(clientNonce);
     pendingInputsRef.current.delete(clientNonce);
-    if (input?.image) URL.revokeObjectURL(input.image.previewUrl);
+    if (input?.attachment) URL.revokeObjectURL(input.attachment.previewUrl);
     setMessages((prev) => prev.filter((m) => m.clientNonce !== clientNonce));
   }, []);
 

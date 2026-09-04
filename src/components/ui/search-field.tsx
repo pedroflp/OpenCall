@@ -1,6 +1,7 @@
 'use client';
 
 import { forwardRef } from 'react';
+import { useTranslations } from 'next-intl';
 import { HugeIcon } from '@/components/HugeIcon';
 import { cn } from '@/lib/utils';
 
@@ -23,36 +24,40 @@ interface SearchFieldProps extends Omit<React.InputHTMLAttributes<HTMLInputEleme
 }
 
 const SearchField = forwardRef<HTMLInputElement, SearchFieldProps>(
-  ({ value, onValueChange, className, placeholder = 'Buscar', ...props }, ref) => (
-    <div
-      className={cn(
-        'flex h-auto items-center gap-2 rounded-md bg-background px-2.5 py-1.5 ring-offset-background',
-        'focus-within:outline-none focus-within:ring-2 focus-within:ring-ring focus-within:ring-offset-2',
-        className,
-      )}
-    >
-      <HugeIcon name="search-01" size={16} className="shrink-0 text-muted-foreground" />
-      <input
-        ref={ref}
-        type="search"
-        value={value}
-        onChange={(event) => onValueChange(event.target.value)}
-        placeholder={placeholder}
-        className="min-w-0 flex-1 bg-transparent text-[13.5px] outline-none placeholder:text-muted-foreground [&::-webkit-search-cancel-button]:hidden"
-        {...props}
-      />
-      {value && (
-        <button
-          type="button"
-          onClick={() => onValueChange('')}
-          aria-label="Limpar busca"
-          className="shrink-0 text-muted-foreground hover:text-foreground"
-        >
-          <HugeIcon name="cancel-01" size={14} />
-        </button>
-      )}
-    </div>
-  ),
+  ({ value, onValueChange, className, placeholder, ...props }, ref) => {
+    const t = useTranslations('common');
+
+    return (
+      <div
+        className={cn(
+          'flex h-auto items-center gap-2 rounded-md bg-background px-2.5 py-1.5 ring-offset-background',
+          'focus-within:outline-none focus-within:ring-2 focus-within:ring-ring focus-within:ring-offset-2',
+          className,
+        )}
+      >
+        <HugeIcon name="search-01" size={16} className="shrink-0 text-muted-foreground" />
+        <input
+          ref={ref}
+          type="search"
+          value={value}
+          onChange={(event) => onValueChange(event.target.value)}
+          placeholder={placeholder ?? t('search')}
+          className="min-w-0 flex-1 bg-transparent text-[13.5px] outline-none placeholder:text-muted-foreground [&::-webkit-search-cancel-button]:hidden"
+          {...props}
+        />
+        {value && (
+          <button
+            type="button"
+            onClick={() => onValueChange('')}
+            aria-label={t('clearSearch')}
+            className="shrink-0 text-muted-foreground hover:text-foreground"
+          >
+            <HugeIcon name="cancel-01" size={14} />
+          </button>
+        )}
+      </div>
+    );
+  },
 );
 SearchField.displayName = 'SearchField';
 

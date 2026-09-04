@@ -1,4 +1,5 @@
 'use client';
+import { useTranslations } from 'next-intl';
 
 import { useState } from 'react';
 import Avatar from '@/components/Avatar';
@@ -28,6 +29,8 @@ export default function GroupCard({
   onMembersAdded: (groupId: string, userIds: string[]) => void;
   onMemberRemoved: (groupId: string, userId: string) => void;
 }) {
+  const t = useTranslations('admin.groups');
+  const tAdmin = useTranslations('admin');
   const { toast } = useToast();
   const [pending, setPending] = useState<string | null>(null);
   const [addOpen, setAddOpen] = useState(false);
@@ -44,7 +47,7 @@ export default function GroupCard({
     const result = await addGroupMembers(group.id, selectedIds);
     setAddingMembers(false);
     if (!result.ok) {
-      toast({ title: 'Não deu pra adicionar', description: 'Tenta de novo daqui a pouco.', variant: 'destructive' });
+      toast({ title: t('addFailed'), description: tAdmin('tryAgainSoon'), variant: 'destructive' });
       return;
     }
     onMembersAdded(group.id, selectedIds);
@@ -57,7 +60,7 @@ export default function GroupCard({
     const result = await removeGroupMember(group.id, userId);
     setPending(null);
     if (!result.ok) {
-      toast({ title: 'Não deu pra remover', description: 'Tenta de novo daqui a pouco.', variant: 'destructive' });
+      toast({ title: t('removeFailed'), description: tAdmin('tryAgainSoon'), variant: 'destructive' });
       return;
     }
     onMemberRemoved(group.id, userId);
@@ -69,10 +72,10 @@ export default function GroupCard({
     const result = await deleteGroup(group.id);
     setPending(null);
     if (!result.ok) {
-      toast({ title: 'Não deu pra apagar o grupo', description: 'Tenta de novo daqui a pouco.', variant: 'destructive' });
+      toast({ title: t('deleteFailed'), description: tAdmin('tryAgainSoon'), variant: 'destructive' });
       return;
     }
-    toast({ title: 'Grupo removido.' });
+    toast({ title: t('deleted') });
     onGroupDeleted(group.id);
   }
 
@@ -94,7 +97,7 @@ export default function GroupCard({
             group={group}
             onSaved={onGroupUpdated}
             trigger={
-              <Button variant="ghost" size="icon" aria-label="Editar grupo">
+              <Button variant="ghost" size="icon" aria-label={t('editGroup')}>
                 <HugeIcon name="pencil-edit-01" size={16} />
               </Button>
             }
@@ -102,7 +105,7 @@ export default function GroupCard({
           <Button
             variant="ghost"
             size="icon"
-            aria-label="Apagar grupo"
+            aria-label={t('deleteGroup')}
             onClick={handleDeleteGroup}
             disabled={pending === '__delete__'}
           >
@@ -122,7 +125,7 @@ export default function GroupCard({
               variant="ghost"
               size="icon"
               className="h-7 w-7 shrink-0"
-              aria-label="Remover do grupo"
+              aria-label={t('removeFromGroup')}
               onClick={() => handleRemoveMember(user.id)}
               disabled={pending === user.id}
             >
@@ -130,7 +133,7 @@ export default function GroupCard({
             </Button>
           </li>
         ))}
-        {members.length === 0 && <p className="px-2 py-1.5 text-sm text-muted-foreground">Nenhum membro ainda.</p>}
+        {members.length === 0 && <p className="px-2 py-1.5 text-sm text-muted-foreground">{t('noMembers')}</p>}
       </ul>
 
       {availableUsers.length > 0 && (
@@ -145,7 +148,7 @@ export default function GroupCard({
             <PopoverTrigger asChild>
               <Button variant="outline" className="h-9 w-full justify-start gap-2 font-normal">
                 <HugeIcon name="add-01" size={14} />
-                {selectedIds.length > 0 ? `${selectedIds.length} selecionado${selectedIds.length === 1 ? '' : 's'}` : 'Adicionar membro...'}
+                {selectedIds.length > 0 ? t('selectedCount', { count: selectedIds.length }) : t('addMember')}
               </Button>
             </PopoverTrigger>
             <PopoverContent align="start" className="w-64 p-2">
@@ -170,7 +173,7 @@ export default function GroupCard({
                 })}
               </div>
               <Button className="mt-2 w-full" size="sm" onClick={handleAddSelectedMembers} disabled={selectedIds.length === 0 || addingMembers}>
-                {addingMembers ? 'Adicionando...' : `Adicionar${selectedIds.length > 0 ? ` (${selectedIds.length})` : ''}`}
+                {addingMembers ? t('adding') : t('addSelected', { count: selectedIds.length })}
               </Button>
             </PopoverContent>
           </Popover>

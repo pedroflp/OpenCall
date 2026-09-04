@@ -1,4 +1,5 @@
 'use client';
+import { useTranslations } from 'next-intl';
 
 import { useState } from 'react';
 import { Button } from '@/components/ui/button';
@@ -8,17 +9,26 @@ import type { AdminInviteDTO } from '@/app/api/admin/invites/types';
 import { createInvite, revokeInvite } from '@/app/api/admin/invites/requests';
 import { cn } from '@/lib/utils';
 
+/** Mesmo `?invite=` que o NoAccessPopover lê pra auto-resgatar — quem recebe o link só precisa entrar autenticado, sem colar código nenhum. */
+function inviteLink(code: string): string {
+  const url = new URL('/', window.location.origin);
+  url.searchParams.set('invite', code);
+  return url.toString();
+}
+
 function InviteRow({ invite, onRevoked }: { invite: AdminInviteDTO; onRevoked: (id: string) => void }) {
+  const t = useTranslations('admin.invites');
+  const tAdmin = useTranslations('admin');
   const { toast } = useToast();
   const [revoking, setRevoking] = useState(false);
   const revoked = Boolean(invite.revokedAt);
 
   async function copy() {
     try {
-      await navigator.clipboard.writeText(invite.code);
-      toast({ title: 'Código copiado!' });
+      await navigator.clipboard.writeText(inviteLink(invite.code));
+      toast({ title: t('linkCopied') });
     } catch {
-      toast({ title: 'Não deu pra copiar', description: 'Copie manualmente.', variant: 'destructive' });
+      toast({ title: t('copyFailed'), description: t('copyFailedDescription'), variant: 'destructive' });
     }
   }
 
@@ -28,7 +38,7 @@ function InviteRow({ invite, onRevoked }: { invite: AdminInviteDTO; onRevoked: (
     setRevoking(false);
 
     if (!result.ok) {
-      toast({ title: 'Não deu pra revogar', description: 'Tenta de novo daqui a pouco.', variant: 'destructive' });
+      toast({ title: t('revokeFailed'), description: tAdmin('tryAgainSoon'), variant: 'destructive' });
       return;
     }
     onRevoked(invite.id);
@@ -41,18 +51,18 @@ function InviteRow({ invite, onRevoked }: { invite: AdminInviteDTO; onRevoked: (
         <div className="min-w-0">
           <p className={cn('font-mono font-semibold tracking-widest', revoked && 'text-muted-foreground line-through')}>{invite.code}</p>
           <p className="text-xs text-muted-foreground">
-            {invite.redeemedCount === 1 ? '1 pessoa entrou com esse código' : `${invite.redeemedCount} pessoas entraram com esse código`}
-            {revoked && ' · revogado'}
+            {t('redeemedCount', { count: invite.redeemedCount })}
+            {revoked && t('revokedSuffix')}
           </p>
         </div>
       </div>
 
       <div className="flex shrink-0 items-center gap-1">
-        <Button variant="ghost" size="icon" aria-label="Copiar código" onClick={() => void copy()}>
+        <Button variant="ghost" size="icon" aria-label={t('copyLink')} onClick={() => void copy()}>
           <HugeIcon name="copy-01" size={16} />
         </Button>
         {!revoked && (
-          <Button variant="ghost" size="icon" aria-label="Revogar código" disabled={revoking} onClick={() => void handleRevoke()}>
+          <Button variant="ghost" size="icon" aria-label={t('revokeCode')} disabled={revoking} onClick={() => void handleRevoke()}>
             <HugeIcon name="delete-02" size={16} className="text-destructive" />
           </Button>
         )}
@@ -62,6 +72,8 @@ function InviteRow({ invite, onRevoked }: { invite: AdminInviteDTO; onRevoked: (
 }
 
 export default function AdminInvitesView({ invites: initialInvites }: { invites: AdminInviteDTO[] }) {
+  const t = useTranslations('admin.invites');
+  const tAdmin = useTranslations('admin');
   const { toast } = useToast();
   const [invites, setInvites] = useState(initialInvites);
   const [creating, setCreating] = useState(false);
@@ -73,7 +85,7 @@ export default function AdminInvitesView({ invites: initialInvites }: { invites:
 
     const invite = result.data?.invite as AdminInviteDTO | undefined;
     if (!result.ok || !invite) {
-      toast({ title: 'Não deu pra criar o código', description: 'Tenta de novo daqui a pouco.', variant: 'destructive' });
+      toast({ title: t('createFailed'), description: tAdmin('tryAgainSoon'), variant: 'destructive' });
       return;
     }
     setInvites((prev) => [invite, ...prev]);
@@ -87,19 +99,19 @@ export default function AdminInvitesView({ invites: initialInvites }: { invites:
     <main className="mx-auto flex w-full max-w-2xl flex-1 flex-col gap-6 overflow-y-auto px-6 py-10">
       <div className="flex items-center justify-between gap-3">
         <div>
-          <h1 className="text-2xl font-bold">Convites</h1>
-          <p className="text-sm text-muted-foreground">Códigos multi-uso e sem expiração — quem cola um ganha acesso aos canais.</p>
+          <h1 className="text-2xl font-bold">{t('title')}</h1>
+          <p className="text-sm text-muted-foreground">{t('description')}</p>
         </div>
 
         <Button className="gap-2" disabled={creating} onClick={() => void handleCreate()}>
           <HugeIcon name="add-01" size={16} />
-          Novo código
+          {t('newCode')}
         </Button>
       </div>
 
       {invites.length === 0 && (
         <p className="rounded-xl border border-dashed border-border/60 p-6 text-center text-sm text-muted-foreground">
-          Nenhum código criado ainda.
+          {t('empty')}
         </p>
       )}
 

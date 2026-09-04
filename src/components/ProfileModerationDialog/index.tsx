@@ -1,6 +1,7 @@
 'use client';
 
 import { useEffect, useState } from 'react';
+import { useTranslations } from 'next-intl';
 import Avatar from '@/components/Avatar';
 import { HugeIcon } from '@/components/HugeIcon';
 import { Button } from '@/components/ui/button';
@@ -38,6 +39,8 @@ import { NICKNAME_MAX_LENGTH } from '@/lib/profile/identity';
  * quando o estilo mudar.
  */
 export function ProfileModerationMenuItem({ onSelect }: { onSelect: () => void }) {
+  const t = useTranslations('moderation');
+
   return (
     <button
       type="button"
@@ -45,7 +48,7 @@ export function ProfileModerationMenuItem({ onSelect }: { onSelect: () => void }
       className="flex w-full items-center gap-2 rounded-sm px-2 py-1.5 text-left text-sm transition-colors hover:bg-secondary"
     >
       <HugeIcon name="user-edit-01" size={16} />
-      Editar perfil
+      {t('editProfile')}
     </button>
   );
 }
@@ -67,6 +70,8 @@ export default function ProfileModerationDialog({
   open: boolean;
   onOpenChange: (open: boolean) => void;
 }) {
+  const t = useTranslations('moderation');
+  const tCommon = useTranslations('common');
   const { toast } = useToast();
   const [mask, setMask] = useState<ProfileMask | null>(null);
   const [nickname, setNickname] = useState('');
@@ -89,7 +94,7 @@ export default function ProfileModerationDialog({
       const response = await fetch(`/api/admin/users/${userId}/profile`);
       if (cancelled) return;
       if (!response.ok) {
-        toast({ title: 'Não deu pra abrir o perfil', description: 'Tenta de novo daqui a pouco.', variant: 'destructive' });
+        toast({ title: t('openFailed'), description: t('tryAgainSoon'), variant: 'destructive' });
         onOpenChange(false);
         return;
       }
@@ -102,7 +107,7 @@ export default function ProfileModerationDialog({
     return () => {
       cancelled = true;
     };
-  }, [open, userId, onOpenChange, toast]);
+  }, [open, userId, onOpenChange, toast, t]);
 
   async function send(init: RequestInit) {
     setPending(true);
@@ -111,7 +116,7 @@ export default function ProfileModerationDialog({
       if (!response.ok) throw new Error();
       onOpenChange(false);
     } catch {
-      toast({ title: 'Não deu pra salvar', description: 'Tenta de novo daqui a pouco.', variant: 'destructive' });
+      toast({ title: t('saveFailed'), description: t('tryAgainSoon'), variant: 'destructive' });
     } finally {
       setPending(false);
     }
@@ -128,10 +133,8 @@ export default function ProfileModerationDialog({
     <Dialog open={open} onOpenChange={onOpenChange}>
       <DialogContent className="max-w-md">
         <DialogHeader>
-          <DialogTitle>Editar perfil</DialogTitle>
-          <DialogDescription>
-            Apelido e foto que esta pessoa escolheu. Remover devolve o que vem do Discord.
-          </DialogDescription>
+          <DialogTitle>{t('editProfile')}</DialogTitle>
+          <DialogDescription>{t('description')}</DialogDescription>
         </DialogHeader>
 
         {/* Skeleton com a forma do painel carregado — mesmas medidas do avatar,
@@ -155,7 +158,7 @@ export default function ProfileModerationDialog({
               <Avatar image={mask.discordAvatar} fallback={mask.discordUsername.slice(0, 2)} size={10} className="shrink-0" />
               <div className="min-w-0">
                 <p className="truncate text-sm font-medium">{mask.discordUsername}</p>
-                <p className="text-xs text-muted-foreground">Nome e foto do Discord</p>
+                <p className="text-xs text-muted-foreground">{t('discordNameAndPhoto')}</p>
               </div>
             </div>
 
@@ -167,8 +170,7 @@ export default function ProfileModerationDialog({
             {mask.useDiscordProfile && mask.displayName && (
               <p className="flex items-start gap-2 rounded-popover-in bg-muted/40 px-3 py-2 text-xs text-muted-foreground">
                 <HugeIcon name="information-circle" size={14} className="mt-0.5 shrink-0" />
-                O apelido abaixo está guardado mas não aparece: esta pessoa escolheu ser vista pelo nome do Discord. A
-                foto, se houver, continua valendo.
+                {t('hiddenNicknameNotice')}
               </p>
             )}
 
@@ -176,7 +178,7 @@ export default function ProfileModerationDialog({
 
             <div className="space-y-2">
               <label htmlFor="moderation-nickname" className="text-xs font-medium text-muted-foreground">
-                Apelido
+                {t('nickname')}
               </label>
               <div className="flex items-center gap-2">
                 <Input
@@ -191,14 +193,14 @@ export default function ProfileModerationDialog({
                   }}
                 />
                 <Button size="sm" disabled={pending} onClick={() => void saveNickname()}>
-                  Salvar
+                  {tCommon('save')}
                 </Button>
               </div>
-              <p className="text-xs text-muted-foreground">Vazio devolve o nome do Discord.</p>
+              <p className="text-xs text-muted-foreground">{t('emptyReturnsDiscord')}</p>
             </div>
 
             <div className="space-y-2">
-              <p className="text-xs font-medium text-muted-foreground">Foto</p>
+              <p className="text-xs font-medium text-muted-foreground">{t('photo')}</p>
               {mask.hasCustomAvatar ? (
                 <Button
                   variant="destructive"
@@ -207,10 +209,10 @@ export default function ProfileModerationDialog({
                   onClick={() => void send({ method: 'DELETE' })}
                 >
                   <HugeIcon name="image-not-found-01" size={16} />
-                  Remover foto
+                  {t('removePhoto')}
                 </Button>
               ) : (
-                <p className="text-xs text-muted-foreground">Sem foto própria — já usa a do Discord.</p>
+                <p className="text-xs text-muted-foreground">{t('noCustomPhoto')}</p>
               )}
             </div>
           </div>

@@ -1,6 +1,7 @@
 'use client';
 
 import { useEffect, useRef, useState } from 'react';
+import { useTranslations } from 'next-intl';
 import type { Participant } from 'livekit-client';
 import { RemoteTrackPublication, Track } from 'livekit-client';
 import type { TrackReference } from '@livekit/components-react';
@@ -73,6 +74,8 @@ function StageHeader({
 // (size-full): quem dá a forma é o wrapper no grid (ver ConnectedStage),
 // senão o tile briga com o tamanho da coluna e invade a vizinha.
 function IdleTile({ participant }: { participant: Participant }) {
+  const t = useTranslations('voice.stage');
+  const tParticipant = useTranslations('voice.participant');
   const { micEnabled, deafened, screenSharing } = useParticipantMedia(participant);
   const isSpeaking = useSpeakingIndicator(participant);
   const { enterStream } = useVoice();
@@ -117,7 +120,7 @@ function IdleTile({ participant }: { participant: Participant }) {
       <span className="truncate text-md font-semibold text-white">{name}</span>
       {screenSharing && (
         <Badge variant="destructive" className="absolute right-3 top-3 whitespace-nowrap text-sm">
-          AO VIVO
+          {tParticipant('live')}
         </Badge>
       )}
     </button>
@@ -128,7 +131,7 @@ function IdleTile({ participant }: { participant: Participant }) {
   ) : (
     <Tooltip>
       <TooltipTrigger asChild>{tile}</TooltipTrigger>
-      <TooltipContent>Clique para entrar na transmissão</TooltipContent>
+      <TooltipContent>{t('clickToEnterStream')}</TooltipContent>
     </Tooltip>
   );
 
@@ -155,6 +158,7 @@ function FullscreenToggleButton({
   className?: string;
   side?: 'top' | 'bottom' | 'left' | 'right';
 }) {
+  const tParticipant = useTranslations('voice.participant');
   return (
     <Tooltip>
       <TooltipTrigger asChild>
@@ -183,6 +187,7 @@ export function LiveVolumeButton({
   side?: 'top' | 'bottom' | 'left' | 'right';
   container?: HTMLElement | null;
 }) {
+  const tParticipant = useTranslations('voice.participant');
   const [open, setOpen] = useState(false);
   const { getStreamVolume, setStreamVolume } = useVoice();
   const volume = getStreamVolume(identity);
@@ -195,7 +200,7 @@ export function LiveVolumeButton({
           <PopoverAnchor asChild>
             <button
               type="button"
-              aria-label="Volume da live"
+              aria-label={tParticipant('streamVolume')}
               onClick={() => setOpen(true)}
               className={cn('flex items-center justify-center rounded-lg transition-colors', className)}
             >
@@ -203,12 +208,12 @@ export function LiveVolumeButton({
             </button>
           </PopoverAnchor>
         </TooltipTrigger>
-        <TooltipContent side={side}>Volume da live</TooltipContent>
+        <TooltipContent side={side}>{tParticipant('streamVolume')}</TooltipContent>
       </Tooltip>
 
       <PopoverContent align="end" className="w-56 p-1" container={container}>
         <div className="flex flex-col gap-2 px-2 py-1.5">
-          <span className="text-[10px] font-bold uppercase tracking-[0.16em] text-muted-foreground">Volume da live</span>
+          <span className="text-[10px] font-bold uppercase tracking-[0.16em] text-muted-foreground">{tParticipant('streamVolume')}</span>
           <div className="relative">
             <Slider
               value={[percent]}
@@ -237,6 +242,7 @@ function StreamOptionsButton({
   onStopStream: () => void;
   container?: HTMLElement | null;
 }) {
+  const t = useTranslations('voice.stage');
   const [open, setOpen] = useState(false);
 
   return (
@@ -246,7 +252,7 @@ function StreamOptionsButton({
           <PopoverAnchor asChild>
             <button
               type="button"
-              aria-label="Opções da transmissão"
+              aria-label={t('streamOptions')}
               onClick={() => setOpen(true)}
               className="flex size-9 items-center justify-center rounded-lg bg-black/55 text-white transition-colors hover:bg-black/70"
             >
@@ -254,7 +260,7 @@ function StreamOptionsButton({
             </button>
           </PopoverAnchor>
         </TooltipTrigger>
-        <TooltipContent side="bottom">Opções da transmissão</TooltipContent>
+        <TooltipContent side="bottom">{t('streamOptions')}</TooltipContent>
       </Tooltip>
 
       <PopoverContent align="end" className="w-52 p-1" container={container}>
@@ -267,7 +273,7 @@ function StreamOptionsButton({
           className="flex w-full items-center gap-2 rounded-sm px-2 py-1.5 text-left text-sm text-destructive transition-colors hover:bg-destructive/10"
         >
           <HugeIcon name="monitor-stop" size={16} />
-          Desligar transmissão
+          {t('turnOffStream')}
         </button>
       </PopoverContent>
     </Popover>
@@ -280,6 +286,8 @@ function StreamOptionsButton({
  * Clicar troca o foco: sai da live atual e entra nessa.
  */
 function ThumbnailTile({ trackRef }: { trackRef: TrackReference }) {
+  const t = useTranslations('voice.stage');
+  const tParticipant = useTranslations('voice.participant');
   const { enterStream } = useVoice();
   const name = participantDisplayName(trackRef.participant);
 
@@ -292,7 +300,7 @@ function ThumbnailTile({ trackRef }: { trackRef: TrackReference }) {
           className="relative flex aspect-[16/10] w-[120px] shrink-0 flex-col items-center justify-center gap-1.5 overflow-hidden rounded-md border border-border/50 bg-card transition-colors hover:border-primary/60"
         >
           <Badge variant="destructive" className="absolute right-1.5 top-1.5 text-[9px]">
-            AO VIVO
+            {tParticipant('live')}
           </Badge>
           <Avatar
             image={avatarFromParticipant(trackRef.participant)}
@@ -303,7 +311,7 @@ function ThumbnailTile({ trackRef }: { trackRef: TrackReference }) {
           <span className="max-w-[100px] truncate text-xs font-semibold text-foreground/85">{name}</span>
         </button>
       </TooltipTrigger>
-      <TooltipContent>Clique para entrar na transmissão</TooltipContent>
+      <TooltipContent>{t('clickToEnterStream')}</TooltipContent>
     </Tooltip>
   );
 }
@@ -331,17 +339,25 @@ function IncomingAttentionCard({
   channelName: string;
   onActivateAudio: () => void;
 }) {
+  const t = useTranslations('voice.stage');
   return (
     <div className="flex items-center gap-3 rounded-xl border border-amber-500/30 bg-amber-500/10 px-4 py-3">
       <HugeIcon name="notification-01" size={22} className="shrink-0 animate-wiggle-loop text-amber-500" />
       <Avatar image={incomingAttention.avatar} fallback={incomingAttention.name.slice(0, 2)} size={8} />
+      {/* Os dois nomes entram como TAGS (e não interpolados soltos) porque
+          cada um vem em negrito e a ordem deles muda com a língua — em inglês
+          o canal fica no fim da frase, aqui ele fica depois de "no canal". */}
       <p className="text-sm text-foreground/85">
-        <span className="font-semibold">{incomingAttention.name}</span> está chamando sua atenção no canal{' '}
-        <span className="font-semibold">{channelName}</span>
+        {t.rich('attentionCall', {
+          userName: incomingAttention.name,
+          channelName,
+          name: (chunks) => <span className="font-semibold">{chunks}</span>,
+          channel: (chunks) => <span className="font-semibold">{chunks}</span>,
+        })}
       </p>
       <Button type="button" size="sm" variant="ghost" className="shrink-0 gap-1.5 bg-primary/10 hover:bg-primary/20 text-primary hover:text-primary" onClick={onActivateAudio}>
         <HugeIcon name="headphones" size={16} />
-        Ativar áudio
+        {t('enableAudio')}
       </Button>
     </div>
   );
@@ -349,6 +365,7 @@ function IncomingAttentionCard({
 
 /** Câmera promovida ao centro do palco por um clique local (ver CameraGrid) — mesmo tratamento visual da live, sem os controles específicos de transmissão. */
 function FocusedCameraTile({ trackRef, onUnfocus }: { trackRef: TrackReference; onUnfocus: () => void }) {
+  const t = useTranslations('voice.stage');
   const stageRef = useRef<HTMLDivElement>(null);
   const [isFullscreen, setIsFullscreen] = useState(false);
   // Mesma superfície e mesmo gesto da live: em tela cheia, clicar no vídeo
@@ -405,14 +422,14 @@ function FocusedCameraTile({ trackRef, onUnfocus }: { trackRef: TrackReference; 
             <TooltipTrigger asChild>
               <button
                 type="button"
-                aria-label="Voltar câmera pro topo"
+                aria-label={t('cameraBackToTop')}
                 onClick={onUnfocus}
                 className="flex size-9 items-center justify-center rounded-lg bg-black/55 text-white transition-colors hover:bg-black/70"
               >
                 <HugeIcon name="cancel-01" size={18} />
               </button>
             </TooltipTrigger>
-            <TooltipContent side="bottom">Voltar câmera pro topo</TooltipContent>
+            <TooltipContent side="bottom">{t('cameraBackToTop')}</TooltipContent>
           </Tooltip>
         </div>
       </div>
@@ -431,6 +448,8 @@ function ConnectedStage({
   onFocusCamera: (trackSid: string) => void;
   onUnfocusCamera: () => void;
 }) {
+  const tControls = useTranslations('voice.controls');
+  const tParticipant = useTranslations('voice.participant');
   const participants = useParticipants();
   const { watching, leaveStream, toggleScreenShare, stopStream, incomingAttention, toggleAttentionAudio, streamQuality } = useVoice();
   const { data: session } = useSession();
@@ -518,7 +537,7 @@ function ConnectedStage({
 
   const otherStreamingTracks = screenShareTracks.filter((track) => track.participant.identity !== watching);
   const isOwnStream = watchedTrack?.participant.isLocal ?? false;
-  const closeLabel = isOwnStream ? 'Encerrar transmissão' : 'Sair da transmissão';
+  const closeLabel = isOwnStream ? tControls('endStream') : tControls('leaveStream');
 
   return (
     <div className="relative z-10 flex min-h-0 min-w-0 flex-1 flex-col">
@@ -563,7 +582,7 @@ function ConnectedStage({
                 />
                 <span className="text-sm font-semibold text-white">{participantDisplayName(watchedTrack.participant)}</span>
                 <Badge variant="destructive" className="text-[10px]">
-                  AO VIVO
+                  {tParticipant('live')}
                 </Badge>
               </div>
 
@@ -675,7 +694,8 @@ function ConnectedStage({
 
 /** Otimista: o próprio usuário ainda não está no LiveKit, só entrando. Opacidade baixa + shimmer no card inteiro. */
 function OptimisticSelfTile({ user }: { user: UserDTO | null }) {
-  const name = user?.username || 'Você';
+  const tCommon = useTranslations('common');
+  const name = user?.username || tCommon('you');
 
   return (
     <div className="relative flex w-[110px] flex-col items-center gap-2.5 opacity-50">
@@ -695,12 +715,13 @@ function OptimisticSelfTile({ user }: { user: UserDTO | null }) {
 }
 
 function RtcDisabledBanner() {
+  const t = useTranslations('voice.stage');
   return (
     <div className="flex flex-1 flex-col items-center justify-center gap-4 p-10 text-center">
       <HugeIcon name="mic-off-02" size={64} className="text-muted-foreground" />
       <div className="flex flex-col gap-1.5">
-        <p className="text-xl font-bold">Os canais estão temporariamente desligados</p>
-        <p className="text-sm text-muted-foreground">Ninguém consegue entrar em voz agora. Religue no switch do OpenCall na barra lateral.</p>
+        <p className="text-xl font-bold">{t('disabledTitle')}</p>
+        <p className="text-sm text-muted-foreground">{t('disabledDescription')}</p>
       </div>
     </div>
   );
@@ -723,6 +744,8 @@ function PreJoinStage({
   joining: boolean;
   rtcEnabled: boolean;
 }) {
+  const t = useTranslations('voice.stage');
+  const tParticipant = useTranslations('voice.participant');
   return (
     <div className="relative z-10 flex min-w-0 flex-1 flex-col">
       <StageHeader
@@ -769,7 +792,7 @@ function PreJoinStage({
                           onWatchParticipant(participant.identity);
                         }}
                       >
-                        AO VIVO
+                        {tParticipant('live')}
                       </Badge>
                     )}
                   </div>
@@ -782,13 +805,11 @@ function PreJoinStage({
 
           <div className="flex flex-col items-center gap-3 text-center">
             <p className="text-2xl text-foreground/30">
-              {presenceParticipants.length > 0
-                ? 'Entre no canal para ouvir e participar da conversa.'
-                : 'Ninguém está neste canal ainda. Seja o primeiro a entrar.'}
+              {presenceParticipants.length > 0 ? t('joinToListen') : t('emptyChannel')}
             </p>
             <Button type="button" size="lg" className="text-xl gap-2 bg-primary/20 py-6 px-8 text-primary hover:bg-primary/30 backdrop-blur-sm" onClick={onJoin} disabled={joining}>
               {joining ? <HugeIcon name="loading-03" size={24} className="animate-spin" /> : <HugeIcon name="login-01" size={24} />}
-              {joining ? 'Conectando…' : 'Entrar no canal'}
+              {joining ? t('connecting') : t('joinChannel')}
             </Button>
           </div>
         </div>

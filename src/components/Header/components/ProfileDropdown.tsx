@@ -9,6 +9,7 @@ import { HugeIcon } from '@/components/HugeIcon';
 import AudioDeviceSelects from '@/components/VoiceDock/AudioDeviceSelects';
 import { LogOut } from 'lucide-react';
 import { signOut } from 'next-auth/react';
+import { useTranslations } from 'next-intl';
 
 interface ProfileDropdownProps {
   user: UserDTO;
@@ -16,6 +17,8 @@ interface ProfileDropdownProps {
 }
 
 export default function ProfileDropdown({ user, variant = 'compact' }: ProfileDropdownProps) {
+  const t = useTranslations('header');
+  const tCommon = useTranslations('common');
   const [deviceSettingsOpen, setDeviceSettingsOpen] = useState(false);
 
   async function handleSignOut() {
@@ -41,7 +44,9 @@ export default function ProfileDropdown({ user, variant = 'compact' }: ProfileDr
         )}
       </DropdownMenuTrigger>
       <DropdownMenuContent align={variant === 'full' ? 'start' : 'center'} side={variant === 'full' ? 'top' : 'bottom'}>
-        <DropdownMenuLabel>Olá, <strong>{user?.username}</strong>!</DropdownMenuLabel>
+        <DropdownMenuLabel>
+          {t.rich('greeting', { username: user.username, b: (chunks) => <strong>{chunks}</strong> })}
+        </DropdownMenuLabel>
         <DropdownMenuSeparator />
         <Popover open={deviceSettingsOpen} onOpenChange={setDeviceSettingsOpen}>
           <PopoverTrigger asChild>
@@ -53,7 +58,7 @@ export default function ProfileDropdown({ user, variant = 'compact' }: ProfileDr
               }}
             >
               <HugeIcon name="settings-01" size={16} />
-              Dispositivos de áudio
+              {t('audioDevices')}
             </DropdownMenuItem>
           </PopoverTrigger>
           <PopoverContent align='start' side='right' sideOffset={12}>
@@ -63,7 +68,7 @@ export default function ProfileDropdown({ user, variant = 'compact' }: ProfileDr
         <DropdownMenuSeparator />
         <DropdownMenuItem className='cursor-pointer flex gap-2 items-center text-red-500 focus:bg-red-600/70' onClick={handleSignOut}>
           <LogOut size={16} />
-          Sair
+          {tCommon('signOut')}
         </DropdownMenuItem>
       </DropdownMenuContent>
     </DropdownMenu>

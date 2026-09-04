@@ -1,6 +1,7 @@
 'use client';
 
 import { useEffect, useState } from 'react';
+import { useTranslations } from 'next-intl';
 import { createPortal } from 'react-dom';
 
 import Image from 'next/image';
@@ -8,8 +9,9 @@ import { HugeIcon } from '@/components/HugeIcon';
 
 interface LightboxImage {
   url: string;
-  width: number;
-  height: number;
+  /** Nulos quando a mensagem é anterior à migração de anexos, ou o metadata não foi lido — cai num <img> puro (ver AttachmentBubble). */
+  width: number | null;
+  height: number | null;
 }
 
 /**
@@ -19,6 +21,7 @@ interface LightboxImage {
  * da lista, então a posição continua preservada de graça (ver A10 da RFC-008).
  */
 export default function ImageLightbox({ image, onClose }: { image: LightboxImage; onClose: () => void }) {
+  const t = useTranslations('chat.media');
   const [mounted, setMounted] = useState(false);
 
   useEffect(() => setMounted(true), []);
@@ -43,21 +46,26 @@ export default function ImageLightbox({ image, onClose }: { image: LightboxImage
       <button
         type="button"
         onClick={onClose}
-        aria-label="Fechar"
+        aria-label={t('closeImage')}
         className="absolute right-4 top-4 flex size-9 items-center justify-center rounded-full bg-muted/60 text-foreground hover:bg-muted"
       >
         <HugeIcon name="cancel-01" size={18} />
       </button>
 
       <div className="relative max-h-[85vh] max-w-[90vw]" onClick={(event) => event.stopPropagation()}>
-        <Image
-          src={image.url}
-          alt=""
-          width={image.width}
-          height={image.height}
-          className="max-h-[85vh] w-auto max-w-[90vw] rounded-lg object-contain"
-          unoptimized
-        />
+        {image.width && image.height ? (
+          <Image
+            src={image.url}
+            alt=""
+            width={image.width}
+            height={image.height}
+            className="max-h-[85vh] w-auto max-w-[90vw] rounded-lg object-contain"
+            unoptimized
+          />
+        ) : (
+          // eslint-disable-next-line @next/next/no-img-element -- next/image exige width/height, e aqui eles não existem.
+          <img src={image.url} alt="" className="max-h-[85vh] w-auto max-w-[90vw] rounded-lg object-contain" />
+        )}
       </div>
     </div>,
     document.body,

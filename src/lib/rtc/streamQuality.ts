@@ -22,38 +22,28 @@ export const RESOLUTION_OPTIONS = [
 export const FRAME_RATE_OPTIONS = [24, 30, 60] as const;
 export const BITRATE_OPTIONS_KBPS = [1000, 1500, 2000, 2500, 3000, 3500, 4000, 5000, 7000, 10000] as const;
 
-export const DEGRADATION_OPTIONS = [
-  {
-    value: 'maintain-framerate',
-    label: 'Fluidez',
-    hint: 'Sob congestionamento, borra a imagem pra não travar. Certo pra gameplay.',
-  },
-  {
-    value: 'maintain-resolution',
-    label: 'Nitidez',
-    hint: 'Sob congestionamento, derruba frames pra manter o detalhe. Certo pra código e planilha.',
-  },
-] as const;
+// Só o VALOR: `label` e `hint` viraram `admin.stream.degradation.<valor>` no
+// catálogo. Este módulo é lido pelo servidor pra montar o RtcConfig, e ali não
+// existe leitor cuja língua consultar.
+export const DEGRADATION_OPTIONS = [{ value: 'maintain-framerate' }, { value: 'maintain-resolution' }] as const;
 
 // Resolução e bitrate andam juntos: subir só o teto de bitrate não produz efeito
 // nenhum, porque a captura já sai na resolução final e o encoder continua
 // recebendo o mesmo quadro pequeno (ver docs/migração-self-host.md §6.1). É por
 // isso que o painel oferece preset como controle principal — o modo avançado
 // existe pra calibrar, não pra ser o caminho normal.
+// Mesmo caso do DEGRADATION_OPTIONS acima: aqui só os números, os textos em
+// `admin.stream.presets.<id>`.
 export const STREAM_PRESETS: Record<
   StreamPresetId,
-  { label: string; hint: string; height: number; frameRate: number; maxBitrateKbps: number }
+  { height: number; frameRate: number; maxBitrateKbps: number }
 > = {
   economico: {
-    label: '540p econômico',
-    hint: 'Menor consumo de banda do servidor. Legível, mas perde detalhe em cena de movimento.',
     height: 540,
     frameRate: 30,
     maxBitrateKbps: 1500,
   },
   equilibrado: {
-    label: '720p equilibrado',
-    hint: 'Boa imagem pra gameplay com metade do egress do 1080p.',
     height: 720,
     frameRate: 30,
     maxBitrateKbps: 2500,
@@ -62,15 +52,11 @@ export const STREAM_PRESETS: Record<
   // mesma nitidez — 60 fps a 2500 kbps não seria "mais fluido", seria a mesma
   // fluidez com a imagem pior.
   fluido: {
-    label: '720p fluido',
-    hint: 'Movimento mais fluido na mesma resolução, por ~60% mais banda que o 720p30.',
     height: 720,
     frameRate: 60,
     maxBitrateKbps: 4000,
   },
   alta: {
-    label: '1080p alta',
-    hint: 'Preset oficial do LiveKit pra 1080p30. Maior custo de banda.',
     height: 1080,
     frameRate: 30,
     maxBitrateKbps: 5000,

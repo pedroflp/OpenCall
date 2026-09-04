@@ -1,4 +1,5 @@
 'use client';
+import { useTranslations } from 'next-intl';
 
 import { useEffect, useState } from 'react';
 import { useAdminRefresh } from '@/flows/admin/refresh';
@@ -12,6 +13,8 @@ import { UserRoles } from '@/app/api/user/types';
 
 /** Otimista: sem isso o Switch só reflete o clique depois de dois round-trips (o PATCH em si, e o refresh que o segue). */
 function useRoleToggle(endpoint: string, serverChecked: boolean, onChanged: () => void) {
+  const t = useTranslations('admin.users');
+  const tAdmin = useTranslations('admin');
   const { toast } = useToast();
   const [pending, setPending] = useState(false);
   const [optimistic, setOptimistic] = useState<boolean | null>(null);
@@ -27,7 +30,7 @@ function useRoleToggle(endpoint: string, serverChecked: boolean, onChanged: () =
       onChanged();
     } catch {
       setOptimistic(null);
-      toast({ title: 'Não deu pra atualizar', description: 'Tenta de novo daqui a pouco.', variant: 'destructive' });
+      toast({ title: t('updateFailed'), description: tAdmin('tryAgainSoon'), variant: 'destructive' });
     } finally {
       setPending(false);
     }
@@ -47,6 +50,8 @@ function PermissionsRow({
   currentUserIsAdmin: boolean;
   onChanged: () => void;
 }) {
+  const t = useTranslations('admin.users');
+  const tAdmin = useTranslations('admin');
   const targetIsAdmin = user.roles.includes(UserRoles.ADMIN);
   // Literal, não OR'd com ADMIN: ADMIN + CHANNELS_ACCESS juntos formam o combo
   // "superadmin" — precisa dar pra ver quem tem os dois de fato.
@@ -61,17 +66,17 @@ function PermissionsRow({
   // remover). Só quem já é ADMIN pode desligar isso de outro ADMIN.
   const channelsAccessBlocked = targetIsAdmin && !currentUserIsAdmin && channelsAccess.checked;
   const channelsAccessTooltip = isSelf
-    ? 'Você não pode alterar isso pra você mesmo por aqui'
+    ? t('selfTooltip')
     : channelsAccessBlocked
-      ? 'Só um admin pode remover admin de canais de outro admin'
+      ? t('adminOnlyChannelsTooltip')
       : null;
 
   // Acesso à voz continua ADMIN-only (rota /canal-access não muda) — quem
   // só tem CHANNELS_ACCESS vê a coluna, mas não consegue mexer nela.
   const canalAccessTooltip = targetIsAdmin
-    ? 'Admin sempre tem acesso ao OpenCall'
+    ? t('adminAlwaysHasAccess')
     : !currentUserIsAdmin
-      ? 'Só um admin pode alterar o acesso ao OpenCall'
+      ? t('adminOnlyAccessTooltip')
       : null;
 
   const channelsAccessControl = (
@@ -80,7 +85,9 @@ function PermissionsRow({
       disabled={isSelf || channelsAccess.pending || channelsAccessBlocked}
       onCheckedChange={channelsAccess.toggle}
       aria-label={
-        channelsAccess.checked ? `Remover admin de canais de ${user.username}` : `Tornar ${user.username} admin de canais`
+        channelsAccess.checked
+          ? t('removeChannelsAdmin', { username: user.username })
+          : t('grantChannelsAdmin', { username: user.username })
       }
     />
   );
@@ -91,7 +98,9 @@ function PermissionsRow({
       disabled={targetIsAdmin || !currentUserIsAdmin || canalAccess.pending}
       onCheckedChange={canalAccess.toggle}
       aria-label={
-        canalAccess.checked ? `Remover acesso ao OpenCall de ${user.username}` : `Dar acesso ao OpenCall para ${user.username}`
+        canalAccess.checked
+          ? t('revokeAccess', { username: user.username })
+          : t('grantAccess', { username: user.username })
       }
     />
   );
@@ -103,7 +112,7 @@ function PermissionsRow({
           <Avatar image={user.avatar} fallback={user.username.slice(0, 2)} size={8} />
           <span className="truncate text-sm font-medium">{user.username}</span>
           {targetIsAdmin && (
-            <span className="text-[10px] font-bold uppercase tracking-wider text-muted-foreground">Admin</span>
+            <span className="text-[10px] font-bold uppercase tracking-wider text-muted-foreground">{t('adminBadge')}</span>
           )}
         </div>
       </TableCell>
@@ -146,23 +155,22 @@ export default function AdminUsersView({
   currentUserId?: string;
   currentUserIsAdmin: boolean;
 }) {
+  const t = useTranslations('admin.users');
   const refresh = useAdminRefresh();
 
   return (
     <main className="mx-auto flex w-full max-w-3xl flex-1 flex-col gap-6 overflow-y-auto px-6 py-10">
       <div>
-        <h1 className="text-2xl font-bold">Usuários</h1>
-        <p className="text-sm text-muted-foreground">
-          Admin de canais gerencia quem tem acesso ao OpenCall; combinado com admin da plataforma, forma um superadmin.
-        </p>
+        <h1 className="text-2xl font-bold">{t('title')}</h1>
+        <p className="text-sm text-muted-foreground">{t('description')}</p>
       </div>
 
       <Table>
         <TableHeader>
           <TableRow>
-            <TableHead>Usuário</TableHead>
-            <TableHead>Admin de canais</TableHead>
-            <TableHead>Acesso ao OpenCall</TableHead>
+            <TableHead>{t('columnUser')}</TableHead>
+            <TableHead>{t('columnChannelsAdmin')}</TableHead>
+            <TableHead>{t('columnAccess')}</TableHead>
           </TableRow>
         </TableHeader>
         <TableBody>

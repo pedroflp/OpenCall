@@ -1,6 +1,7 @@
 'use client';
 
 import { useEffect, useState } from 'react';
+import { useTranslations } from 'next-intl';
 import type { Participant } from 'livekit-client';
 import { useSession } from 'next-auth/react';
 import { usePathname, useRouter } from 'next/navigation';
@@ -19,6 +20,7 @@ import { routeNames } from '@/app/route.names';
 import { cn } from '@/lib/utils';
 
 function ParticipantVolumeControl({ identity }: { identity: string }) {
+  const t = useTranslations('voice.participant');
   const { getParticipantVolume, setParticipantVolume, isParticipantMuted } = useVoice();
   const volume = getParticipantVolume(identity);
   const percent = Math.round(volume * 100);
@@ -26,7 +28,7 @@ function ParticipantVolumeControl({ identity }: { identity: string }) {
 
   return (
     <div className="flex flex-col gap-2 px-2 py-1.5">
-      <span className="text-[10px] font-bold uppercase tracking-[0.16em] text-muted-foreground">Volume</span>
+      <span className="text-[10px] font-bold uppercase tracking-[0.16em] text-muted-foreground">{t('volume')}</span>
       <div className="relative">
         <Slider
           value={[muted ? 0 : percent]}
@@ -43,7 +45,7 @@ function ParticipantVolumeControl({ identity }: { identity: string }) {
           )}
         />
         <span className="pointer-events-none absolute left-3 top-1/2 -translate-y-1/2 text-xs tabular-nums">
-          {muted ? 'Silenciado só para você' : `${percent}%`}
+          {muted ? t('mutedForYouOnly') : `${percent}%`}
         </span>
       </div>
     </div>
@@ -52,19 +54,22 @@ function ParticipantVolumeControl({ identity }: { identity: string }) {
 
 /** Sino "tocando": mostrado pra sala inteira enquanto alguém chamou a atenção desse participante (ver callAttention em VoiceProvider). */
 function AttentionBell() {
+  const t = useTranslations('voice.participant');
+
   return (
     <Tooltip>
       <TooltipTrigger asChild>
-        <span className="shrink-0 text-amber-500" aria-label="Chamando atenção">
+        <span className="shrink-0 text-amber-500" aria-label={t('callingAttention')}>
           <HugeIcon name="notification-01" size={18} className="animate-wiggle-loop" />
         </span>
       </TooltipTrigger>
-      <TooltipContent>Alguém está chamando a atenção dessa pessoa</TooltipContent>
+      <TooltipContent>{t('someoneCallingAttention')}</TooltipContent>
     </Tooltip>
   );
 }
 
 function CallAttentionMenuItem({ identity, onDone }: { identity: string; onDone: () => void }) {
+  const t = useTranslations('voice.participant');
   const { callAttention, getAttentionCooldown } = useVoice();
   const [remainingMs, setRemainingMs] = useState(() => getAttentionCooldown(identity));
 
@@ -92,7 +97,7 @@ function CallAttentionMenuItem({ identity, onDone }: { identity: string; onDone:
       )}
     >
       <HugeIcon name="notification-01" size={16} />
-      Chamar atenção
+      {t('callAttention')}
     </button>
   );
 
@@ -101,12 +106,13 @@ function CallAttentionMenuItem({ identity, onDone }: { identity: string; onDone:
   return (
     <Tooltip>
       <TooltipTrigger asChild>{button}</TooltipTrigger>
-      <TooltipContent side="left">Aguarde {Math.ceil(remainingMs / 1000)}s pra chamar de novo</TooltipContent>
+      <TooltipContent side="left">{t('attentionCooldownTooltip', { seconds: Math.ceil(remainingMs / 1000) })}</TooltipContent>
     </Tooltip>
   );
 }
 
 export default function ParticipantTile({ participant }: { participant: Participant }) {
+  const t = useTranslations('voice.participant');
   const isSpeaking = useSpeakingIndicator(participant);
   const { micEnabled, screenSharing, cameraEnabled, deafened } = useParticipantMedia(participant);
   const {
@@ -182,7 +188,7 @@ export default function ParticipantTile({ participant }: { participant: Particip
           {screenSharing &&
             (participant.isLocal ? (
               <Badge variant="destructive" className="shrink-0 text-[10px]">
-                AO VIVO
+                {t('live')}
               </Badge>
             ) : (
               <Tooltip>
@@ -204,46 +210,46 @@ export default function ParticipantTile({ participant }: { participant: Particip
                       }
                     }}
                   >
-                    AO VIVO
+                    {t('live')}
                   </Badge>
                 </TooltipTrigger>
-                <TooltipContent>Clique para assistir a transmissão</TooltipContent>
+                <TooltipContent>{t('clickToWatchStream')}</TooltipContent>
               </Tooltip>
             ))}
           {cameraEnabled && (
             <Tooltip>
               <TooltipTrigger asChild>
-                <span className="shrink-0 text-white" aria-label="Câmera ligada">
+                <span className="shrink-0 text-white" aria-label={t('cameraOn')}>
                   <HugeIcon name="camera-01" size={18} />
                 </span>
               </TooltipTrigger>
-              <TooltipContent>Câmera ligada</TooltipContent>
+              <TooltipContent>{t('cameraOn')}</TooltipContent>
             </Tooltip>
           )}
           {serverMuted ? (
             <Tooltip>
               <TooltipTrigger asChild>
-                <span className="shrink-0 text-destructive" aria-label="Silenciado para todos">
+                <span className="shrink-0 text-destructive" aria-label={t('mutedForEveryone')}>
                   <HugeIcon name="mic-off-02" size={18} />
                 </span>
               </TooltipTrigger>
-              <TooltipContent>Silenciado para todos</TooltipContent>
+              <TooltipContent>{t('mutedForEveryone')}</TooltipContent>
             </Tooltip>
           ) : mutedForMe ? (
             <Tooltip>
               <TooltipTrigger asChild>
-                <span className="shrink-0 text-muted-foreground" aria-label="Silenciado por você">
+                <span className="shrink-0 text-muted-foreground" aria-label={t('mutedByYou')}>
                   <HugeIcon name="mic-off-02" size={18} />
                 </span>
               </TooltipTrigger>
-              <TooltipContent>Silenciado por você</TooltipContent>
+              <TooltipContent>{t('mutedByYou')}</TooltipContent>
             </Tooltip>
           ) : (
             !micEnabled && (
-              <HugeIcon name="mic-off-02" size={18} aria-label="Microfone desligado" className="shrink-0 text-muted-foreground" />
+              <HugeIcon name="mic-off-02" size={18} aria-label={t('micOff')} className="shrink-0 text-muted-foreground" />
             )
           )}
-          {deafened && <HugeIcon name="headphone-mute" size={18} aria-label="Ensurdecido" className="shrink-0 text-muted-foreground" />}
+          {deafened && <HugeIcon name="headphone-mute" size={18} aria-label={t('deafened')} className="shrink-0 text-muted-foreground" />}
         </li>
       </PopoverAnchor>
 
@@ -269,7 +275,7 @@ export default function ParticipantTile({ participant }: { participant: Particip
                 className="flex w-full items-center gap-2 rounded-sm px-2 py-1.5 text-left text-sm transition-colors hover:bg-secondary"
               >
                 <HugeIcon name="view" size={16} />
-                Assistir transmissão
+                {t('watchStream')}
               </button>
             )}
 
@@ -284,7 +290,7 @@ export default function ParticipantTile({ participant }: { participant: Particip
               className="flex w-full items-center gap-2 rounded-sm px-2 py-1.5 text-left text-sm transition-colors hover:bg-secondary"
             >
               <HugeIcon name={mutedForMe ? 'mic-02' : 'mic-off-02'} size={16} />
-              {mutedForMe ? 'Reativar para você' : 'Silenciar para você'}
+              {mutedForMe ? t('unmuteForYou') : t('muteForYou')}
             </button>
 
             {canManageTarget && (
@@ -311,7 +317,7 @@ export default function ParticipantTile({ participant }: { participant: Particip
                 className="flex w-full items-center gap-2 rounded-sm px-2 py-1.5 text-left text-sm text-destructive transition-colors hover:bg-destructive/10"
               >
                 <HugeIcon name="camera-off-01" size={16} />
-                Desligar câmera
+                {t('turnOffCamera')}
               </button>
             )}
 
@@ -326,7 +332,7 @@ export default function ParticipantTile({ participant }: { participant: Particip
                 className="flex w-full items-center gap-2 rounded-sm px-2 py-1.5 text-left text-sm text-destructive transition-colors hover:bg-destructive/10"
               >
                 <HugeIcon name="logout-01" size={16} />
-                Desconectar
+                {t('disconnect')}
               </button>
             )}
           </div>

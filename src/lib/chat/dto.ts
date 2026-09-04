@@ -2,6 +2,7 @@ import { Prisma } from '@prisma/client';
 import { publicImageUrl } from '@/lib/chat/imageUrl';
 import { channelsIdentity, PROFILE_MASK_SELECT } from '@/lib/profile/identity';
 import { replyExcerpt } from '@/lib/chat/replyExcerpt';
+import { fileNameFromKey, type AttachmentKind } from '@/lib/chat/attachments';
 
 /**
  * Autor, autor da citação e mencionados carregam os campos da MÁSCARA DE
@@ -17,7 +18,7 @@ export const MESSAGE_INCLUDE = {
     select: {
       id: true,
       content: true,
-      imageKey: true,
+      attachmentKind: true,
       deletedAt: true,
       author: { select: { id: true, ...PROFILE_MASK_SELECT } },
     },
@@ -27,17 +28,53 @@ export const MESSAGE_INCLUDE = {
 
 export type MessageWithRelations = Prisma.TextMessageGetPayload<{ include: typeof MESSAGE_INCLUDE }>;
 
+export interface AttachmentDTO {
+  kind: AttachmentKind;
+  url: string;
+  name: string;
+  mime: string;
+  bytes: number;
+  /** IMAGE/VIDEO — reserva a caixa antes de o arquivo carregar. Null no resto (e nas linhas antigas sem dimensão). */
+  width: number | null;
+  height: number | null;
+  /** VIDEO/AUDIO — mostra a duração antes do primeiro play. */
+  durationMs: number | null;
+}
+
 export interface MessageDTO {
   id: string;
   channelId: string;
   content: string | null;
-  image: { url: string; width: number; height: number; bytes: number } | null;
+  attachment: AttachmentDTO | null;
   author: { id: string; username: string; avatar: string };
   /** true quando a mensagem tem replyToId, mesmo que replyTo abaixo esteja null (citação indisponível — ver A24). */
   hasReply: boolean;
-  replyTo: { id: string; authorId: string; authorUsername: string; authorAvatar: string; excerpt: string; hasImage: boolean } | null;
+  replyTo: {
+    id: string;
+    authorId: string;
+    authorUsername: string;
+    authorAvatar: string;
+    excerpt: string;
+    /** Null quando a citada não tem anexo — a tira mostra "Imagem"/"Vídeo"/"Áudio"/"Arquivo" conforme a espécie. */
+    attachmentKind: AttachmentKind | null;
+  } | null;
   mentions: { id: string; username: string; avatar: string }[];
   createdAt: string;
+}
+
+function toAttachmentDTO(row: MessageWithRelations): AttachmentDTO | null {
+  if (!row.attachmentKey || !row.attachmentKind || row.attachmentBytes == null) return null;
+
+  return {
+    kind: row.attachmentKind,
+    url: publicImageUrl(row.attachmentKey),
+    name: row.attachmentName || fileNameFromKey(row.attachmentKey),
+    mime: row.attachmentMime ?? 'application/octet-stream',
+    bytes: row.attachmentBytes,
+    width: row.attachmentWidth,
+    height: row.attachmentHeight,
+    durationMs: row.attachmentDurationMs,
+  };
 }
 
 export function toMessageDTO(row: MessageWithRelations): MessageDTO {
@@ -59,7 +96,7 @@ export function toMessageDTO(row: MessageWithRelations): MessageDTO {
           authorUsername: replyAuthor.username,
           authorAvatar: replyAuthor.avatar,
           excerpt: replyExcerpt(row.replyTo.content),
-          hasImage: Boolean(row.replyTo.imageKey),
+          attachmentKind: row.replyTo.attachmentKind,
         }
       : null;
 
@@ -67,10 +104,7 @@ export function toMessageDTO(row: MessageWithRelations): MessageDTO {
     id: row.id,
     channelId: row.channelId,
     content: row.content,
-    image:
-      row.imageKey && row.imageWidth && row.imageHeight && row.imageBytes != null
-        ? { url: publicImageUrl(row.imageKey), width: row.imageWidth, height: row.imageHeight, bytes: row.imageBytes }
-        : null,
+    attachment: toAttachmentDTO(row),
     author: { id: row.author.id, ...channelsIdentity(row.author) },
     hasReply: row.replyToId !== null,
     replyTo,

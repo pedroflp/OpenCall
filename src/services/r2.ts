@@ -18,6 +18,14 @@ export const r2: S3Client =
     region: 'auto',
     endpoint,
     forcePathStyle: Boolean(process.env.R2_ENDPOINT),
+    // Sem checksum de requisição por padrão. Com corpo STREAMADO (o upload de
+    // anexo, ver ADR-0011) o SDK só consegue mandar checksum via
+    // `Content-Encoding: aws-chunked` + trailer, um dialeto que nem todo
+    // endpoint compatível com S3 aceita — e o MinIO do docker-compose é
+    // justamente um deles. WHEN_REQUIRED mantém o checksum onde a operação
+    // exige e sai do caminho no PutObject, que já é protegido por
+    // Content-Length e por HTTPS.
+    requestChecksumCalculation: 'WHEN_REQUIRED',
     credentials: {
       accessKeyId: process.env.R2_ACCESS_KEY_ID!,
       secretAccessKey: process.env.R2_SECRET_ACCESS_KEY!,

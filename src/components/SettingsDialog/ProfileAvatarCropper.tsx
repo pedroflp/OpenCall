@@ -1,4 +1,5 @@
 'use client';
+import { useTranslations } from 'next-intl';
 
 import { useCallback, useEffect, useRef, useState } from 'react';
 import { Button } from '@/components/ui/button';
@@ -43,6 +44,7 @@ export default function ProfileAvatarCropper({
   onCancel: () => void;
   onConfirm: (crop: CropRect) => void;
 }) {
+  const t = useTranslations('settings.profile.cropper');
   const [url, setUrl] = useState<string | null>(null);
   const [natural, setNatural] = useState<{ width: number; height: number } | null>(null);
   const [zoom, setZoom] = useState(1);
@@ -188,7 +190,7 @@ export default function ProfileAvatarCropper({
           min={1}
           max={MAX_ZOOM}
           step={0.02}
-          aria-label="Aproximar"
+          aria-label={t('zoomIn')}
           disabled={saving || !natural}
           onValueChange={([next]) => applyZoom(next)}
         />
@@ -197,10 +199,10 @@ export default function ProfileAvatarCropper({
 
       <div className="flex items-center gap-2">
         <Button variant="ghost" size="sm" onClick={onCancel} disabled={saving}>
-          Cancelar
+          {t('cancel')}
         </Button>
         <Button size="sm" onClick={confirm} disabled={saving || !natural}>
-          Usar foto
+          {t('use')}
         </Button>
       </div>
     </div>

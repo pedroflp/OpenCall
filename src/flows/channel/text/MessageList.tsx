@@ -1,10 +1,12 @@
 'use client';
+import { useTranslations } from 'next-intl';
 
 import { useCallback, useLayoutEffect, useMemo, useRef, useState } from 'react';
 import { cn } from '@/lib/utils';
 import MessageItem, { MessageItemSkeleton } from './MessageItem';
 import { useUnreadDivider } from './useUnreadDivider';
 import { HugeIcon } from '@/components/HugeIcon';
+import type { AttachmentDTO } from '@/lib/chat/dto';
 import type { ClientMessage } from './types';
 
 const GROUP_WINDOW_MS = 5 * 60 * 1000;
@@ -13,9 +15,10 @@ const LOAD_OLDER_THRESHOLD_PX = 300;
 
 /** Linha só à esquerda + rótulo — layout assimétrico do design (Chat de Mensagens.dc.html), não o divisor centrado convencional. */
 function UnreadDivider() {
+  const t = useTranslations('chat.list');
   return (
     <div className="mb-4 mt-2.5 flex items-center gap-2.5">
-      <span className="text-[11px] font-bold uppercase tracking-wider text-destructive">Novas mensagens</span>
+      <span className="text-[11px] font-bold uppercase tracking-wider text-destructive">{t('newMessages')}</span>
       <div className="h-px flex-1 bg-destructive" />
     </div>
   );
@@ -74,10 +77,11 @@ export default function MessageList({
   canDeleteAny: boolean;
   onReply: (message: ClientMessage) => void;
   onDelete: (message: ClientMessage) => void;
-  onImageClick: (image: NonNullable<ClientMessage['image']>) => void;
+  onImageClick: (attachment: AttachmentDTO) => void;
   onRetry: (clientNonce: string) => void;
   onDiscard: (clientNonce: string) => void;
 }) {
+  const t = useTranslations('chat.list');
   const scrollRef = useRef<HTMLDivElement>(null);
   const [atBottom, setAtBottom] = useState(true);
   const atBottomRef = useRef(true);
@@ -187,12 +191,12 @@ export default function MessageList({
         {messages.length === 0 ? (
           <div className="flex h-full flex-col items-center justify-center gap-2 text-center text-muted-foreground">
             <HugeIcon name="bubble-chat" size={32} />
-            <p className="text-sm">Ainda não tem nenhuma mensagem por aqui. Manda a primeira!</p>
+            <p className="text-sm">{t('empty')}</p>
           </div>
         ) : (
           <>
             <div className="mt-auto" />
-            {loadingOlder && <div className="py-2 text-center text-xs text-muted-foreground">Carregando mensagens antigas…</div>}
+            {loadingOlder && <div className="py-2 text-center text-xs text-muted-foreground">{t('loadingOlder')}</div>}
             {renderItems.map(({ message, grouped }, index) => (
               <div key={message.id} className={cn(index > 0 && (grouped ? 'mt-px' : 'mt-5'))}>
                 {dividerMessageId === message.id && <UnreadDivider />}
@@ -224,7 +228,7 @@ export default function MessageList({
           )}
         >
           <HugeIcon name="arrow-down-01" size={13} />
-          Novas mensagens
+          {t('newMessages')}
         </button>
       )}
     </div>

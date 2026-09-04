@@ -2,6 +2,7 @@
 
 import { useState } from 'react';
 import { HugeIcon } from '@/components/HugeIcon';
+import { useTranslations } from 'next-intl';
 import { Button } from '@/components/ui/button';
 import { Popover, PopoverContent, PopoverTrigger } from '@/components/ui/popover';
 import { Tooltip, TooltipContent, TooltipTrigger } from '@/components/ui/tooltip';
@@ -12,6 +13,7 @@ import VideoDeviceSelect from './VideoDeviceSelect';
 // zerados) pra ler como uma única peça — um split button clássico, com a
 // seta abrindo a seleção de dispositivo pra cima.
 export default function CameraDeviceButton({ active }: { active: boolean }) {
+  const t = useTranslations('voice.devices');
   const [open, setOpen] = useState(false);
 
   return (
@@ -23,7 +25,7 @@ export default function CameraDeviceButton({ active }: { active: boolean }) {
               type="button"
               variant="ghost"
               size="icon"
-              aria-label="Selecionar câmera"
+              aria-label={t('selectCamera')}
               className={cn(
                 'shrink-0 rounded-tl-none rounded-bl-none border-0',
                 active ? 'bg-red-950/40 text-red-500 hover:text-red-600 hover:bg-red-950/40' : 'bg-muted'
@@ -37,7 +39,7 @@ export default function CameraDeviceButton({ active }: { active: boolean }) {
           <VideoDeviceSelect active={open} />
         </PopoverContent>
       </Popover>
-      <TooltipContent>Selecionar câmera</TooltipContent>
+      <TooltipContent>{t('selectCamera')}</TooltipContent>
     </Tooltip>
   );
 }

@@ -2,6 +2,7 @@
 
 import { useEffect, useState } from 'react';
 import { Room } from 'livekit-client';
+import { useTranslations } from 'next-intl';
 import { HugeIcon } from '@/components/HugeIcon';
 import { Label } from '@/components/ui/label';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
@@ -15,6 +16,7 @@ function useOutputDeviceSupport(): boolean {
 }
 
 export default function AudioDeviceSelects({ active }: { active: boolean }) {
+  const t = useTranslations('voice.devices');
   const { inputDeviceId, outputDeviceId, setInputDeviceId, setOutputDeviceId } = useVoice();
   const outputSupported = useOutputDeviceSupport();
   const [inputs, setInputs] = useState<MediaDeviceInfo[]>([]);
@@ -59,18 +61,18 @@ export default function AudioDeviceSelects({ active }: { active: boolean }) {
       <div className="space-y-2">
         <Label className="flex items-center gap-1.5">
           <HugeIcon name="mic-02" size={14} />
-          Microfone
+          {t('microphone')}
         </Label>
         <Select value={inputDeviceId || undefined} onValueChange={setInputDeviceId}>
           <SelectTrigger>
-            <SelectValue placeholder="Padrão do sistema" />
+            <SelectValue placeholder={t('systemDefault')} />
           </SelectTrigger>
           <SelectContent>
             {inputs
               .filter((device) => device.deviceId)
               .map((device) => (
                 <SelectItem key={device.deviceId} value={device.deviceId}>
-                  {device.label || 'Microfone'}
+                  {device.label || t('microphone')}
                 </SelectItem>
               ))}
           </SelectContent>
@@ -81,11 +83,11 @@ export default function AudioDeviceSelects({ active }: { active: boolean }) {
         <div className="space-y-2">
           <Label className="flex items-center gap-1.5">
             <HugeIcon name="headphones" size={14} />
-            Saída de áudio
+            {t('audioOutput')}
           </Label>
           <Select value={outputDeviceId || undefined} onValueChange={setOutputDeviceId}>
             <SelectTrigger>
-              <SelectValue placeholder="Padrão do sistema" />
+              <SelectValue placeholder={t('systemDefault')} />
             </SelectTrigger>
             <SelectContent>
               {outputs
@@ -100,7 +102,7 @@ export default function AudioDeviceSelects({ active }: { active: boolean }) {
         </div>
       ) : (
         <p className="text-xs text-muted-foreground">
-          Este navegador não permite escolher o dispositivo de saída de áudio.
+          {t('outputUnsupported')}
         </p>
       )}
     </div>

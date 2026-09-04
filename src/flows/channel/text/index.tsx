@@ -1,4 +1,5 @@
 import { Link } from 'next-view-transitions';
+import { getTranslations } from 'next-intl/server';
 import { ChannelType } from '@prisma/client';
 import { getUser } from '@/app/api/auth/[...nextauth]/auth';
 import { getTextChannel, getDefaultTextChannelId } from '@/lib/chat/textChannels';
@@ -21,15 +22,20 @@ export default async function TextChannelPage({ channelId }: { channelId?: strin
 
   const channel = await getTextChannel(resolvedChannelId);
 
-  if (!channel) return (
-    <main className="flex flex-col gap-8 items-center h-full justify-center">
-      <HugeIcon name="hashtag" size={92} />
-      <h1 className="text-3xl font-bold">Canal não encontrado</h1>
-      <Link href={routeNames.HOME}>
-        <Button variant="outline">Voltar para o início</Button>
-      </Link>
-    </main>
-  );
+  if (!channel) {
+    // Server Component: o catálogo vem da request, como no canal de voz.
+    const t = await getTranslations('channels');
+
+    return (
+      <main className="flex flex-col gap-8 items-center h-full justify-center">
+        <HugeIcon name="hashtag" size={92} />
+        <h1 className="text-3xl font-bold">{t('notFound')}</h1>
+        <Link href={routeNames.HOME}>
+          <Button variant="outline">{t('backHome')}</Button>
+        </Link>
+      </main>
+    );
+  }
 
   return (
     <TextChannelView

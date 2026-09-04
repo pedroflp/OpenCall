@@ -1,5 +1,6 @@
 'use client';
 
+import { useTranslations } from 'next-intl';
 import { Label } from '@/components/ui/label';
 import { Separator } from '@/components/ui/separator';
 import { Slider } from '@/components/ui/slider';
@@ -20,22 +21,21 @@ import { useVoice } from '@/providers/VoiceProvider';
  * nada.
  */
 export default function AudioVideoTab({ active }: { active: boolean }) {
+  const t = useTranslations('settings.audioVideo');
   const { noiseGateThreshold, setNoiseGateThreshold } = useVoice();
 
   return (
     <div className="space-y-4">
       <div>
-        <p className="text-[11px] font-bold uppercase tracking-wider text-muted-foreground">Áudio e vídeo</p>
-        <p className="mt-1 text-xs text-muted-foreground">
-          Escolha os dispositivos e ajuste a partir de que volume o seu microfone começa a sair.
-        </p>
+        <p className="text-[11px] font-bold uppercase tracking-wider text-muted-foreground">{t('heading')}</p>
+        <p className="mt-1 text-xs text-muted-foreground">{t('description')}</p>
       </div>
 
       <AudioDeviceSelects active={active} />
 
       <div className="space-y-2">
         <div className="flex items-baseline justify-between gap-2">
-          <Label htmlFor="noise-gate-tab">Sensibilidade do microfone</Label>
+          <Label htmlFor="noise-gate-tab">{t('micSensitivity')}</Label>
           <span className="text-[11px] tabular-nums text-muted-foreground">{noiseGateThreshold} dB</span>
         </div>
 
@@ -51,10 +51,7 @@ export default function AudioVideoTab({ active }: { active: boolean }) {
           onValueChange={([next]) => setNoiseGateThreshold(NOISE_GATE_MIN_DB + NOISE_GATE_MAX_DB - next)}
         />
 
-        <p className="text-[11px] text-muted-foreground">
-          Abaixo do limiar o microfone fica em silêncio. Arraste pra direita se estão dizendo que você some; pra
-          esquerda se o ruído de fundo passa.
-        </p>
+        <p className="text-[11px] text-muted-foreground">{t('micSensitivityHint')}</p>
       </div>
 
       <Separator />

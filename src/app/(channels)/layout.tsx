@@ -51,7 +51,7 @@ export default async function ChannelsLayout({ children }: { children: React.Rea
       </main>
       {!user && <LoginPopover />}
       {user && !canalAccess && (
-        // useSearchParams (auto-resgate por ?convite=) exige boundary de Suspense.
+        // useSearchParams (auto-resgate por ?invite=) exige boundary de Suspense.
         <Suspense fallback={null}>
           <NoAccessPopover />
         </Suspense>

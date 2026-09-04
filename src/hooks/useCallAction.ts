@@ -2,11 +2,11 @@
 
 import { useEffect, useState } from 'react';
 import { useToast } from '@/components/ui/use-toast';
+import { useTranslations } from 'next-intl';
 import { getCallCooldownRemaining, setCallCooldown } from '@/lib/rtc/callCooldown';
 
-const INVITE_ERROR_MESSAGE: Record<string, string> = {
-  DM_BLOCKED: 'Esse usuário não aceita DMs de membros do servidor.',
-};
+/** Códigos que a rota devolve com frase própria em `presence.actions.callErrors`. */
+const INVITE_ERRORS = ['DM_BLOCKED'] as const;
 
 // Precisa bater com COOLDOWN_MS de src/app/api/rtc/invite/route.ts — usado só
 // pra já nascer no estado certo no clique de sucesso, sem esperar a resposta
@@ -22,6 +22,7 @@ export type CallStatus = 'idle' | 'sending' | 'cooldown';
  * tratamento de erro precisam ser idênticos.
  */
 export function useCallAction(targetUserId: string) {
+  const t = useTranslations('presence.actions');
   const { toast } = useToast();
   // Semeia o estado com o cooldown persistido (ver callCooldown.ts) — sem
   // isso, fechar e reabrir o popover/modal remonta esse hook do zero e o
@@ -85,14 +86,17 @@ export function useCallAction(targetUserId: string) {
       }
 
       setStatus('idle');
+      const code = data?.error ?? '';
       toast({
-        title: 'Não deu pra chamar',
-        description: (data?.error && INVITE_ERROR_MESSAGE[data.error]) || 'Tenta de novo daqui a pouco.',
+        title: t('callFailed'),
+        description: (INVITE_ERRORS as readonly string[]).includes(code)
+          ? t(`callErrors.${code as (typeof INVITE_ERRORS)[number]}`)
+          : t('tryAgainSoon'),
         variant: 'destructive',
       });
     } catch {
       setStatus('idle');
-      toast({ title: 'Não deu pra chamar', description: 'Falha de rede, tenta de novo.', variant: 'destructive' });
+      toast({ title: t('callFailed'), description: t('networkFailed'), variant: 'destructive' });
     }
   }
 

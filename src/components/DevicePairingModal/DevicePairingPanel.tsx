@@ -2,6 +2,7 @@
 
 import { useCallback, useEffect, useRef, useState } from 'react';
 import QRCode from 'qrcode';
+import { useTranslations } from 'next-intl';
 import { HugeIcon } from '@/components/HugeIcon';
 import { Button } from '@/components/ui/button';
 import { Separator } from '@/components/ui/separator';
@@ -32,6 +33,7 @@ export default function DevicePairingPanel({
   autoStart?: boolean;
   className?: string;
 }) {
+  const t = useTranslations('auth.pairing');
   const [phase, setPhase] = useState<Phase>(autoStart ? 'loading' : 'idle');
   const [qrDataUrl, setQrDataUrl] = useState<string | null>(null);
   const [code, setCode] = useState<string | null>(null);
@@ -93,7 +95,7 @@ export default function DevicePairingPanel({
       {phase === 'idle' && (
         <Button type="button" variant="secondary" className="w-full gap-2" onClick={() => void createPairing()}>
           <HugeIcon name="qr-code-01" size={16} />
-          Gerar código
+          {t('generateCode')}
         </Button>
       )}
 
@@ -102,33 +104,33 @@ export default function DevicePairingPanel({
       {phase === 'ready' && qrDataUrl && code && (
         <>
           {/* eslint-disable-next-line @next/next/no-img-element -- data URL gerado no client, next/image não otimiza URIs desse tipo */}
-          <img src={qrDataUrl} alt="QR code de login" width={240} height={240} className="rounded-lg" />
+          <img src={qrDataUrl} alt={t('qrAlt')} width={240} height={240} className="rounded-lg" />
 
           <div className="flex w-full items-center gap-3">
             <Separator className="flex-1" />
-            <span className="text-xs text-muted-foreground">ou digita</span>
+            <span className="text-xs text-muted-foreground">{t('orType')}</span>
             <Separator className="flex-1" />
           </div>
 
           <p className="rounded-xl bg-muted px-5 py-2 font-mono text-2xl font-bold tracking-widest text-foreground">
             {formatAccessCode(code)}
           </p>
-          <p className="text-xs text-muted-foreground">Expira em 2 minutos</p>
+          <p className="text-xs text-muted-foreground">{t('expiresIn')}</p>
         </>
       )}
 
       {phase === 'connected' && (
         <>
           <HugeIcon name="checkmark-circle-01" size={32} className="text-primary" />
-          <p className="text-sm font-bold text-foreground">Dispositivo conectado!</p>
+          <p className="text-sm font-bold text-foreground">{t('connected')}</p>
         </>
       )}
 
       {phase === 'error' && (
         <>
-          <p className="text-sm text-muted-foreground">O código expirou.</p>
+          <p className="text-sm text-muted-foreground">{t('expired')}</p>
           <Button type="button" size="sm" onClick={() => void createPairing()}>
-            Gerar novo código
+            {t('generateNew')}
           </Button>
         </>
       )}

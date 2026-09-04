@@ -1,7 +1,7 @@
 import { NextRequest, NextResponse } from 'next/server';
 import { getUser, isCurrentUserChannelsAdmin } from '@/app/api/auth/[...nextauth]/auth';
 import { prisma } from '@/services/prisma';
-import { moveImageToDeleted } from '@/lib/chat/storage';
+import { moveAttachmentToDeleted } from '@/lib/chat/storage';
 import { publishToChannel } from '@/lib/chat/signal';
 import { getTextChannel } from '@/lib/chat/textChannels';
 import { CLEAR_COMMAND_MAX_COUNT } from '@/lib/chat/channel';
@@ -35,7 +35,7 @@ export async function POST(req: NextRequest) {
     where: { channelId, deletedAt: null },
     orderBy: [{ createdAt: 'desc' }, { id: 'desc' }],
     take: count,
-    select: { id: true, imageKey: true, authorId: true, createdAt: true },
+    select: { id: true, attachmentKey: true, authorId: true, createdAt: true },
   });
   if (targets.length === 0) return NextResponse.json({ deletedIds: [] });
 
@@ -50,14 +50,14 @@ export async function POST(req: NextRequest) {
   publishToChannel({ type: 'cleared', channelId, ids });
 
   for (const target of targets) {
-    if (!target.imageKey) continue;
-    moveImageToDeleted({
-      key: target.imageKey,
+    if (!target.attachmentKey) continue;
+    moveAttachmentToDeleted({
+      key: target.attachmentKey,
       deletedBy: user.id,
       deletedAt,
       fallbackAuthorId: target.authorId,
       fallbackUploadedAt: target.createdAt,
-    }).catch((error) => console.error('[chat/messages/clear] failed to move image to deleted prefix', error));
+    }).catch((error) => console.error('[chat/messages/clear] failed to move attachment to deleted prefix', error));
   }
 
   return NextResponse.json({ deletedIds: ids });

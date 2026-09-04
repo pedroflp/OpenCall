@@ -1,6 +1,7 @@
 'use client';
 
 import { useCallback, useEffect, useRef, useState } from 'react';
+import { useTranslations } from 'next-intl';
 import { Popover, PopoverContent, PopoverTrigger } from '@/components/ui/popover';
 import { SearchField } from '@/components/ui/search-field';
 import { Tooltip, TooltipContent, TooltipTrigger } from '@/components/ui/tooltip';
@@ -69,6 +70,7 @@ function GifGrid({ gifs, onPick }: { gifs: GifDTO[]; onPick: (gif: GifDTO) => vo
 }
 
 export default function GifPickerPopover({ onPick }: { onPick: (url: string) => void }) {
+  const t = useTranslations('chat.gif');
   const [open, setOpen] = useState(false);
   const [query, setQuery] = useState('');
   const [gifs, setGifs] = useState<GifDTO[]>([]);
@@ -121,7 +123,7 @@ export default function GifPickerPopover({ onPick }: { onPick: (url: string) => 
           <TooltipTrigger asChild>
             <button
               type="button"
-              aria-label="Enviar GIF"
+              aria-label={t('send')}
               className={cn('shrink-0 opacity-70 transition-opacity hover:opacity-100', open && 'opacity-100')}
             >
               <GiphyMark size={22} />
@@ -143,16 +145,16 @@ export default function GifPickerPopover({ onPick }: { onPick: (url: string) => 
             ref={inputRef}
             value={query}
             onValueChange={setQuery}
-            placeholder="Buscar no GIPHY"
+            placeholder={t('searchPlaceholder')}
             className="shrink-0"
           />
 
           <div className="min-h-0 flex-1 overflow-y-auto">
             {failed ? (
-              <p className="px-2 py-6 text-center text-[13px] text-muted-foreground">Não deu pra falar com o GIPHY. Tenta de novo.</p>
+              <p className="px-2 py-6 text-center text-[13px] text-muted-foreground">{t('failed')}</p>
             ) : gifs.length === 0 ? (
               <p className="px-2 py-6 text-center text-[13px] text-muted-foreground">
-                {loading ? 'Buscando…' : 'Nenhum GIF encontrado.'}
+                {loading ? t('searching') : t('noResults')}
               </p>
             ) : (
               <div className={cn(loading && 'opacity-60')}>
@@ -162,10 +164,10 @@ export default function GifPickerPopover({ onPick }: { onPick: (url: string) => 
           </div>
 
           {/* Atribuição é exigência dos termos de uso da API do GIPHY, não enfeite. */}
-          <p className="shrink-0 text-center text-[10px] font-semibold uppercase tracking-wider text-muted-foreground">Powered by GIPHY</p>
+          <p className="shrink-0 text-center text-[10px] font-semibold uppercase tracking-wider text-muted-foreground">{t('poweredBy')}</p>
         </PopoverContent>
       </Popover>
-      <TooltipContent>Enviar GIF</TooltipContent>
+      <TooltipContent>{t('send')}</TooltipContent>
     </Tooltip>
   );
 }

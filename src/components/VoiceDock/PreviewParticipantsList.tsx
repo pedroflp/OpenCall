@@ -1,6 +1,7 @@
 'use client';
 
 import { useState } from 'react';
+import { useTranslations } from 'next-intl';
 import { HugeIcon } from '@/components/HugeIcon';
 import Avatar from '@/components/Avatar';
 import { Badge } from '@/components/ui/badge';
@@ -23,6 +24,7 @@ function PreviewParticipantRow({
   isFullAdmin: boolean;
   isSelf: boolean;
 }) {
+  const t = useTranslations('voice.participant');
   const { disconnectParticipant, join } = useVoice();
   const [menuOpen, setMenuOpen] = useState(false);
   // Um channels_admin (sem ser ADMIN completo) não pode desconectar um ADMIN — mesma regra de /api/rtc/kick.
@@ -54,17 +56,17 @@ function PreviewParticipantRow({
             void join(channelId, participant.identity);
           }}
         >
-          AO VIVO
+          {t('live')}
         </Badge>
       )}
       {participant.cameraEnabled && (
-        <HugeIcon name="camera-01" size={18} aria-label="Câmera ligada" className="shrink-0 text-white" />
+        <HugeIcon name="camera-01" size={18} aria-label={t('cameraOn')} className="shrink-0 text-white" />
       )}
       {participant.micMuted && (
-        <HugeIcon name="mic-off-02" size={18} aria-label="Microfone desligado" className="shrink-0 text-muted-foreground" />
+        <HugeIcon name="mic-off-02" size={18} aria-label={t('micOff')} className="shrink-0 text-muted-foreground" />
       )}
       {participant.deafened && (
-        <HugeIcon name="headphone-mute" size={18} aria-label="Ensurdecido" className="shrink-0 text-muted-foreground" />
+        <HugeIcon name="headphone-mute" size={18} aria-label={t('deafened')} className="shrink-0 text-muted-foreground" />
       )}
     </li>
   );
@@ -89,7 +91,7 @@ function PreviewParticipantRow({
           className="flex w-full items-center gap-2 rounded-sm px-2 py-1.5 text-left text-sm text-destructive transition-colors hover:bg-destructive/10"
         >
           <HugeIcon name="logout-01" size={16} />
-          Desconectar
+          {t('disconnect')}
         </button>
       </PopoverContent>
     </Popover>
@@ -113,7 +115,8 @@ export default function PreviewParticipantsList({
   isChannelsAdmin?: boolean;
   isFullAdmin?: boolean;
 }) {
-  const selfName = user?.username || 'Você';
+  const tCommon = useTranslations('common');
+  const selfName = user?.username || tCommon('you');
 
   return (
     <ul className={className}>

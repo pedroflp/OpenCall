@@ -12,21 +12,28 @@ import DiscordOAuth from "@/components/DiscordOAuth";
 import QrLoginButton from "@/components/QrLoginButton";
 import { cn } from "@/lib/utils";
 import { useSession, signOut } from "next-auth/react";
+import { useTranslations } from "next-intl";
 import { Link } from "next-view-transitions";
 import { usePathname } from "next/navigation";
 import { ReactNode, useEffect, useMemo, useRef, useState } from "react";
 import Image from "next/image";
 import { useIsMobile } from "@/hooks/useIsMobile";
 
+/**
+ * `text` e `title` são CHAVES de `nav`, não texto pronto: a lista é montada
+ * fora do render (`getSections` é chamada de dentro de um `useMemo`), e é o JSX
+ * lá embaixo que traduz. Também é ele que usa a chave como `key` do React — o
+ * que continua certo: a chave é estável, o texto traduzido não seria.
+ */
 type SidebarLink = {
-  text: string;
+  text: 'administration';
   href: string;
   icon: string;
   disabled?: boolean;
 }
 
 type SidebarSection = {
-  title: string;
+  title: 'platform';
   icon?: ReactNode;
   links: SidebarLink[];
 }
@@ -34,18 +41,19 @@ type SidebarSection = {
 function getSections(canAccessAdmin: boolean): SidebarSection[] {
   return [
     {
-      title: 'Plataforma',
+      title: 'platform',
       links: [
         // ADMIN entra na área inteira; CHANNELS_ACCESS só em /admin e
         // /admin/channels (ver middleware.ts) — de qualquer forma o hub em
         // /admin já resolve pra qualquer um dos dois, então o link é o mesmo.
-        ...(canAccessAdmin ? [{ text: 'Administração', href: routeNames.ADMIN, icon: 'shield-01' }] : []),
+        ...(canAccessAdmin ? [{ text: 'administration' as const, href: routeNames.ADMIN, icon: 'shield-01' }] : []),
       ],
     },
   ];
 }
 
 function OpenCallBanner({ collapsed }: { collapsed: boolean }) {
+  const t = useTranslations('nav');
   const href = routeNames.CHANNELS;
 
   if (collapsed) {
@@ -70,7 +78,7 @@ function OpenCallBanner({ collapsed }: { collapsed: boolean }) {
       <Image src="/assets/icons/opencall-banner.png" width={200} height={200} alt="OpenCall" className="pointer-events-none shrink-0 opacity-20 blur-[2px] rounded-lg absolute translate-y-1/2 bottom-1/4 right-8 translate-x-1/2" />
       <div className="min-w-0 flex-1">
         <p className="truncate text-xl font-bold text-foreground">OpenCall</p>
-        <p className="truncate text-xs text-primary/50">Ver canais</p>
+        <p className="truncate text-xs text-primary/50">{t('seeChannels')}</p>
       </div>
       <HugeIcon
         name="arrow-right-01"
@@ -92,6 +100,8 @@ function readCollapsedCookie(): boolean {
 }
 
 export default function SectionsSidebar({ user, initialCollapsed }: { user: UserDTO | null, initialCollapsed?: boolean }) {
+  const t = useTranslations('nav');
+  const tCommon = useTranslations('common');
   const { data: session, status } = useSession();
   const pathname = usePathname();
   const isMobile = useIsMobile();
@@ -168,7 +178,7 @@ export default function SectionsSidebar({ user, initialCollapsed }: { user: User
             variant="ghost"
             size="icon"
             onClick={toggleCollapsed}
-            aria-label={collapsed ? 'Expandir sidebar' : 'Colapsar sidebar'}
+            aria-label={collapsed ? t('expandSidebar') : t('collapseSidebar')}
             className={cn(
               "transition-opacity duration-200",
               collapsed
@@ -195,7 +205,7 @@ export default function SectionsSidebar({ user, initialCollapsed }: { user: User
                 </div>
               ) : (
                 <h2 className="text-xs uppercase tracking-wider text-muted-foreground px-3 mb-2">
-                  {section.title}
+                  {t(section.title)}
                 </h2>
               )}
               <nav className="flex flex-col gap-1">
@@ -230,7 +240,7 @@ export default function SectionsSidebar({ user, initialCollapsed }: { user: User
                           effectiveCollapsed ? 'opacity-0' : 'opacity-100 delay-[1000ms]',
                         )}
                       >
-                        {link.text}
+                        {t(link.text)}
                       </span>
                     </Link>
                   )
@@ -240,7 +250,7 @@ export default function SectionsSidebar({ user, initialCollapsed }: { user: User
                   return (
                     <Tooltip key={link.text}>
                       <TooltipTrigger asChild>{linkContent}</TooltipTrigger>
-                      <TooltipContent side="right">{link.text}</TooltipContent>
+                      <TooltipContent side="right">{t(link.text)}</TooltipContent>
                     </Tooltip>
                   )
                 })}
@@ -278,13 +288,13 @@ export default function SectionsSidebar({ user, initialCollapsed }: { user: User
                       variant="ghost"
                       size="icon"
                       onClick={handleSignOut}
-                      aria-label="Sair"
+                      aria-label={tCommon('signOut')}
                       className="text-red-500 hover:text-red-500 hover:bg-red-500/10"
                     >
                       <HugeIcon name="logout-01" size={18} />
                     </Button>
                   </TooltipTrigger>
-                  <TooltipContent side="top">Sair</TooltipContent>
+                  <TooltipContent side="top">{tCommon('signOut')}</TooltipContent>
                 </Tooltip>
               </div>
             )

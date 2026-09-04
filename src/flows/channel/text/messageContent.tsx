@@ -1,4 +1,5 @@
 import { Fragment, useEffect, useState } from 'react';
+import { useTranslations } from 'next-intl';
 import Image from 'next/image';
 import AvatarCircleSmall from '@/components/Avatar';
 import { cn } from '@/lib/utils';
@@ -147,6 +148,7 @@ function renderInline(text: string, mentions: Mentions, keyPrefix: string, depth
  * mensagem cresce depois do scroll pro fundo e a lista pula.
  */
 function GifEmbed({ url }: { url: string }) {
+  const t = useTranslations('chat.gif');
   const [loaded, setLoaded] = useState(false);
 
   return (
@@ -162,7 +164,7 @@ function GifEmbed({ url }: { url: string }) {
       {/* eslint-disable-next-line @next/next/no-img-element -- GIF externo: next/image mata a animação. */}
       <img
         src={url}
-        alt="GIF"
+        alt={t('alt')}
         loading="lazy"
         onLoad={() => setLoaded(true)}
         className={cn('h-full w-full object-cover', !loaded && 'opacity-0')}

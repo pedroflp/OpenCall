@@ -1,4 +1,5 @@
 'use client';
+import { useTranslations } from 'next-intl';
 
 import { useState } from 'react';
 import { useAdminRefresh } from '@/flows/admin/refresh';
@@ -44,13 +45,15 @@ function minKbpsFor(height: number, frameRate: number) {
   return Math.round((MIN_KBPS_AT_30FPS[height] ?? 0) * Math.max(1, frameRate / 30));
 }
 
-function summarize(height: number, frameRate: number, maxBitrateKbps: number) {
-  return `${height}p · ${frameRate} fps · ${maxBitrateKbps} kbps`;
-}
-
 export default function AdminStreamView({ settings }: { settings: StreamSettings }) {
+  const t = useTranslations('admin.stream');
+  const tAdmin = useTranslations('admin');
+  const tCommon = useTranslations('common');
   const refresh = useAdminRefresh();
   const { toast } = useToast();
+
+  const summarize = (height: number, frameRate: number, maxBitrateKbps: number) =>
+    t('summary', { height, fps: frameRate, kbps: maxBitrateKbps });
 
   const [advanced, setAdvanced] = useState(settings.preset === 'custom');
   const [preset, setPreset] = useState<StreamPresetId>(
@@ -92,16 +95,16 @@ export default function AdminStreamView({ settings }: { settings: StreamSettings
 
     if (!ok) {
       toast({
-        title: 'Não deu pra salvar',
-        description: 'Tenta de novo daqui a pouco.',
+        title: t('saveFailed'),
+        description: tAdmin('tryAgainSoon'),
         variant: 'destructive',
       });
       return;
     }
 
     toast({
-      title: 'Qualidade atualizada!',
-      description: 'Lives em andamento já mudaram; quem abrir agora começa na config nova.',
+      title: t('saved'),
+      description: t('savedDescription'),
     });
     refresh();
   }
@@ -119,18 +122,16 @@ export default function AdminStreamView({ settings }: { settings: StreamSettings
   return (
     <main className="mx-auto flex w-full max-w-2xl flex-1 flex-col gap-6 overflow-y-auto px-6 py-10">
       <div>
-        <h1 className="text-2xl font-bold">Transmissão</h1>
-        <p className="text-sm text-muted-foreground">
-          Qualidade das lives de tela. Vale para todos os canais.
-        </p>
+        <h1 className="text-2xl font-bold">{t('title')}</h1>
+        <p className="text-sm text-muted-foreground">{t('description')}</p>
       </div>
 
       <section className="flex flex-col gap-4 rounded-xl border border-border/60 p-5">
         <div className="flex items-center justify-between gap-3">
-          <h2 className="font-semibold">Qualidade</h2>
+          <h2 className="font-semibold">{t('quality')}</h2>
           <div className="flex items-center gap-2">
             <Label htmlFor="advanced" className="text-sm text-muted-foreground">
-              Modo avançado
+              {t('advancedMode')}
             </Label>
             <Switch id="advanced" checked={advanced} onCheckedChange={handleAdvancedChange} />
           </div>
@@ -154,12 +155,12 @@ export default function AdminStreamView({ settings }: { settings: StreamSettings
                     }`}
                   >
                     <div className="flex flex-wrap items-center justify-between gap-x-3 gap-y-1">
-                      <span className="font-medium">{option.label}</span>
+                      <span className="font-medium">{t(`presets.${id}.label`)}</span>
                       <span className="text-xs text-muted-foreground">
                         {summarize(option.height, option.frameRate, option.maxBitrateKbps)}
                       </span>
                     </div>
-                    <span className="text-sm text-muted-foreground">{option.hint}</span>
+                    <span className="text-sm text-muted-foreground">{t(`presets.${id}.hint`)}</span>
                   </button>
                 );
               })}
@@ -169,7 +170,7 @@ export default function AdminStreamView({ settings }: { settings: StreamSettings
         {advanced && (
           <div className="grid gap-4 sm:grid-cols-3">
             <div className="flex flex-col gap-2">
-              <Label htmlFor="resolution">Resolução</Label>
+              <Label htmlFor="resolution">{t('resolution')}</Label>
               <Select value={String(height)} onValueChange={(value) => setHeight(Number(value))}>
                 <SelectTrigger id="resolution">
                   <SelectValue />
@@ -185,7 +186,7 @@ export default function AdminStreamView({ settings }: { settings: StreamSettings
             </div>
 
             <div className="flex flex-col gap-2">
-              <Label htmlFor="framerate">FPS</Label>
+              <Label htmlFor="framerate">{t('fps')}</Label>
               <Select value={String(frameRate)} onValueChange={(value) => setFrameRate(Number(value))}>
                 <SelectTrigger id="framerate">
                   <SelectValue />
@@ -193,7 +194,7 @@ export default function AdminStreamView({ settings }: { settings: StreamSettings
                 <SelectContent>
                   {FRAME_RATE_OPTIONS.map((option) => (
                     <SelectItem key={option} value={String(option)}>
-                      {option} fps
+                      {t('fpsOption', { value: option })}
                     </SelectItem>
                   ))}
                 </SelectContent>
@@ -201,7 +202,7 @@ export default function AdminStreamView({ settings }: { settings: StreamSettings
             </div>
 
             <div className="flex flex-col gap-2">
-              <Label htmlFor="bitrate">Bitrate</Label>
+              <Label htmlFor="bitrate">{t('bitrate')}</Label>
               <Select
                 value={String(maxBitrateKbps)}
                 onValueChange={(value) => setMaxBitrateKbps(Number(value))}
@@ -212,7 +213,7 @@ export default function AdminStreamView({ settings }: { settings: StreamSettings
                 <SelectContent>
                   {BITRATE_OPTIONS_KBPS.map((option) => (
                     <SelectItem key={option} value={String(option)}>
-                      {option} kbps
+                      {t('bitrateOption', { value: option })}
                     </SelectItem>
                   ))}
                 </SelectContent>
@@ -223,21 +224,18 @@ export default function AdminStreamView({ settings }: { settings: StreamSettings
 
         {underfed && (
           <p className="rounded-lg border border-dashed border-border/60 p-3 text-sm text-muted-foreground">
-            {height}p a {frameRate} fps com {maxBitrateKbps} kbps vai pixelar em cena de movimento — o
-            encoder não gasta bitrate que o teto não libera.{' '}
+            {t('underfed', { height, fps: frameRate, kbps: maxBitrateKbps })}{' '}
             {minKbps > MAX_BITRATE_KBPS
-              ? `Essa combinação pede ~${minKbps} kbps e não cabe no teto de ${MAX_BITRATE_KBPS} kbps: baixe a resolução ou o fps.`
-              : `Para essa combinação, use pelo menos ${minKbps} kbps.`}
+              ? t('underfedOverCeiling', { min: minKbps, ceiling: MAX_BITRATE_KBPS })
+              : t('underfedUseAtLeast', { min: minKbps })}
           </p>
         )}
       </section>
 
       <section className="flex flex-col gap-4 rounded-xl border border-border/60 p-5">
         <div>
-          <h2 className="font-semibold">Sob congestionamento</h2>
-          <p className="text-sm text-muted-foreground">
-            O que sacrificar quando a banda de quem transmite não dá conta.
-          </p>
+          <h2 className="font-semibold">{t('congestionTitle')}</h2>
+          <p className="text-sm text-muted-foreground">{t('congestionDescription')}</p>
         </div>
 
         <div className="grid gap-3 sm:grid-cols-2">
@@ -254,8 +252,8 @@ export default function AdminStreamView({ settings }: { settings: StreamSettings
                   selected ? 'border-primary bg-primary/5' : 'border-border/60 hover:border-border'
                 }`}
               >
-                <span className="font-medium">{option.label}</span>
-                <span className="text-sm text-muted-foreground">{option.hint}</span>
+                <span className="font-medium">{t(`degradation.${option.value}.label`)}</span>
+                <span className="text-sm text-muted-foreground">{t(`degradation.${option.value}.hint`)}</span>
               </button>
             );
           })}
@@ -264,10 +262,10 @@ export default function AdminStreamView({ settings }: { settings: StreamSettings
 
       <div className="flex items-center justify-between gap-3">
         <p className="text-sm text-muted-foreground">
-          Vale na hora: {summarize(height, frameRate, maxBitrateKbps)}
+          {t('effectiveNow', { summary: summarize(height, frameRate, maxBitrateKbps) })}
         </p>
         <Button onClick={handleSave} disabled={!dirty || saving}>
-          {saving ? 'Salvando...' : 'Salvar'}
+          {saving ? t('saving') : tCommon('save')}
         </Button>
       </div>
     </main>

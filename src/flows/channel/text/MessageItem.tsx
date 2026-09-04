@@ -1,18 +1,22 @@
 'use client';
 
 import { useState } from 'react';
-import Image from 'next/image';
 import { format } from 'date-fns';
-import { ptBR } from 'date-fns/locale';
 import { Popover, PopoverContent, PopoverTrigger } from '@/components/ui/popover';
 import { Tooltip, TooltipContent, TooltipTrigger } from '@/components/ui/tooltip';
 import { Avatar, AvatarImage, AvatarFallback } from '@/components/ui/avatar';
 import AvatarCircleSmall from '@/components/Avatar';
 import { cn } from '@/lib/utils';
+import { ATTACHMENT_KIND_ICON } from '@/lib/chat/attachments';
+import { useTranslations } from 'next-intl';
+import type { AttachmentDTO } from '@/lib/chat/dto';
 import { avatarColorFor } from './avatarColor';
 import { HugeIcon } from '@/components/HugeIcon';
 import { MessageContent } from './messageContent';
+import AttachmentBubble from './media/AttachmentBubble';
 import type { ClientMessage } from './types';
+import { useAttachmentKindLabel } from './useAttachmentKindLabel';
+import { useDateFnsLocale } from '@/i18n/dateFns';
 
 
 function AvatarCircle({ userId, username, avatar }: { userId: string; username: string; avatar: string }) {
@@ -53,6 +57,8 @@ export function MessageItemSkeleton({ grouped, lines }: { grouped?: boolean; lin
 }
 
 function ReplyPreviewStrip({ replyTo, onClick }: { replyTo: NonNullable<ClientMessage['replyTo']>; onClick: () => void }) {
+  const tKind = useAttachmentKindLabel();
+
   return (
     <button type="button" onClick={onClick} className="mb-1 mt-0.5 flex min-w-0 items-center gap-1.5 text-muted-foreground hover:text-foreground">
       <HugeIcon name="arrow-turn-backward" size={16} className="shrink-0" />
@@ -61,10 +67,10 @@ function ReplyPreviewStrip({ replyTo, onClick }: { replyTo: NonNullable<ClientMe
       {/* O truncate precisa ficar no elemento de texto, não no flex container: em flex o text-overflow não
           se aplica ao conteúdo anônimo e a citação termina cortada no seco, sem reticências. */}
       <span className="flex min-w-0 max-w-[280px] items-center gap-1 text-[12.5px] text-muted-foreground">
-        {replyTo.hasImage ? (
+        {replyTo.attachmentKind && !replyTo.excerpt ? (
           <>
-            <HugeIcon name="image-01" size={12} className="shrink-0" />
-            <span className="shrink-0">Imagem</span>
+            <HugeIcon name={ATTACHMENT_KIND_ICON[replyTo.attachmentKind]} size={12} className="shrink-0" />
+            <span className="shrink-0">{tKind(replyTo.attachmentKind)}</span>
           </>
         ) : (
           <span className="min-w-0 truncate">{replyTo.excerpt}</span>
@@ -75,36 +81,13 @@ function ReplyPreviewStrip({ replyTo, onClick }: { replyTo: NonNullable<ClientMe
 }
 
 function UnavailableReplyStrip() {
+  const t = useTranslations('chat.message');
+
   return (
     <div className="mb-1 mt-0.5 flex items-center gap-1.5 text-[12.5px] italic text-muted-foreground/60">
       <HugeIcon name="arrow-turn-backward" size={16} className="shrink-0" />
-      mensagem indisponível
+      {t('unavailableReply')}
     </div>
-  );
-}
-
-function ImageBubble({ image, hasText, onClick }: { image: NonNullable<ClientMessage['image']>; hasText: boolean; onClick: () => void }) {
-  const [optimizerFailed, setOptimizerFailed] = useState(false);
-
-  return (
-    <button
-      type="button"
-      onClick={onClick}
-      className={cn('block w-[320px] max-w-full overflow-hidden rounded-[10px] border border-border/50 bg-muted/40', hasText ? 'mt-1.5' : 'mt-1')}
-      style={{ aspectRatio: `${image.width} / ${image.height}` }}
-    >
-      <Image
-        src={image.url}
-        alt=""
-        width={image.width}
-        height={image.height}
-        loading="lazy"
-        sizes="320px"
-        className="h-full w-full object-cover"
-        unoptimized={optimizerFailed}
-        onError={() => setOptimizerFailed(true)}
-      />
-    </button>
   );
 }
 
@@ -118,6 +101,7 @@ function MessageActions({
   onReply: () => void;
   onDelete: () => void;
 }) {
+  const t = useTranslations('chat.message');
   const [open, setOpen] = useState(false);
 
   return (
@@ -126,14 +110,14 @@ function MessageActions({
         <TooltipTrigger asChild>
           <button
             type="button"
-            aria-label="Responder"
+            aria-label={t('reply')}
             onClick={onReply}
             className="flex size-[26px] items-center justify-center rounded-md text-muted-foreground hover:bg-muted/60 hover:text-foreground"
           >
             <HugeIcon name="arrow-turn-backward" size={16} />
           </button>
         </TooltipTrigger>
-        <TooltipContent>Responder</TooltipContent>
+        <TooltipContent>{t('reply')}</TooltipContent>
       </Tooltip>
 
       <Tooltip>
@@ -142,7 +126,7 @@ function MessageActions({
             <TooltipTrigger asChild>
               <button
                 type="button"
-                aria-label="Mais opções"
+                aria-label={t('moreOptions')}
                 className="flex size-[26px] items-center justify-center rounded-md text-muted-foreground hover:bg-muted/60 hover:text-foreground"
               >
                 <HugeIcon name="more-vertical" size={16} />
@@ -150,7 +134,7 @@ function MessageActions({
             </TooltipTrigger>
           </PopoverTrigger>
           <PopoverContent align="end" className="w-[220px] border-border bg-popover p-1 shadow-2xl">
-        <p className="px-2.5 py-1.5 text-[11px] font-semibold uppercase tracking-wide text-muted-foreground">Ações da mensagem</p>
+        <p className="px-2.5 py-1.5 text-[11px] font-semibold uppercase tracking-wide text-muted-foreground">{t('actions')}</p>
         <button
           type="button"
           onClick={() => {
@@ -160,7 +144,7 @@ function MessageActions({
           className="flex w-full items-center gap-2 rounded-md px-2.5 py-1.5 text-left text-[13.5px] font-semibold hover:bg-muted"
         >
           <HugeIcon name="arrow-turn-backward" size={15} />
-          Responder
+          {t('reply')}
         </button>
         {canDelete && (
           <button
@@ -172,26 +156,28 @@ function MessageActions({
             className="flex w-full items-center gap-2 rounded-md px-2.5 py-1.5 text-left text-[13.5px] font-semibold text-destructive hover:bg-destructive/10"
           >
             <HugeIcon name="delete-02" size={16} />
-            Excluir mensagem
+            {t('delete')}
           </button>
         )}
           </PopoverContent>
         </Popover>
-        <TooltipContent>Mais opções</TooltipContent>
+        <TooltipContent>{t('moreOptions')}</TooltipContent>
       </Tooltip>
     </div>
   );
 }
 
 function MessageStatusBar({ onRetry, onDiscard }: { onRetry: () => void; onDiscard: () => void }) {
+  const t = useTranslations('chat.message');
+
   return (
     <div className="mt-1 flex items-center gap-2 text-xs text-destructive">
-      <span>Falha ao enviar</span>
+      <span>{t('sendFailed')}</span>
       <button type="button" onClick={onRetry} className="font-semibold underline underline-offset-2">
-        reenviar
+        {t('resend')}
       </button>
       <button type="button" onClick={onDiscard} className="font-semibold underline underline-offset-2">
-        descartar
+        {t('discard')}
       </button>
     </div>
   );
@@ -216,14 +202,18 @@ export default function MessageItem({
   canDelete: boolean;
   onReply: (message: ClientMessage) => void;
   onDelete: (message: ClientMessage) => void;
-  onImageClick: (image: NonNullable<ClientMessage['image']>) => void;
+  onImageClick: (attachment: AttachmentDTO) => void;
   onReplyPreviewClick: (replyToId: string) => void;
   onRetry: (message: ClientMessage) => void;
   onDiscard: (message: ClientMessage) => void;
   registerRef: (id: string, el: HTMLDivElement | null) => void;
 }) {
-  const time = format(new Date(message.createdAt), 'HH:mm', { locale: ptBR });
-  const fullDate = format(new Date(message.createdAt), "d 'de' MMMM 'às' HH:mm", { locale: ptBR });
+  const t = useTranslations('chat.message');
+  const dateFnsLocale = useDateFnsLocale();
+  const time = format(new Date(message.createdAt), 'HH:mm', { locale: dateFnsLocale });
+  // O PADRÃO vem do catálogo, não só o locale: "d 'de' MMMM 'às' HH:mm" é a
+  // ordem do português — em inglês o mês vem antes do dia.
+  const fullDate = format(new Date(message.createdAt), t('fullDateFormat'), { locale: dateFnsLocale });
   const isPending = message.status === 'sending';
   const isError = message.status === 'error';
   const isSent = message.status === 'sent';
@@ -261,7 +251,13 @@ export default function MessageItem({
         ) : null}
 
         {message.content && <MessageContent content={message.content} mentions={message.mentions} />}
-        {message.image && <ImageBubble image={message.image} hasText={Boolean(message.content)} onClick={() => onImageClick(message.image!)} />}
+        {message.attachment && (
+          <AttachmentBubble
+            attachment={message.attachment}
+            uploadProgress={message.uploadProgress}
+            onImageClick={() => onImageClick(message.attachment!)}
+          />
+        )}
         {isError && <MessageStatusBar onRetry={() => onRetry(message)} onDiscard={() => onDiscard(message)} />}
       </div>
 

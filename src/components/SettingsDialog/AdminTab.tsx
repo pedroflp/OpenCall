@@ -1,4 +1,5 @@
 'use client';
+import { useTranslations } from 'next-intl';
 
 import { useCallback, useEffect, useState } from 'react';
 import { useSession } from 'next-auth/react';
@@ -53,6 +54,8 @@ interface AdminData {
 }
 
 export default function AdminTab({ active }: { active: boolean }) {
+  const t = useTranslations('admin');
+  const tCommon = useTranslations('common');
   const { data: session } = useSession();
   const isAdmin = Boolean(session?.user?.isAdmin);
   const isChannelsAdmin = Boolean(session?.user?.isChannelsAdmin);
@@ -103,9 +106,9 @@ export default function AdminTab({ active }: { active: boolean }) {
   if (failed) {
     return (
       <div className="flex flex-col items-center justify-center gap-3 py-16 text-center">
-        <p className="text-sm text-muted-foreground">Não deu pra carregar a área de admin.</p>
+        <p className="text-sm text-muted-foreground">{t('loadFailed')}</p>
         <Button variant="secondary" size="sm" onClick={() => void load()}>
-          Tentar de novo
+          {tCommon('retry')}
         </Button>
       </div>
     );

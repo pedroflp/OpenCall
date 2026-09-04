@@ -1,4 +1,5 @@
 'use client';
+import { useTranslations } from 'next-intl';
 
 import { useEffect, useState } from 'react';
 import { useSession } from 'next-auth/react';
@@ -92,6 +93,7 @@ function PreviewCard({
   onNavigate: () => void;
   onJoin: () => void;
 }) {
+  const t = useTranslations('voice.dock');
   return (
     <Card className="w-64 cursor-pointer overflow-hidden shadow-lg" onClick={onNavigate}>
       <div className="flex items-center gap-3 p-3">
@@ -115,7 +117,7 @@ function PreviewCard({
           }}
         >
           <HugeIcon name="login-01" size={18} className="mr-2" />
-          Entrar
+          {t('join')}
         </Button>
       </div>
     </Card>
@@ -126,6 +128,7 @@ const VOICE_ANNOUNCEMENT_DISMISS_KEY = 'voice-announcement-dismissed';
 
 /** Ninguém no canal padrão ainda. Anúncio da feature. */
 function AnnouncementCard({ onNavigate }: { onNavigate: () => void }) {
+  const t = useTranslations('voice.dock');
   const [dismissed, setDismissed] = useState(true);
 
   useEffect(() => {
@@ -169,7 +172,7 @@ function AnnouncementCard({ onNavigate }: { onNavigate: () => void }) {
 
       <button
         type="button"
-        aria-label="Dispensar aviso"
+        aria-label={t('dismissAnnouncement')}
         onClick={dismiss}
         className="absolute right-3 top-3 z-[2] flex size-[26px] items-center justify-center rounded-full bg-black/35 text-white/85 transition-colors hover:bg-black/55"
       >
@@ -179,11 +182,11 @@ function AnnouncementCard({ onNavigate }: { onNavigate: () => void }) {
       <div className="relative z-[1] flex flex-col gap-2.5">
         <div className="flex w-fit items-center gap-1.5 rounded-full bg-muted/60 py-1 pl-2 pr-2.5">
           <span className="size-1.5 rounded-full bg-primary" />
-          <span className="text-[11px] font-semibold text-foreground/85">Novidade</span>
+          <span className="text-[11px] font-semibold text-foreground/85">{t('newsBadge')}</span>
         </div>
-        <h3 className="max-w-[20ch] text-[19px] font-bold leading-tight">Chegou o OpenCall</h3>
+        <h3 className="max-w-[20ch] text-[19px] font-bold leading-tight">{t('announcementTitle')}</h3>
         <p className="max-w-[24ch] text-[13px] leading-normal text-muted-foreground">
-          Entre em um canal e compartilhe sua tela com a tropa, direto pelo app.
+          {t('announcementBody')}
         </p>
         <a
           href="#"
@@ -193,7 +196,7 @@ function AnnouncementCard({ onNavigate }: { onNavigate: () => void }) {
           }}
           className="mt-0.5 flex w-fit items-center gap-[5px] text-[13px] font-semibold text-primary underline underline-offset-[3px]"
         >
-          Experimentar agora
+          {t('announcementAction')}
           <HugeIcon name="arrow-right-01" size={14} />
         </a>
       </div>

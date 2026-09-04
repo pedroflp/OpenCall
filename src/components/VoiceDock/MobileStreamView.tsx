@@ -1,6 +1,7 @@
 'use client';
 
 import { useEffect, useRef } from 'react';
+import { useTranslations } from 'next-intl';
 import type { Room } from 'livekit-client';
 import { RemoteTrackPublication, Track } from 'livekit-client';
 import { useTracks, VideoTrack } from '@livekit/components-react';
@@ -78,6 +79,8 @@ export default function MobileStreamView({ active, room }: { active: boolean; ro
 }
 
 function MobileStreamViewInner({ active, room }: { active: boolean; room: Room }) {
+  const t = useTranslations('voice.controls');
+  const tParticipant = useTranslations('voice.participant');
   const isMobile = useIsMobile();
   const { watching, leaveStream, toggleScreenShare, micEnabled, deafened, toggleMic, toggleDeafen } = useVoice();
   // onlySubscribed: false — mesma razão do palco desktop: precisa achar a
@@ -133,7 +136,7 @@ function MobileStreamViewInner({ active, room }: { active: boolean; room: Room }
 
   const name = participantDisplayName(watchedTrack.participant);
   const isOwnStream = watchedTrack.participant.isLocal;
-  const closeLabel = isOwnStream ? 'Encerrar transmissão' : 'Sair da transmissão';
+  const closeLabel = isOwnStream ? t('endStream') : t('leaveStream');
 
   return (
     <div
@@ -153,7 +156,7 @@ function MobileStreamViewInner({ active, room }: { active: boolean; room: Room }
           <Avatar image={avatarFromParticipant(watchedTrack.participant)} fallback={name.slice(0, 2)} size={6} />
           <span className="truncate text-sm font-semibold text-white">{name}</span>
           <Badge variant="destructive" className="shrink-0 text-[10px]">
-            AO VIVO
+            {tParticipant('live')}
           </Badge>
         </div>
 

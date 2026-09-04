@@ -5,6 +5,7 @@ import Image from 'next/image';
 import { usePathname, useRouter } from 'next/navigation';
 import { Link } from 'next-view-transitions';
 import { useSession } from 'next-auth/react';
+import { useTranslations } from 'next-intl';
 import { useParticipants, useTracks } from '@livekit/components-react';
 import { Track } from 'livekit-client';
 import type { UserDTO } from '@/app/api/user/types';
@@ -31,6 +32,7 @@ import { cn } from '@/lib/utils';
 import DiscordOAuth from '@/components/DiscordOAuth';
 import QrLoginButton from '@/components/QrLoginButton';
 import DeleteChannelDialog from '@/flows/admin/channels/DeleteChannelDialog';
+import { MAX_PARTICIPANTS_CEILING } from '@/components/VoiceDock/ChannelDialog';
 import InviteToChannelsModal from './InviteToChannelsModal';
 import ChannelDialog from './ChannelDialog';
 import DevicePairingModal from '@/components/DevicePairingModal';
@@ -71,6 +73,7 @@ function ChannelContextMenu({
   tooltip?: string;
   children: (handlers: { onContextMenu: (event: React.MouseEvent) => void }) => React.ReactElement;
 }) {
+  const t = useTranslations('voice.sidebar');
   const router = useRouter();
   const pathname = usePathname();
   const [menuOpen, setMenuOpen] = useState(false);
@@ -130,7 +133,7 @@ function ChannelContextMenu({
               className="flex w-full items-center gap-2 rounded-sm px-2 py-1.5 text-left text-sm transition-colors hover:bg-secondary"
             >
               <HugeIcon name="pencil-edit-01" size={16} />
-              Editar canal
+              {t('editChannel')}
             </button>
             <button
               type="button"
@@ -141,7 +144,7 @@ function ChannelContextMenu({
               className="flex w-full items-center gap-2 rounded-sm px-2 py-1.5 text-left text-sm text-destructive transition-colors hover:bg-destructive/10"
             >
               <HugeIcon name="delete-02" size={16} />
-              Excluir canal
+              {t('deleteChannel')}
             </button>
           </PopoverContent>
         )}
@@ -168,6 +171,7 @@ function ChannelContextMenu({
  * lida) sair de baixo do botão em vez de ficar coberto.
  */
 function ChannelMenuButton({ onOpen }: { onOpen: () => void }) {
+  const t = useTranslations('voice.sidebar');
   return (
     <button
       type="button"
@@ -177,16 +181,17 @@ function ChannelMenuButton({ onOpen }: { onOpen: () => void }) {
         onOpen();
       }}
       className="invisible absolute right-1 top-1/2 shrink-0 -translate-y-1/2 rounded-md p-1 text-muted-foreground transition-colors hover:bg-secondary hover:text-foreground group-hover:visible focus-visible:visible"
-      aria-label="Opções do canal"
+      aria-label={t('channelOptions')}
     >
       <HugeIcon name="more-vertical" size={16} />
     </button>
   );
 }
 
-/** Badge do limite de participantes (só voice, ver ADR-0001) — mostrado no fim da linha do nome do canal. `null` é canal sem limite: não mostra badge nenhum. */
+/** Badge do limite de participantes (só voice, ver ADR-0001) — mostrado no fim da linha do nome do canal. `null` é canal sem limite; o teto do slider (99) é tratado como "sem limite" também, já que na prática ninguém lota isso. */
 function ChannelLimitBadge({ maxParticipants, currentCount }: { maxParticipants: number | null; currentCount: number }) {
-  if (maxParticipants === null) return null;
+  const t = useTranslations('voice.sidebar');
+  if (maxParticipants === null || maxParticipants === MAX_PARTICIPANTS_CEILING) return null;
 
   return (
     <Tooltip>
@@ -195,7 +200,7 @@ function ChannelLimitBadge({ maxParticipants, currentCount }: { maxParticipants:
           {currentCount > 0 ? `${currentCount}/${maxParticipants}` : maxParticipants}
         </Badge>
       </TooltipTrigger>
-      <TooltipContent>Limite de usuários</TooltipContent>
+      <TooltipContent>{t('userLimit')}</TooltipContent>
     </Tooltip>
   );
 }
@@ -212,7 +217,7 @@ function ChannelHeader({
   channel,
   onNameClick,
   href,
-  tooltip = 'Entrar no canal',
+  tooltip,
   connected,
   isChannelsAdmin,
   participantCount,
@@ -225,11 +230,12 @@ function ChannelHeader({
   isChannelsAdmin: boolean;
   participantCount: number;
 }) {
+  const t = useTranslations('voice.sidebar');
   const { screenSharing, screenShareCountdown } = useVoice();
 
   const disconnectCountdown =
     screenSharing && screenShareCountdown !== null
-      ? { seconds: screenShareCountdown, tooltip: 'Tempo para a transmissão ser fechada se ninguém entrar' }
+      ? { seconds: screenShareCountdown, tooltip: t('streamCountdownTooltip') }
       : null;
 
   const content = (
@@ -265,7 +271,7 @@ function ChannelHeader({
   );
 
   return (
-    <ChannelContextMenu channel={channel} isChannelsAdmin={isChannelsAdmin} tooltip={href || onNameClick ? tooltip : undefined}>
+    <ChannelContextMenu channel={channel} isChannelsAdmin={isChannelsAdmin} tooltip={href || onNameClick ? tooltip ?? t('enterChannel') : undefined}>
       {({ onContextMenu }) => {
         if (href) {
           return (
@@ -337,12 +343,13 @@ function ChannelListItem({
   rtcEnabled: boolean;
   isChannelsAdmin: boolean;
 }) {
+  const t = useTranslations('voice.sidebar');
   const presence = useChannelPresence(channel.id, rtcEnabled);
   const { join } = useVoice();
   const streamer = presence.participants.find((participant) => participant.isStreaming);
 
   return (
-    <ChannelContextMenu channel={channel} isChannelsAdmin={isChannelsAdmin} tooltip="Entrar no canal">
+    <ChannelContextMenu channel={channel} isChannelsAdmin={isChannelsAdmin} tooltip={t('enterChannel')}>
       {({ onContextMenu }) => (
         <Link
           href={routeNames.CHANNEL(channel.id)}
@@ -367,7 +374,7 @@ function ChannelListItem({
               className="shrink-0 cursor-pointer text-md"
               onClick={() => void join(channel.id, streamer.identity)}
             >
-              AO VIVO
+              {t('live')}
             </Badge>
           )}
           {presence.participants.length > 0 && <ChannelParticipantsStack participants={presence.participants} />}
@@ -392,6 +399,8 @@ function ConnectedChannelRow({ channel, isChannelsAdmin }: { channel: Channel; i
   // useParticipantMedia.
   const screenShareTracks = useTracks([Track.Source.ScreenShare], { onlySubscribed: false });
 
+  const t = useTranslations('voice.sidebar');
+
   const sortedParticipants = useMemo(() => {
     const liveIdentities = new Set(
       screenShareTracks.filter((track) => !track.publication.isMuted).map((track) => track.participant.identity)
@@ -408,7 +417,7 @@ function ConnectedChannelRow({ channel, isChannelsAdmin }: { channel: Channel; i
       <ChannelHeader
         channel={channel}
         href={onOwnPage ? undefined : routeNames.CHANNEL(channel.id)}
-        tooltip="Voltar para o canal"
+        tooltip={t('backToChannel')}
         connected
         isChannelsAdmin={isChannelsAdmin}
         participantCount={participants.length}
@@ -552,6 +561,7 @@ function RtcHeader({
   onToggleRtc: (enabled: boolean) => void;
   user: UserDTO | null;
 }) {
+  const t = useTranslations('voice.sidebar');
   const [menuOpen, setMenuOpen] = useState(false);
   const [inviteOpen, setInviteOpen] = useState(false);
   const [pairingOpen, setPairingOpen] = useState(false);
@@ -579,7 +589,7 @@ function RtcHeader({
               className="flex w-full items-center gap-2 rounded-sm px-2 py-1.5 text-left text-sm transition-colors hover:bg-secondary"
             >
               <HugeIcon name="user-add-02" size={16} />
-              Convidar para canais
+              {t('inviteToChannels')}
             </button>
             <button
               type="button"
@@ -590,7 +600,7 @@ function RtcHeader({
               className="flex w-full items-center gap-2 rounded-sm px-2 py-1.5 text-left text-sm transition-colors hover:bg-secondary"
             >
               <HugeIcon name="qr-code-01" size={16} />
-              Entrar em outro dispositivo
+              {t('signInAnotherDevice')}
             </button>
           </PopoverContent>
         </Popover>
@@ -598,9 +608,9 @@ function RtcHeader({
       {isChannelsAdmin && (
         <ChannelDialog
           defaultType={ChannelType.TEXT}
-          tooltip="Criar canal"
+          tooltip={t('createChannel')}
           trigger={
-            <Button type="button" variant="ghost" size="icon" className="-mr-2 h-7 w-7" aria-label="Criar canal">
+            <Button type="button" variant="ghost" size="icon" className="-mr-2 h-7 w-7" aria-label={t('createChannel')}>
               <HugeIcon name="add-01" size={16} />
             </Button>
           }
@@ -631,10 +641,11 @@ function RtcHeader({
 }
 
 function ChannelsDisabledBanner() {
+  const t = useTranslations('voice.sidebar');
   return (
     <div className="mb-1.5 flex items-center gap-2 rounded-lg bg-muted/40 px-2.5 py-2 opacity-60">
       <HugeIcon name="mic-off-02" size={15} className="shrink-0 text-muted-foreground" />
-      <span className="text-[11px] font-bold uppercase tracking-wider text-muted-foreground">Canais de voz desligados</span>
+      <span className="text-[11px] font-bold uppercase tracking-wider text-muted-foreground">{t('voiceChannelsOff')}</span>
     </div>
   );
 }
@@ -649,6 +660,7 @@ function TextChannelRow({
   active: boolean;
   isChannelsAdmin: boolean;
 }) {
+  const t = useTranslations('voice.sidebar');
   const { count, displayCount, mentionCount, mentionDisplayCount } = useChatUnread(channel.id);
 
   return (
@@ -672,7 +684,7 @@ function TextChannelRow({
                   {displayCount}
                 </Badge>
               </TooltipTrigger>
-              <TooltipContent>{count === 1 ? '1 mensagem não lida' : `${count} mensagens não lidas`}</TooltipContent>
+              <TooltipContent>{t('unreadMessages', { count })}</TooltipContent>
             </Tooltip>
           )}
           {mentionCount > 0 && (
@@ -682,7 +694,7 @@ function TextChannelRow({
                   {mentionDisplayCount}
                 </Badge>
               </TooltipTrigger>
-              <TooltipContent>{mentionCount === 1 ? 'Você foi mencionado 1 vez' : `Você foi mencionado ${mentionCount} vezes`}</TooltipContent>
+              <TooltipContent>{t('mentions', { count: mentionCount })}</TooltipContent>
             </Tooltip>
           )}
         </Link>
@@ -701,6 +713,7 @@ function TextChannelsSection({
   pendingIds: Set<string>;
   isChannelsAdmin: boolean;
 }) {
+  const t = useTranslations('voice.sidebar');
   const pathname = usePathname();
   const defaultChannelId = channels[0]?.id ?? null;
 
@@ -754,6 +767,9 @@ function SidebarFooter({
   connectedChannelId: string | null;
   joining: boolean;
 }) {
+  const tControls = useTranslations('voice.controls');
+  const tSidebar = useTranslations('voice.sidebar');
+  const tCommon = useTranslations('common');
   const [settingsOpen, setSettingsOpen] = useState(false);
   const [settingsTab, setSettingsTab] = useState<'profile' | 'audio-video'>('profile');
   const identity = useSelfIdentity(user);
@@ -788,7 +804,7 @@ function SidebarFooter({
     return <SelfControlCard channelName={channelName} user={user} />;
   }
 
-  const name = identity?.username || 'Você';
+  const name = identity?.username || tCommon('you');
 
   return (
     <div className="shrink-0 p-2 relative rounded-2xl overflow-hidden bg-gradient-to-tr from-muted to-accent/10">
@@ -800,14 +816,14 @@ function SidebarFooter({
           <TooltipTrigger asChild>
             <button
               type="button"
-              aria-label="Editar perfil"
+              aria-label={tSidebar('editProfile')}
               className="rounded-full transition-opacity hover:opacity-80"
               onClick={() => openSettings('profile')}
             >
               <Avatar image={identity?.avatar} fallback={name.slice(0, 2)} size={10} />
             </button>
           </TooltipTrigger>
-          <TooltipContent>Editar perfil</TooltipContent>
+          <TooltipContent>{tSidebar('editProfile')}</TooltipContent>
         </Tooltip>
         <div className="min-w-0 flex-1">
           <div className="truncate text-sm font-bold">{name}</div>
@@ -822,13 +838,13 @@ function SidebarFooter({
               type="button"
               size="icon"
               variant="secondary"
-              aria-label="Configurações"
+              aria-label={tControls('settings')}
               onClick={() => openSettings('audio-video')}
             >
               <HugeIcon name="settings-01" size={19} />
             </Button>
           </TooltipTrigger>
-          <TooltipContent>Configurações</TooltipContent>
+          <TooltipContent>{tControls('settings')}</TooltipContent>
         </Tooltip>
       </div>
 
@@ -843,6 +859,7 @@ function SidebarFooter({
  * voz) — só o conteúdo à direita muda.
  */
 export default function VoiceChannelSidebar({ user }: { user: UserDTO | null }) {
+  const t = useTranslations('voice.sidebar');
   const { data: session, status: sessionStatus } = useSession();
   // Exige o DTO do Postgres, não só o cookie JWT válido: um cookie de sessão
   // sobrevive a um reset de banco (dev) ou a um usuário apagado (prod), e sem
@@ -897,12 +914,12 @@ export default function VoiceChannelSidebar({ user }: { user: UserDTO | null }) 
       <ScrollArea className="flex-1">
         <RtcHeader isAdmin={isAdmin} isChannelsAdmin={isChannelsAdmin} rtcEnabled={rtcEnabled} onToggleRtc={setRtcEnabled} user={user} />
 
-        <div className="px-2 mt-4 pb-2 text-[11px] font-bold uppercase tracking-wider text-muted-foreground">Canais de texto</div>
+        <div className="px-2 mt-4 pb-2 text-[11px] font-bold uppercase tracking-wider text-muted-foreground">{t('textChannels')}</div>
         {sessionLoading ? <ChannelListSkeleton rows={2} /> : (
           <TextChannelsSection channels={textChannels} pendingIds={pendingTextIds} isChannelsAdmin={isChannelsAdmin} />
         )}
 
-        <div className="mt-6 px-2 pb-2 text-[11px] font-bold uppercase tracking-wider text-muted-foreground">Canais de voz</div>
+        <div className="mt-6 px-2 pb-2 text-[11px] font-bold uppercase tracking-wider text-muted-foreground">{t('voiceChannels')}</div>
         {sessionLoading ? (
           <ChannelListSkeleton rows={3} />
         ) : rtcEnabled ? (

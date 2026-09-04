@@ -1,0 +1,760 @@
+{
+  "app": {
+    "description": "Self-hosted voice, video and community chat."
+  },
+  "common": {
+    "save": "Save",
+    "cancel": "Cancel",
+    "remove": "Remove",
+    "delete": "Delete",
+    "close": "Close",
+    "back": "Back",
+    "confirm": "Confirm",
+    "create": "Create",
+    "edit": "Edit",
+    "copy": "Copy",
+    "copied": "Copied",
+    "retry": "Try again",
+    "loading": "Loading",
+    "search": "Search",
+    "saving": "Saving",
+    "you": "You",
+    "signOut": "Sign out",
+    "tryAgainSoon": "Try again in a moment.",
+    "clearSearch": "Clear search"
+  },
+  "nav": {
+    "platform": "Platform",
+    "administration": "Administration",
+    "seeChannels": "See channels",
+    "expandSidebar": "Expand sidebar",
+    "collapseSidebar": "Collapse sidebar"
+  },
+  "channels": {
+    "notFound": "Channel not found",
+    "backHome": "Back to the start",
+    "createChannel": "Create channel",
+    "empty": {
+      "VOICE": {
+        "title": "No voice channels yet",
+        "description": "Create the first one to start calling everyone in."
+      },
+      "TEXT": {
+        "title": "No text channels yet",
+        "description": "Create the first one to start the conversation."
+      }
+    },
+    "dialog": {
+      "createTitle": "New channel",
+      "editTitle": "Edit channel",
+      "channelType": "Channel type",
+      "text": "Text",
+      "textDescription": "Send messages, images, GIFs, emoji, opinions and jokes",
+      "voice": "Voice",
+      "voiceDescription": "Hang out with everyone over voice, video and screen sharing",
+      "typeLocked": "The type can't be changed after it's created.",
+      "name": "Name",
+      "namePlaceholder": "e.g. General",
+      "limitSize": "Limit size",
+      "create": "Create channel",
+      "saveChanges": "Save changes",
+      "created": "Channel created!",
+      "updated": "Channel updated!",
+      "createFailed": "Couldn't create the channel",
+      "saveFailed": "Couldn't save the channel",
+      "tryAgainSoon": "Try again in a bit."
+    }
+  },
+  "header": {
+    "greeting": "Hi, <b>{username}</b>!",
+    "audioDevices": "Audio devices"
+  },
+  "presence": {
+    "general": "General",
+    "ringingBadge": "Calling",
+    "rejectedBadge": "Declined",
+    "status": {
+      "online": "Online",
+      "away": "Away",
+      "offline": "Offline"
+    },
+    "call": {
+      "idle": "Ping on Discord",
+      "sending": "Pinging...",
+      "cooldown": "Pinged",
+      "cooldownTooltip": "Wait {seconds}s to ping again"
+    },
+    "ring": {
+      "idle": "Ring them in",
+      "ringing": "Ringing...",
+      "cooldown": "Rang",
+      "rejected": "Declined",
+      "noChannelTooltip": "Join a voice channel first",
+      "alreadyInRoomTooltip": "They're already in your room",
+      "cooldownTooltip": "Wait {seconds}s to ring again"
+    },
+    "chatBlock": {
+      "block": "Block in chat",
+      "unblock": "Unblock in chat"
+    },
+    "actions": {
+      "callFailed": "Couldn't ping them",
+      "ringFailed": "Couldn't ring them",
+      "networkFailed": "Network failed, try again.",
+      "tryAgainSoon": "Try again in a bit.",
+      "tryAgain": "Try again.",
+      "callErrors": {
+        "DM_BLOCKED": "This user doesn't accept DMs from server members."
+      },
+      "ringErrors": {
+        "TARGET_OFFLINE": "This person isn't online.",
+        "CHANNEL_NOT_FOUND": "Invalid channel."
+      },
+      "blockFailed": "Couldn't block them in chat",
+      "unblockFailed": "Couldn't unblock them in chat",
+      "blockErrors": {
+        "CANNOT_BLOCK_ADMIN": "A channels_admin can't block an ADMIN."
+      }
+    }
+  },
+  "voice": {
+    "joinErrors": {
+      "UNAUTHENTICATED": "Sign in to your account to use voice.",
+      "CHANNEL_NOT_FOUND": "This channel doesn't exist.",
+      "CHANNEL_FULL": "The channel is full.",
+      "TOO_MANY_JOINS": "Too many attempts in a row. Hold on a moment.",
+      "SERVICE_DISABLED": "OpenCall is temporarily disabled.",
+      "fallback": "Couldn't join the channel."
+    },
+    "unexpectedError": "Unexpected error.",
+    "tryAgainSoon": "Try again in a moment.",
+    "toasts": {
+      "rateLimited": {
+        "title": "Easy there",
+        "description": "Too many actions in a row — hold on a second."
+      },
+      "streamEndedByAdmin": {
+        "title": "Stream ended",
+        "description": "An admin ended your stream."
+      },
+      "cameraOffByAdmin": {
+        "title": "Camera turned off",
+        "description": "A channel admin turned your camera off."
+      },
+      "mutedByAdmin": {
+        "title": "Microphone disabled",
+        "description": "A channel admin muted you for everyone."
+      },
+      "micUnavailable": {
+        "title": "Chosen microphone unavailable",
+        "description": "We joined with the system's default microphone."
+      },
+      "micPermission": {
+        "title": "No microphone access",
+        "description": "Allow microphone access for this site in your browser settings (and your system settings, if it's blocked there too) and try again."
+      },
+      "joinFailed": "Couldn't join voice",
+      "serverMuted": {
+        "title": "You're muted",
+        "description": "A channel admin has to turn your microphone back on."
+      },
+      "streamNoSystemAudio": {
+        "title": "Streaming without system audio",
+        "description": "This browser would carry the call's voice along with it. Use Chrome or Edge 140+ to stream with sound."
+      },
+      "streamEndedNoViewers": {
+        "title": "Stream ended",
+        "description": "Nobody joined to watch within a minute, so the stream ended automatically."
+      },
+      "cameraOnFailed": "Couldn't turn the camera on",
+      "flipCameraFailed": "Couldn't flip the camera",
+      "disconnectFailed": "Couldn't disconnect them",
+      "removeViewerFailed": "Couldn't remove the viewer",
+      "endStreamFailed": "Couldn't end the stream",
+      "cameraOffFailed": "Couldn't turn the camera off",
+      "switchMicFailed": "Couldn't switch the microphone",
+      "switchOutputFailed": "Couldn't switch the audio output",
+      "switchCameraFailed": "Couldn't switch the camera",
+      "muteFailed": "Couldn't mute them"
+    },
+    "devices": {
+      "systemDefault": "System default",
+      "audioOutput": "Audio output",
+      "outputUnsupported": "This browser doesn't allow choosing the audio output device.",
+      "camera": "Camera",
+      "selectCamera": "Select camera",
+      "micSettings": "Microphone settings",
+      "micTestFailed": "Couldn't test the microphone",
+      "micTestFailedDescription": "Check your microphone permission.",
+      "microphone": "Microphone",
+      "sensitivity": "Sensitivity",
+      "listenToSelf": "Listen to yourself",
+      "stopListening": "Stop listening",
+      "useHeadphones": "Use headphones to avoid echo during the test."
+    },
+    "controls": {
+      "flipCamera": "Flip camera",
+      "cameraOn": "Turn camera on",
+      "cameraOff": "Turn camera off",
+      "startStream": "Share screen",
+      "stopStream": "Stop sharing",
+      "endStream": "End stream",
+      "leaveStream": "Leave stream",
+      "settings": "Settings",
+      "leaveChannel": "Leave channel",
+      "soundEffects": "Sound effects"
+    },
+    "sidebar": {
+      "channelOptions": "Channel options",
+      "userLimit": "User limit",
+      "streamCountdownTooltip": "Time before the stream closes if nobody joins",
+      "unreadMessages": "{count, plural, one {1 unread message} other {# unread messages}}",
+      "mentions": "{count, plural, one {You were mentioned once} other {You were mentioned # times}}",
+      "enterChannel": "Join channel",
+      "backToChannel": "Back to the channel",
+      "createChannel": "Create channel",
+      "editChannel": "Edit channel",
+      "deleteChannel": "Delete channel",
+      "live": "LIVE",
+      "inviteToChannels": "Invite to the channels",
+      "signInAnotherDevice": "Sign in on another device",
+      "editProfile": "Edit profile",
+      "voiceConnected": "Voice connected",
+      "inVoice": "In voice",
+      "voiceChannelsOff": "Voice channels off",
+      "textChannels": "Text channels",
+      "voiceChannels": "Voice channels"
+    },
+    "stage": {
+      "clickToEnterStream": "Click to join the stream",
+      "streamOptions": "Stream options",
+      "turnOffStream": "Turn off stream",
+      "attentionCall": "<name>{userName}</name> is calling for you in <channel>{channelName}</channel>",
+      "enableAudio": "Enable audio",
+      "cameraBackToTop": "Move camera back to the top",
+      "disabledTitle": "The channels are temporarily off",
+      "disabledDescription": "Nobody can join voice right now. Flip the OpenCall switch in the sidebar to turn it back on.",
+      "joinToListen": "Join the channel to listen and take part in the conversation.",
+      "emptyChannel": "Nobody's in this channel yet. Be the first to join.",
+      "connecting": "Connecting…",
+      "joinChannel": "Join channel"
+    },
+    "participant": {
+      "mutedForYouOnly": "Muted for you only",
+      "callingAttention": "Calling for attention",
+      "someoneCallingAttention": "Someone is calling for this person's attention",
+      "callAttention": "Call their attention",
+      "clickToWatchStream": "Click to watch the stream",
+      "cameraOn": "Camera on",
+      "mutedByYou": "Muted by you",
+      "watchStream": "Watch stream",
+      "unmuteForYou": "Unmute for you",
+      "muteForYou": "Mute for you",
+      "turnOffCamera": "Turn camera off",
+      "live": "LIVE",
+      "volume": "Volume",
+      "streamVolume": "Stream volume",
+      "mutedForEveryone": "Muted for everyone",
+      "micOff": "Microphone off",
+      "deafened": "Deafened",
+      "disconnect": "Disconnect",
+      "removeFromStream": "Remove from stream",
+      "attentionCooldownTooltip": "Wait {seconds}s to call again"
+    },
+    "quality": {
+      "ariaLabel": "Connection quality: {label}",
+      "connecting": "Connecting…",
+      "excellent": "Excellent",
+      "good": "Good",
+      "fair": "Fair",
+      "poor": "Poor",
+      "pingLabel": "Ping",
+      "pingPrefix": "Ping:"
+    },
+    "invite": {
+      "title": "Invite people to the channels",
+      "description": "Share the link with whoever you want, or ping someone straight on Discord.",
+      "copyLink": "Copy link",
+      "linkCopied": "Link copied!",
+      "copyFailed": "Couldn't copy",
+      "copyFailedDescription": "Copy it manually.",
+      "sendFailed": "Couldn't send it",
+      "sendFailedDescription": "Try again in a bit.",
+      "networkFailedDescription": "Network failed, try again.",
+      "sending": "Sending…",
+      "sentCooldown": "Sent — wait {seconds}s",
+      "sendToChannel": "Send to the chat",
+      "sendToDiscord": "Send on Discord",
+      "send": "Send",
+      "discordUserIdPlaceholder": "Discord user ID",
+      "howToGetIdLabel": "How to get the ID",
+      "howToGetId": "<b>How to get the ID</b>: right-click the user, \"Copy User ID\" (if you don't see it, turn on developer mode in the settings).",
+      "someone": "Someone",
+      "discordMessage": "# {username} is calling you into a call\nJoin the OpenCall channels 👇\n{url}"
+    },
+    "dock": {
+      "join": "Join",
+      "newsBadge": "New",
+      "announcementTitle": "OpenCall is here",
+      "announcementBody": "Join a channel and share your screen with everyone, right from the app.",
+      "announcementAction": "Try it now",
+      "dismissAnnouncement": "Dismiss notice"
+    }
+  },
+  "install": {
+    "title": "Install OpenCall",
+    "description": "Install OpenCall as an app — it opens straight up, without the browser bar.",
+    "descriptionIos": "Add OpenCall to your home screen to open it like an app, no browser needed.",
+    "iosStep1": "Tap the <b>•••</b> in the Safari bar",
+    "iosStep2": "Tap <b>Share</b>",
+    "iosStep3": "Scroll down and tap <b>Add to Home Screen</b>",
+    "action": "Install",
+    "afterInstall": "Once installed, this notice won't show up again.",
+    "afterInstallIos": "Once it's on your home screen, this notice won't show up again.",
+    "dontShowAgain": "Don't show this again"
+  },
+  "moderation": {
+    "editProfile": "Edit profile",
+    "description": "The nickname and picture this person chose. Removing them brings back what comes from Discord.",
+    "tryAgainSoon": "Try again in a bit.",
+    "openFailed": "Couldn't open the profile",
+    "saveFailed": "Couldn't save",
+    "discordNameAndPhoto": "Discord name and picture",
+    "hiddenNicknameNotice": "The nickname below is saved but not visible: this person chose to be seen by their Discord name. The picture, if there is one, still applies.",
+    "nickname": "Nickname",
+    "emptyReturnsDiscord": "Leaving it empty brings back the Discord name.",
+    "photo": "Picture",
+    "removePhoto": "Remove picture",
+    "noCustomPhoto": "No custom picture — already using the Discord one."
+  },
+  "call": {
+    "incomingFrom": "Incoming call from {username}",
+    "invitingYou": "Ringing you into {channel}",
+    "decline": "Decline",
+    "accept": "Accept",
+    "powerSaving": "Power saving",
+    "powerSavingHint": "The call is still live. Tap to wake the screen back up!",
+    "respondFailed": "Couldn't answer the call",
+    "respondFailedDescription": "Try again."
+  },
+  "errors": {
+    "channel": {
+      "title": "Something went wrong in this channel.",
+      "description": "The room's audio isn't affected. Try reloading this area — if it keeps happening, let us know."
+    }
+  },
+  "update": {
+    "title": "Update available",
+    "description": "OpenCall got an update while you were here.",
+    "callToAction": "Reload the page to pick up the latest version.",
+    "action": "Update to the new version"
+  },
+  "settings": {
+    "title": "Settings",
+    "tabs": {
+      "profile": "Profile",
+      "accountLink": "Link & devices",
+      "audioVideo": "Audio & video",
+      "language": "Language",
+      "admin": "Administration"
+    },
+    "profile": {
+      "heading": "Profile",
+      "description": "A nickname and a picture that are just yours, layered over what comes from Discord. They apply across OpenCall.",
+      "uploadPhoto": "Upload photo",
+      "changePhoto": "Change photo",
+      "photoHint": "PNG, JPG, GIF, WebP or AVIF, up to 10 MB. GIFs stay animated, cropped from the center.",
+      "nickname": "Nickname",
+      "nicknameHint": "Leave it empty to use your Discord name ({username}).",
+      "useDiscordProfile": "Use my Discord profile",
+      "saveFailed": "Couldn't save",
+      "rateLimitedSeconds": "Easy there — try again in {seconds}s.",
+      "errors": {
+        "UNSUPPORTED_CONTENT_TYPE": "Format not accepted. Use PNG, JPG, GIF, WebP or AVIF.",
+        "INVALID_IMAGE_BYTES": "That file isn't a valid image.",
+        "IMAGE_TOO_LARGE": "The image is over 10 MB.",
+        "ANIMATION_TOO_HEAVY": "That GIF gets too heavy once cropped. Try one with fewer frames.",
+        "INVALID_NICKNAME": "The nickname needs to be between 2 and {max} characters.",
+        "RATE_LIMITED": "Easy there — wait a moment before trying again."
+      },
+      "nicknameSaved": {
+        "title": "Nickname saved",
+        "description": "Everyone already sees you as {name}."
+      },
+      "nicknameRemoved": {
+        "title": "Nickname removed",
+        "description": "You show up as {username} again."
+      },
+      "discordOn": {
+        "title": "Using your Discord profile",
+        "description": "You show up as {username}, with the picture from there. {saved, select, both {Your nickname and your picture stay} name {Your nickname stays} avatar {Your picture stays} other {What was yours stays}} saved here."
+      },
+      "maskOn": {
+        "title": "Mask on",
+        "withName": "You show up as {name} again.",
+        "avatarOnly": "Your picture is back in effect."
+      },
+      "photoUpdated": {
+        "title": "Photo updated",
+        "description": "It's already the one everyone sees."
+      },
+      "photoRemoved": {
+        "title": "Photo removed",
+        "description": "Your Discord picture is back in effect."
+      },
+      "animatedImage": {
+        "title": "Animated image",
+        "description": "GIFs are cropped from the center, no manual framing."
+      },
+      "cropper": {
+        "cancel": "Cancel",
+        "use": "Use photo",
+        "zoomIn": "Zoom in",
+        "zoomOut": "Zoom out"
+      }
+    },
+    "accountLink": {
+      "heading": "Link & devices",
+      "description": "Sign in to the same account on another device by scanning a QR code, or typing the code there. No need for Discord again."
+    },
+    "audioVideo": {
+      "heading": "Audio & video",
+      "description": "Pick your devices and set how loud you have to be before your mic opens up.",
+      "micSensitivity": "Microphone sensitivity",
+      "micSensitivityHint": "Below the threshold the mic stays silent. Drag right if people say you cut out; left if background noise gets through."
+    },
+    "language": {
+      "heading": "Language",
+      "description": "Applies to this device only — the same login can stay in another language on your phone.",
+      "label": "Interface language"
+    }
+  },
+  "auth": {
+    "welcomeTitle": "Welcome to OpenCall",
+    "welcomeSubtitle": "Sign in to get the full experience.",
+    "signInTitle": "Sign in to OpenCall",
+    "signInDescription": "Your Discord account unlocks the voice channels and the chat.",
+    "or": "or",
+    "signInWithDiscord": "Sign in with Discord",
+    "signInWithQr": "Sign in with QR code",
+    "readQr": "Scan QR code",
+    "enterAccessCode": "Enter access code",
+    "hintMobile": "Already signed in on your computer? Open <b>Sign in on another device</b> over there and scan it here — nothing to type.",
+    "hintDesktop": "Already signed in on another device? Open <b>Sign in on another device</b> over there and type it here — no password needed.",
+    "qrStep": {
+      "title": "Scan the QR code",
+      "description": "On the device you're already signed in on, open <b>Sign in on another device</b> and point the camera at the QR code."
+    },
+    "codeStep": {
+      "title": "Access code",
+      "description": "On the device you're already signed in on, open <b>Sign in on another device</b> and type the six characters shown there.",
+      "invalid": "Invalid or expired code. Generate a new one on the device you're signed in on — each code lasts 2 minutes.",
+      "blocked": "Too many attempts in a row. Wait a few minutes or sign in with Discord."
+    },
+    "authenticated": {
+      "title": "Account authenticated",
+      "description": "Taking you to the full experience…"
+    },
+    "camera": {
+      "denied": "No camera access. Allow it in your browser settings and try again.",
+      "unsupported": "This browser doesn't give access to the camera."
+    },
+    "scanner": {
+      "title": "Scan the QR code",
+      "description": "<b>On the device you're already signed in on</b> click the <deviceButton>Sign in on another device</deviceButton> button to generate the access code, then scan it!"
+    },
+    "pairing": {
+      "title": "Sign in on another device",
+      "description": "Scan it with the camera or type the code to sign in without entering your Discord password again.",
+      "generateCode": "Generate code",
+      "qrAlt": "Login QR code",
+      "orType": "or type",
+      "expiresIn": "Expires in 2 minutes",
+      "connected": "Device connected!",
+      "expired": "The code expired.",
+      "generateNew": "Generate a new code"
+    },
+    "qrPage": {
+      "signingIn": "Signing in…",
+      "expiredTitle": "This code expired or was already used.",
+      "expiredDescription": "Generate a new QR code on the other device and scan it again."
+    },
+    "noAccess": {
+      "almostThere": "Almost there",
+      "almostThereSubtitle": "An invite code unlocks the channels for you.",
+      "title": "Invite code",
+      "description": "Your account doesn't have channel access yet. Paste the code an admin gave you here, or ask them to grant it in /admin/channels.",
+      "placeholder": "Invite code",
+      "invalid": "Invalid, expired or revoked code.",
+      "blocked": "Too many attempts in a row. Wait a few minutes and try again.",
+      "checking": "Checking…",
+      "redeem": "Redeem access",
+      "granted": "Access granted",
+      "grantedDescription": "Loading the channels…"
+    }
+  },
+  "chat": {
+    "attachmentKind": {
+      "IMAGE": "Image",
+      "VIDEO": "Video",
+      "AUDIO": "Audio",
+      "FILE": "File"
+    },
+    "composer": {
+      "placeholder": "Message",
+      "attachFile": "Attach file",
+      "insertEmoji": "Insert emoji",
+      "sendMessage": "Send message",
+      "blocked": "An admin blocked you from sending messages",
+      "replyingTo": "Replying to",
+      "cancelReply": "Cancel reply",
+      "removeAttachment": "Remove attachment",
+      "readingFile": "Reading the file…",
+      "attachmentTooLarge": "{kind} larger than {max}",
+      "clearCommandDescription": "Deletes the last N messages in the channel",
+      "mention": "Mention"
+    },
+    "message": {
+      "unavailableReply": "message unavailable",
+      "actions": "Message actions",
+      "reply": "Reply",
+      "moreOptions": "More options",
+      "delete": "Delete message",
+      "sendFailed": "Couldn't send",
+      "resend": "resend",
+      "discard": "discard",
+      "fullDateFormat": "MMMM d 'at' HH:mm"
+    },
+    "list": {
+      "empty": "No messages here yet. Send the first one!",
+      "loadingOlder": "Loading older messages…",
+      "newMessages": "New messages"
+    },
+    "typing": "{count, plural, =1 {{first} is typing…} =2 {{first} and {second} are typing…} other {{first} and {others} others are typing…}}",
+    "gif": {
+      "send": "Send GIF",
+      "searchPlaceholder": "Search GIPHY",
+      "searching": "Searching…",
+      "noResults": "No GIFs found.",
+      "failed": "Couldn't reach GIPHY. Try again.",
+      "poweredBy": "Powered by GIPHY",
+      "alt": "GIF"
+    },
+    "view": {
+      "back": "Back",
+      "dropFileHere": "Drop the file here",
+      "deleteTitle": "Delete message?",
+      "deleteDescription": "This can't be undone. The message disappears for everyone in the channel.",
+      "delete": "Delete",
+      "deleteFailed": "Couldn't delete the message",
+      "deleteFailedRetry": "Try again.",
+      "deleteFailedNetwork": "Check your connection and try again.",
+      "clearFailed": "Couldn't delete the messages",
+      "cleared": "{count, plural, =1 {The last message was deleted} other {The last # messages were deleted}}"
+    },
+    "media": {
+      "closeImage": "Close",
+      "play": "Play",
+      "pause": "Pause",
+      "playVideo": "Play video",
+      "audioPosition": "Audio position",
+      "videoPosition": "Video position",
+      "playbackRate": "Playback speed: {rate}",
+      "skipBack": "Back 10 seconds",
+      "skipForward": "Forward 10 seconds",
+      "pictureInPicture": "Picture in picture",
+      "fullscreen": "Fullscreen",
+      "exitFullscreen": "Exit fullscreen",
+      "mute": "Mute",
+      "unmute": "Unmute",
+      "volume": "Volume"
+    }
+  },
+  "admin": {
+    "tabs": {
+      "users": "Users",
+      "channels": "Channels",
+      "invites": "Invites",
+      "groups": "Groups",
+      "stream": "Streaming",
+      "infra": "Infra"
+    },
+    "loadFailed": "Couldn't load the admin area.",
+    "tryAgainSoon": "Try again in a bit.",
+    "users": {
+      "title": "Users",
+      "description": "Channel admins manage who has access to OpenCall; combined with platform admin, that makes a superadmin.",
+      "columnUser": "User",
+      "columnChannelsAdmin": "Channel admin",
+      "columnAccess": "OpenCall access",
+      "adminBadge": "Admin",
+      "updateFailed": "Couldn't update",
+      "selfTooltip": "You can't change this for yourself here",
+      "adminOnlyChannelsTooltip": "Only an admin can remove channel admin from another admin",
+      "adminAlwaysHasAccess": "Admins always have OpenCall access",
+      "adminOnlyAccessTooltip": "Only an admin can change OpenCall access",
+      "removeChannelsAdmin": "Remove channel admin from {username}",
+      "grantChannelsAdmin": "Make {username} a channel admin",
+      "revokeAccess": "Remove {username}'s OpenCall access",
+      "grantAccess": "Give {username} OpenCall access"
+    },
+    "channels": {
+      "title": "Channels",
+      "description": "Create, edit and delete voice and text channels.",
+      "editChannel": "Edit channel",
+      "deleteChannel": "Delete channel",
+      "textChannel": "Text channel",
+      "noLimit": "No participant limit",
+      "limit": "Limit of {count} participants",
+      "delete": {
+        "title": "Delete channel permanently",
+        "description": "This can't be undone.",
+        "body": "This will permanently delete the channel <name>{channelName}</name>{messages, plural, =0 {} one { and <count>{messages}</count> message} other { and <count>{messages}</count> messages}}.",
+        "voiceNote": "Anyone already connected to the room stays connected, but nobody else will be able to join.",
+        "confirmLabel": "Type <name>{channelName}</name> to confirm",
+        "confirm": "Delete permanently",
+        "failed": "Couldn't delete the channel",
+        "done": "Channel permanently deleted."
+      },
+      "empty": "No channels created yet.",
+      "newChannel": "New channel",
+      "voiceSection": "Voice channels",
+      "textSection": "Text channels"
+    },
+    "invites": {
+      "title": "Invites",
+      "description": "Multi-use codes that never expire — whoever pastes one gets access to the channels.",
+      "newCode": "New code",
+      "empty": "No codes created yet.",
+      "redeemedCount": "{count, plural, one {1 person joined with this code} other {# people joined with this code}}",
+      "revokedSuffix": " · revoked",
+      "copyLink": "Copy invite link",
+      "revokeCode": "Revoke code",
+      "linkCopied": "Link copied!",
+      "copyFailed": "Couldn't copy",
+      "copyFailedDescription": "Copy it manually.",
+      "revokeFailed": "Couldn't revoke it",
+      "createFailed": "Couldn't create the code"
+    },
+    "groups": {
+      "title": "Groups",
+      "description": "Manage the groups shown in the users sidebar.",
+      "newGroup": "New group",
+      "empty": "No groups created yet.",
+      "editGroup": "Edit group",
+      "deleteGroup": "Delete group",
+      "removeFromGroup": "Remove from group",
+      "noMembers": "No members yet.",
+      "addMember": "Add member...",
+      "selectedCount": "{count, plural, one {1 selected} other {# selected}}",
+      "adding": "Adding...",
+      "addSelected": "{count, plural, =0 {Add} other {Add (#)}}",
+      "addFailed": "Couldn't add them",
+      "removeFailed": "Couldn't remove them",
+      "deleteFailed": "Couldn't delete the group",
+      "deleted": "Group removed.",
+      "form": {
+        "createTitle": "New group",
+        "editTitle": "Edit group",
+        "titleLabel": "Title",
+        "titlePlaceholder": "e.g. Staff",
+        "colorLabel": "Member name color",
+        "colorPicker": "Group color",
+        "sortLabel": "Sort priority",
+        "create": "Create group",
+        "saveChanges": "Save changes",
+        "saveFailed": "Couldn't save the group",
+        "created": "Group created!",
+        "updated": "Group updated!",
+        "sortHint": "The lower the number, the higher the group appears."
+      }
+    },
+    "stream": {
+      "title": "Streaming",
+      "description": "Quality of screen streams. Applies to every channel.",
+      "quality": "Quality",
+      "advancedMode": "Advanced mode",
+      "resolution": "Resolution",
+      "fps": "FPS",
+      "fpsOption": "{value} fps",
+      "bitrate": "Bitrate",
+      "bitrateOption": "{value} kbps",
+      "summary": "{height}p · {fps} fps · {kbps} kbps",
+      "effectiveNow": "In effect now: {summary}",
+      "underfed": "{height}p at {fps} fps with {kbps} kbps will pixelate on motion — the encoder can't spend bitrate the ceiling doesn't allow.",
+      "underfedOverCeiling": "This combination needs ~{min} kbps and doesn't fit under the {ceiling} kbps ceiling: lower the resolution or the fps.",
+      "underfedUseAtLeast": "For this combination, use at least {min} kbps.",
+      "congestionTitle": "Under congestion",
+      "congestionDescription": "What to sacrifice when the streamer's bandwidth can't keep up.",
+      "saving": "Saving...",
+      "saveFailed": "Couldn't save",
+      "saved": "Quality updated!",
+      "savedDescription": "Streams in progress already changed; anyone opening now starts on the new config.",
+      "presets": {
+        "economico": {
+          "label": "540p economical",
+          "hint": "Lowest server bandwidth. Readable, but loses detail on motion."
+        },
+        "equilibrado": {
+          "label": "720p balanced",
+          "hint": "Good picture for gameplay at half the egress of 1080p."
+        },
+        "fluido": {
+          "label": "720p smooth",
+          "hint": "Smoother motion at the same resolution, for ~60% more bandwidth than 720p30."
+        },
+        "alta": {
+          "label": "1080p high",
+          "hint": "LiveKit's official 1080p30 preset. Highest bandwidth cost."
+        }
+      },
+      "degradation": {
+        "maintain-framerate": {
+          "label": "Smoothness",
+          "hint": "Under congestion, blurs the picture instead of stuttering. Right for gameplay."
+        },
+        "maintain-resolution": {
+          "label": "Sharpness",
+          "hint": "Under congestion, drops frames to keep the detail. Right for code and spreadsheets."
+        }
+      }
+    },
+    "infra": {
+      "title": "Infra",
+      "description": "LiveKit VPS usage and cost forecast.",
+      "refresh": "Refresh",
+      "collecting": "Collecting...",
+      "refreshFailed": "Couldn't refresh",
+      "refreshFailedDescription": "Failed to collect data from the VPS over SSH right now. Try again in a moment.",
+      "updatedAt": "Updated at: {when}",
+      "ranges": {
+        "hour": "Hour",
+        "day": "Day",
+        "week": "Week",
+        "month": "Month"
+      },
+      "weekBucket": "wk. {date}",
+      "charts": {
+        "cpu": "CPU",
+        "ram": "RAM",
+        "disk": "Disk",
+        "bandwidth": "Bandwidth",
+        "cpuPercent": "CPU %",
+        "ramUsedMb": "RAM used (MB)",
+        "diskUsedGb": "Disk used (GB)",
+        "netRxMb": "Download (MB)",
+        "netTxMb": "Upload (MB)"
+      },
+      "forecast": {
+        "title": "Cost forecast",
+        "unavailable": "No plan data yet — as soon as the collector runs on the VPS for the first time, the forecast shows up here.",
+        "planLine": "Plan {planId} · {vcpu} vCPU · {ramMb}MB RAM · {diskGb}GB disk · {region} · US${cost}/mo",
+        "monthBandwidth": "Bandwidth this month: <used>{usedGb}GB</used> of {quota}GB",
+        "projection": "Projected month end: ~{projected}GB ({days} days left, based on the average of recent days)",
+        "projectedCost": "Projected cost this month",
+        "healthy": "Usage within expectations — no sign an upgrade is needed."
+      },
+      "noData": "No data yet — the VPS collector hasn't sent anything for this period."
+    }
+  }
+}

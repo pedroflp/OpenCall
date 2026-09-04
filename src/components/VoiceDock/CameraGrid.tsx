@@ -1,4 +1,5 @@
 'use client';
+import { useTranslations } from 'next-intl';
 
 import { useEffect } from 'react';
 import { RemoteTrackPublication, Track } from 'livekit-client';
@@ -103,6 +104,7 @@ export function CameraTile({ trackRef, onFocus }: { trackRef: TrackReference; on
 // pra live (docs/rfc-camera.md). Sem pausa por visibilidade: a live já tem a
 // própria (ConnectedStage), aqui é só um espelho pequeno pra trocar o foco.
 function LiveTile({ trackRef, onFocus }: { trackRef: TrackReference; onFocus: () => void }) {
+  const t = useTranslations('voice.participant');
   const name = participantDisplayName(trackRef.participant);
 
   return (
@@ -112,7 +114,7 @@ function LiveTile({ trackRef, onFocus }: { trackRef: TrackReference; onFocus: ()
       onFocus={onFocus}
       badge={
         <Badge variant="destructive" className="absolute right-2 top-2 text-[10px]">
-          AO VIVO
+          {t('live')}
         </Badge>
       }
     />

@@ -1,7 +1,7 @@
 import { NextRequest, NextResponse } from 'next/server';
 import { getUser, isCurrentUserChannelsAdmin } from '@/app/api/auth/[...nextauth]/auth';
 import { prisma } from '@/services/prisma';
-import { moveImageToDeleted } from '@/lib/chat/storage';
+import { moveAttachmentToDeleted } from '@/lib/chat/storage';
 import { publishToChannel } from '@/lib/chat/signal';
 
 export const runtime = 'nodejs';
@@ -17,7 +17,7 @@ export async function DELETE(_req: NextRequest, { params }: { params: { id: stri
 
   const message = await prisma.textMessage.findUnique({
     where: { id: params.id },
-    select: { id: true, channelId: true, authorId: true, imageKey: true, createdAt: true, deletedAt: true },
+    select: { id: true, channelId: true, authorId: true, attachmentKey: true, createdAt: true, deletedAt: true },
   });
   if (!message || message.deletedAt) return err(404, 'NOT_FOUND');
 
@@ -35,14 +35,14 @@ export async function DELETE(_req: NextRequest, { params }: { params: { id: stri
 
   publishToChannel({ type: 'deleted', channelId: message.channelId, id: message.id });
 
-  if (message.imageKey) {
-    moveImageToDeleted({
-      key: message.imageKey,
+  if (message.attachmentKey) {
+    moveAttachmentToDeleted({
+      key: message.attachmentKey,
       deletedBy: user.id,
       deletedAt,
       fallbackAuthorId: message.authorId,
       fallbackUploadedAt: message.createdAt,
-    }).catch((error) => console.error('[chat/messages/DELETE] failed to move image to deleted prefix', error));
+    }).catch((error) => console.error('[chat/messages/DELETE] failed to move attachment to deleted prefix', error));
   }
 
   return new NextResponse(null, { status: 204 });

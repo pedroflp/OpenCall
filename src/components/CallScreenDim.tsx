@@ -2,6 +2,7 @@
 
 import type { Participant, Room } from 'livekit-client';
 import { useParticipants } from '@livekit/components-react';
+import { useTranslations } from 'next-intl';
 import Avatar from '@/components/Avatar';
 import { HugeIcon } from '@/components/HugeIcon';
 import { useCallWakeLockDim } from '@/hooks/useCallWakeLockDim';
@@ -24,6 +25,7 @@ export default function CallScreenDim({
   // overlay visual de escurecimento fica condicionado a esse flag por cima.
   dimAllowed: boolean;
 }) {
+  const t = useTranslations('call');
   const isMobile = useIsMobile();
   const dimmed = useCallWakeLockDim(active && isMobile);
 
@@ -34,9 +36,9 @@ export default function CallScreenDim({
       {room && <DimParticipants room={room} />}
       <div className="flex items-center gap-2 text-white/60">
         <span className="size-2 animate-pulse rounded-full bg-green-500" />
-        <b className="text-lg">Modo economia</b>
+        <b className="text-lg">{t('powerSaving')}</b>
       </div>
-      <p className='text-center text-muted-foreground'>A chamada ainda está ativa. Toque para reativar a tela ao modo ligado!</p>
+      <p className='text-center text-muted-foreground'>{t('powerSavingHint')}</p>
     </div>
   );
 }

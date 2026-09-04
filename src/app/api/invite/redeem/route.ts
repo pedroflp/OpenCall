@@ -17,7 +17,7 @@ const REDEEM_RATE_LIMIT = { windowMs: 5 * 60_000, max: 10 };
 /**
  * Concede CANAL_ACCESS a quem já tem conta (Discord) mas ainda não tem acesso
  * aos canais — usado pelo NoAccessPopover (código colado) e pelo auto-resgate
- * via `?convite=` (ver signIn callback em authOptions.ts). Multi-uso: o mesmo
+ * via `?invite=` (ver signIn callback em authOptions.ts). Multi-uso: o mesmo
  * código serve pra vários usuários até um admin revogar (invite.revokedAt).
  */
 export async function POST(req: NextRequest) {

@@ -2,6 +2,7 @@
 
 import { useEffect, useState } from 'react';
 import Image from 'next/image';
+import { useTranslations } from 'next-intl';
 import type { UserDTO } from '@/app/api/user/types';
 import { Button } from '@/components/ui/button';
 import { Dialog, DialogContent, DialogDescription, DialogHeader, DialogTitle } from '@/components/ui/dialog';
@@ -19,6 +20,7 @@ const SERVER_CHANNEL_COOLDOWN_KEY = 'server-chat-channel';
 const SERVER_CHANNEL_COOLDOWN_MS = 60_000;
 
 function SendToServerChannelSection() {
+  const t = useTranslations('voice.invite');
   const { toast } = useToast();
   const [status, setStatus] = useState<'idle' | 'sending' | 'cooldown'>(() =>
     getCallCooldownRemaining(SERVER_CHANNEL_COOLDOWN_KEY) > 0 ? 'cooldown' : 'idle'
@@ -63,15 +65,19 @@ function SendToServerChannelSection() {
       }
 
       setStatus('idle');
-      toast({ title: 'Não deu pra enviar', description: 'Tenta de novo daqui a pouco.', variant: 'destructive' });
+      toast({ title: t('sendFailed'), description: t('sendFailedDescription'), variant: 'destructive' });
     } catch {
       setStatus('idle');
-      toast({ title: 'Não deu pra enviar', description: 'Falha de rede, tenta de novo.', variant: 'destructive' });
+      toast({ title: t('sendFailed'), description: t('networkFailedDescription'), variant: 'destructive' });
     }
   }
 
   const label =
-    status === 'sending' ? 'Enviando…' : status === 'cooldown' ? `Enviado — aguarde ${Math.ceil(remainingMs / 1000)}s` : 'Enviar no bate-papo';
+    status === 'sending'
+      ? t('sending')
+      : status === 'cooldown'
+        ? t('sentCooldown', { seconds: Math.ceil(remainingMs / 1000) })
+        : t('sendToChannel');
 
   return (
     <Button type="button" variant="outline" className="gap-1" loading={status === 'sending'} disabled={status !== 'idle'} onClick={() => void send()}>
@@ -81,7 +87,7 @@ function SendToServerChannelSection() {
   );
 }
 
-// Rota pública própria (src/app/convite/page.tsx) em vez de linkar /channels
+// Rota pública própria (src/app/invite/page.tsx) em vez de linkar /channels
 // direto — assim, ao colar no Discord, o link gera uma prévia com o mesmo
 // banner do embed da DM (o /channels em si é gated e não teria isso).
 function inviteUrl(user: UserDTO | null): string {
@@ -95,21 +101,26 @@ function inviteUrl(user: UserDTO | null): string {
 
 /** Mesma rota e mesmo hook do "Chamar no Discord" do PlatformUsersSidebar — só muda de onde vem o ID (digitado aqui, não da lista de presença). */
 function SendToDiscordSection() {
+  const t = useTranslations('voice.invite');
   const [discordUserId, setDiscordUserId] = useState('');
   const { status, remainingMs, call } = useCallAction(discordUserId.trim());
 
   const label =
-    status === 'sending' ? 'Enviando…' : status === 'cooldown' ? `Enviado — aguarde ${Math.ceil(remainingMs / 1000)}s` : 'Enviar';
+    status === 'sending'
+      ? t('sending')
+      : status === 'cooldown'
+        ? t('sentCooldown', { seconds: Math.ceil(remainingMs / 1000) })
+        : t('send');
 
   return (
     <div className="flex flex-col gap-2 rounded-xl border border-border/40 bg-muted/20 p-3">
       <div className="flex items-center gap-2 text-sm font-semibold">
         <Image src="/assets/icons/discord.svg" width={16} height={16} alt="" className="size-4" />
-        Enviar no Discord
+        {t('sendToDiscord')}
       </div>
       <div className="flex gap-2">
         <Input
-          placeholder="ID do usuário no Discord"
+          placeholder={t('discordUserIdPlaceholder')}
           value={discordUserId}
           onChange={(e) => setDiscordUserId(e.target.value)}
           disabled={status === 'sending'}
@@ -125,7 +136,7 @@ function SendToDiscordSection() {
         </Button>
       </div>
       <p className="text-[10px] underline-offset-2 text-muted-foreground">
-        <b>Como pegar o ID</b>: Clique com o botão direito no usuário, &quot;Copiar ID do usuário&quot;(se não aparecer, ative o modo desenvolvedor nas configurações).
+        {t.rich('howToGetId', { b: (chunks) => <b>{chunks}</b> })}
       </p>
     </div>
   );
@@ -140,6 +151,7 @@ export default function InviteToChannelsModal({
   onOpenChange: (open: boolean) => void;
   user: UserDTO | null;
 }) {
+  const t = useTranslations('voice.invite');
   const { toast } = useToast();
 
   async function copy(text: string, successTitle: string) {
@@ -147,29 +159,29 @@ export default function InviteToChannelsModal({
       await navigator.clipboard.writeText(text);
       toast({ title: successTitle });
     } catch {
-      toast({ title: 'Não deu pra copiar', description: 'Copie manualmente.', variant: 'destructive' });
+      toast({ title: t('copyFailed'), description: t('copyFailedDescription'), variant: 'destructive' });
     }
   }
 
   const url = inviteUrl(user);
   // Markdown que o próprio client do Discord já entende numa mensagem comum
   // (cabeçalho grande "# " funciona fora de embed) — a prévia com imagem vem
-  // do unfurl automático da URL, que já é o link personalizado de /convite.
-  const message = `# ${user?.username ?? 'Alguém'} está te chamando pra call\nEntra na chamada dos canais do OpenCall 👇\n${url}`;
+  // do unfurl automático da URL, que já é o link personalizado de /invite.
+  const message = t('discordMessage', { username: user?.username ?? t('someone'), url });
 
   return (
     <Dialog open={open} onOpenChange={onOpenChange}>
       <DialogContent className="max-w-md">
         <DialogHeader>
-          <DialogTitle>Convidar para os canais</DialogTitle>
-          <DialogDescription>Compartilhe o link com quem você quiser, ou chame alguém direto no Discord.</DialogDescription>
+          <DialogTitle>{t('title')}</DialogTitle>
+          <DialogDescription>{t('description')}</DialogDescription>
         </DialogHeader>
 
         <div className="flex flex-col gap-3">
           <div className="grid grid-cols-2 gap-2">
-            <Button type="button" variant="outline" className="gap-1" onClick={() => void copy(url, 'Link copiado!')}>
+            <Button type="button" variant="outline" className="gap-1" onClick={() => void copy(url, t('linkCopied'))}>
               <HugeIcon name="copy-link" size={16} />
-              Copiar link
+              {t('copyLink')}
             </Button>
             {/* <Button type="button" variant="outline" className="gap-1" onClick={() => void copy(message, 'Mensagem copiada!')}>
               <HugeIcon name="copy-01" size={16} />

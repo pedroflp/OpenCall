@@ -2,6 +2,7 @@
 
 import { useEffect, useRef, useState } from 'react';
 import { createLocalAudioTrack, type LocalAudioTrack } from 'livekit-client';
+import { useTranslations } from 'next-intl';
 import { HugeIcon } from '@/components/HugeIcon';
 import { Button } from '@/components/ui/button';
 import { Label } from '@/components/ui/label';
@@ -56,6 +57,7 @@ function useSelfListenPreview(
   deafened: boolean,
   toggleDeafen: () => Promise<void>
 ) {
+  const t = useTranslations('voice.devices');
   const [active, setActive] = useState(false);
   const [loading, setLoading] = useState(false);
   const [analyser, setAnalyser] = useState<AnalyserNode | null>(null);
@@ -131,8 +133,8 @@ function useSelfListenPreview(
     } catch (error) {
       toast({
         variant: 'destructive',
-        title: 'Não foi possível testar o microfone',
-        description: error instanceof Error ? error.message : 'Verifique a permissão de microfone.',
+        title: t('micTestFailed'),
+        description: error instanceof Error ? error.message : t('micTestFailedDescription'),
       });
       stop();
     } finally {
@@ -175,6 +177,8 @@ function useSelfListenPreview(
 }
 
 export default function MicSettingsPopover({ trigger }: { trigger: React.ReactNode }) {
+  const t = useTranslations('voice.devices');
+  const tSettings = useTranslations('settings.audioVideo');
   const { noiseGateThreshold, setNoiseGateThreshold, inputDeviceId, outputDeviceId, channel, deafened, toggleDeafen } = useVoice();
   const [open, setOpen] = useState(false);
   const preview = useSelfListenPreview(noiseGateThreshold, inputDeviceId, outputDeviceId, channel !== null, deafened, toggleDeafen);
@@ -193,11 +197,11 @@ export default function MicSettingsPopover({ trigger }: { trigger: React.ReactNo
           <TooltipTrigger asChild>{trigger}</TooltipTrigger>
         </PopoverTrigger>
         <PopoverContent align="start" sideOffset={12} className="space-y-3 border-0">
-          <p className="text-[11px] font-bold uppercase tracking-wider text-muted-foreground">Microfone</p>
+          <p className="text-[11px] font-bold uppercase tracking-wider text-muted-foreground">{t('microphone')}</p>
 
           <div className="space-y-2">
             <div className="flex items-baseline justify-between gap-2">
-              <Label htmlFor="noise-gate">Sensibilidade</Label>
+              <Label htmlFor="noise-gate">{t('sensitivity')}</Label>
               <span className="text-[11px] tabular-nums text-muted-foreground">{noiseGateThreshold} dB</span>
             </div>
 
@@ -214,21 +218,21 @@ export default function MicSettingsPopover({ trigger }: { trigger: React.ReactNo
               onValueChange={([next]) => setNoiseGateThreshold(NOISE_GATE_MIN_DB + NOISE_GATE_MAX_DB - next)}
             />
 
-            <p className="text-[11px] text-muted-foreground">
-              Abaixo do limiar o microfone fica em silêncio. Arraste pra direita se estão dizendo que você some; pra
-              esquerda se o ruído de fundo passa.
-            </p>
+            {/* Mesma explicação da aba Áudio e vídeo das Configurações, e a
+                chave é a mesma de lá de propósito: são a MESMA frase sobre o
+                mesmo slider, só que num popover. */}
+            <p className="text-[11px] text-muted-foreground">{tSettings('micSensitivityHint')}</p>
           </div>
 
           <Button type="button" variant="secondary" size="sm" className="w-full gap-2" disabled={preview.loading} onClick={preview.toggle}>
             <HugeIcon name={preview.active ? 'mic-off-02' : 'mic-02'} size={15} />
-            {preview.active ? 'Parar de ouvir' : 'Ouvir a si mesmo'}
+            {preview.active ? t('stopListening') : t('listenToSelf')}
           </Button>
           <AudioWaveform analyser={preview.analyser} active={preview.active} />
-          <p className="text-[11px] text-muted-foreground">Use fones de ouvido pra evitar eco no teste.</p>
+          <p className="text-[11px] text-muted-foreground">{t('useHeadphones')}</p>
         </PopoverContent>
       </Popover>
-      <TooltipContent>Configurações do microfone</TooltipContent>
+      <TooltipContent>{t('micSettings')}</TooltipContent>
     </Tooltip>
   );
 }

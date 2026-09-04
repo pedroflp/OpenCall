@@ -1,11 +1,13 @@
 'use client';
 
 import { HugeIcon } from '@/components/HugeIcon';
+import { useTranslations } from 'next-intl';
 import { useVoice } from '@/providers/VoiceProvider';
 import { useIsMobile } from '@/hooks/useIsMobile';
 import ControlButton from './ControlButton';
 
 export default function VoiceControls({ className }: { className?: string }) {
+  const t = useTranslations('voice.controls');
   const { micEnabled, deafened, screenSharing, watching, toggleMic, toggleDeafen, toggleScreenShare, leaveStream, leave } = useVoice();
   const isMobile = useIsMobile();
 
@@ -20,7 +22,7 @@ export default function VoiceControls({ className }: { className?: string }) {
       </ControlButton>
 
       <ControlButton
-        label={screenSharing ? 'Parar transmissão' : 'Transmitir tela'}
+        label={screenSharing ? t('stopStream') : t('startStream')}
         active={screenSharing}
         dangerSoft={screenSharing}
         disabled={!screenSharing && isMobile}
@@ -30,14 +32,14 @@ export default function VoiceControls({ className }: { className?: string }) {
       </ControlButton>
 
       {watching && (
-        <ControlButton label="Sair da transmissão" onClick={leaveStream}>
+        <ControlButton label={t('leaveStream')} onClick={leaveStream}>
           <HugeIcon name="monitor-stop" size={18} />
         </ControlButton>
       )}
 
       <div className="flex-1" />
 
-      <ControlButton label="Sair do canal" className="text-destructive" onClick={leave}>
+      <ControlButton label={t('leaveChannel')} className="text-destructive" onClick={leave}>
         <HugeIcon name="call-end-01" size={18} />
       </ControlButton>
     </div>

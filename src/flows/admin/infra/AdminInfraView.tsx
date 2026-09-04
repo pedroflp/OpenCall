@@ -2,7 +2,9 @@
 
 import { useState } from 'react';
 import { format } from 'date-fns';
-import { ptBR } from 'date-fns/locale';
+import type { Locale as DateFnsLocale } from 'date-fns';
+import { useTranslations } from 'next-intl';
+import { useDateFnsLocale } from '@/i18n/dateFns';
 import { RefreshCw } from 'lucide-react';
 import { Area, AreaChart, CartesianGrid, XAxis, YAxis } from 'recharts';
 import { Card, CardContent, CardHeader, CardTitle, CardDescription } from '@/components/ui/card';
@@ -21,21 +23,22 @@ import { fetchMetricsSeries, refreshMetrics } from '@/app/api/admin/metrics/requ
 import type { MetricsRange, MetricsSeries } from '@/lib/metrics/series';
 import type { ForecastResult } from '@/lib/metrics/forecast';
 
-const RANGE_OPTIONS: { value: MetricsRange; label: string }[] = [
-  { value: 'hour', label: 'Hora' },
-  { value: 'day', label: 'Dia' },
-  { value: 'week', label: 'Semana' },
-  { value: 'month', label: 'Mês' },
-];
+/** Só os VALORES — o rótulo de cada faixa vem de `admin.infra.ranges`. */
+const RANGE_VALUES: MetricsRange[] = ['hour', 'day', 'week', 'month'];
 
 const BYTES_PER_GB = 1_000_000_000;
 const BYTES_PER_MB = 1_000_000;
 
-function bucketLabel(range: MetricsRange, date: Date): string {
+/**
+ * O rótulo do eixo X. `weekPrefix` e o locale entram por parâmetro porque o
+ * "sem." é uma palavra (era fixa aqui) e o nome do mês do bucket mensal muda de
+ * língua junto com o resto do painel.
+ */
+function bucketLabel(range: MetricsRange, date: Date, locale: DateFnsLocale, weekPrefix: (date: string) => string): string {
   if (range === 'hour') return format(date, 'HH:mm');
   if (range === 'day') return format(date, 'dd/MM');
-  if (range === 'week') return `sem. ${format(date, 'dd/MM')}`;
-  return format(date, 'MMM/yy', { locale: ptBR });
+  if (range === 'week') return weekPrefix(format(date, 'dd/MM'));
+  return format(date, 'MMM/yy', { locale });
 }
 
 interface ChartRow {
@@ -47,9 +50,9 @@ interface ChartRow {
   netTxMb: number;
 }
 
-function toChartRows(series: MetricsSeries): ChartRow[] {
+function toChartRows(series: MetricsSeries, locale: DateFnsLocale, weekPrefix: (date: string) => string): ChartRow[] {
   return series.points.map((point) => ({
-    time: bucketLabel(series.range, new Date(point.bucket)),
+    time: bucketLabel(series.range, new Date(point.bucket), locale, weekPrefix),
     cpuPercent: Math.round(point.cpuPercent * 10) / 10,
     ramUsedMb: Math.round(point.ramUsedMb),
     diskUsedGb: Math.round(point.diskUsedGb * 10) / 10,
@@ -58,14 +61,26 @@ function toChartRows(series: MetricsSeries): ChartRow[] {
   }));
 }
 
-// Cores validadas (CVD-safe) em src/app/globals.css — ver skill dataviz.
-const CPU_CONFIG = { cpuPercent: { label: 'CPU %', color: 'hsl(var(--chart-cpu))' } } satisfies ChartConfig;
-const RAM_CONFIG = { ramUsedMb: { label: 'RAM usada (MB)', color: 'hsl(var(--chart-ram))' } } satisfies ChartConfig;
-const DISK_CONFIG = { diskUsedGb: { label: 'Disco usado (GB)', color: 'hsl(var(--chart-disk))' } } satisfies ChartConfig;
-const NET_CONFIG = {
-  netRxMb: { label: 'Download (MB)', color: 'hsl(var(--chart-net-rx))' },
-  netTxMb: { label: 'Upload (MB)', color: 'hsl(var(--chart-net-tx))' },
-} satisfies ChartConfig;
+/**
+ * Cores validadas (CVD-safe) em src/app/globals.css — ver skill dataviz.
+ *
+ * Virou função porque o `label` de cada série aparece na legenda e no tooltip
+ * do gráfico: é texto de tela, e sai do catálogo como o resto. As CORES
+ * continuam fixas — não têm língua.
+ */
+type InfraTranslator = ReturnType<typeof useTranslations<'admin.infra'>>;
+
+function chartConfigs(t: InfraTranslator) {
+  return {
+    cpu: { cpuPercent: { label: t('charts.cpuPercent'), color: 'hsl(var(--chart-cpu))' } } satisfies ChartConfig,
+    ram: { ramUsedMb: { label: t('charts.ramUsedMb'), color: 'hsl(var(--chart-ram))' } } satisfies ChartConfig,
+    disk: { diskUsedGb: { label: t('charts.diskUsedGb'), color: 'hsl(var(--chart-disk))' } } satisfies ChartConfig,
+    net: {
+      netRxMb: { label: t('charts.netRxMb'), color: 'hsl(var(--chart-net-rx))' },
+      netTxMb: { label: t('charts.netTxMb'), color: 'hsl(var(--chart-net-tx))' },
+    } satisfies ChartConfig,
+  };
+}
 
 function MetricAreaChart({
   title,
@@ -78,6 +93,8 @@ function MetricAreaChart({
   config: ChartConfig;
   dataKeys: (keyof ChartRow)[];
 }) {
+  const t = useTranslations('admin.infra');
+
   return (
     <Card>
       <CardHeader className="pb-2">
@@ -86,7 +103,7 @@ function MetricAreaChart({
       <CardContent>
         {data.length === 0 ? (
           <p className="flex h-40 items-center justify-center text-sm text-muted-foreground">
-            Sem dados ainda — o coletor da VPS ainda não mandou nada nesse período.
+            {t('noData')}
           </p>
         ) : (
           <ChartContainer config={config} className="aspect-auto h-40 w-full">
@@ -118,14 +135,14 @@ function MetricAreaChart({
 }
 
 function ForecastCard({ forecast }: { forecast: ForecastResult }) {
+  const t = useTranslations('admin.infra.forecast');
+
   if (!forecast.available || !forecast.plan || !forecast.bandwidth) {
     return (
       <Card>
         <CardHeader>
-          <CardTitle className="text-base">Previsão de custo</CardTitle>
-          <CardDescription>
-            Ainda sem dados do plano — assim que o coletor rodar na VPS pela primeira vez, a previsão aparece aqui.
-          </CardDescription>
+          <CardTitle className="text-base">{t('title')}</CardTitle>
+          <CardDescription>{t('unavailable')}</CardDescription>
         </CardHeader>
       </Card>
     );
@@ -140,29 +157,38 @@ function ForecastCard({ forecast }: { forecast: ForecastResult }) {
   return (
     <Card>
       <CardHeader>
-        <CardTitle className="text-base">Previsão de custo</CardTitle>
+        <CardTitle className="text-base">{t('title')}</CardTitle>
         <CardDescription>
-          Plano {plan.planId} · {plan.vcpuCount} vCPU · {plan.ramMb}MB RAM · {plan.diskGb}GB disco · {plan.region} · US$
-          {plan.monthlyCostUsd.toFixed(2)}/mês
+          {t('planLine', {
+            planId: plan.planId,
+            vcpu: plan.vcpuCount,
+            ramMb: plan.ramMb,
+            diskGb: plan.diskGb,
+            region: plan.region,
+            cost: plan.monthlyCostUsd.toFixed(2),
+          })}
         </CardDescription>
       </CardHeader>
       <CardContent className="flex flex-col gap-4">
         <div className="flex flex-col gap-1.5">
           <div className="flex items-center justify-between text-sm">
             <span>
-              Banda do mês: <span className="font-medium">{usedGb.toFixed(1)}GB</span> de {plan.bandwidthQuotaGb}GB
+              {t.rich('monthBandwidth', {
+                usedGb: usedGb.toFixed(1),
+                quota: plan.bandwidthQuotaGb,
+                used: (chunks) => <span className="font-medium">{chunks}</span>,
+              })}
             </span>
             <span className="text-muted-foreground">{usedPercent.toFixed(0)}%</span>
           </div>
           <Progress value={usedPercent} className={cn(overshooting && '[&>div]:bg-destructive')} />
           <p className="text-xs text-muted-foreground">
-            Projeção pro fim do mês: ~{projectedGb.toFixed(0)}GB ({bandwidth.daysRemaining} dias restantes, com base na
-            média dos últimos dias)
+            {t('projection', { projected: projectedGb.toFixed(0), days: bandwidth.daysRemaining })}
           </p>
         </div>
 
         <div className="flex items-center justify-between rounded-lg border border-border/60 p-3 text-sm">
-          <span>Custo projetado este mês</span>
+          <span>{t('projectedCost')}</span>
           <span className="font-semibold">US${(projectedTotalCostUsd ?? plan.monthlyCostUsd).toFixed(2)}</span>
         </div>
 
@@ -175,7 +201,7 @@ function ForecastCard({ forecast }: { forecast: ForecastResult }) {
             ))}
           </ul>
         ) : (
-          <p className="text-xs text-muted-foreground">Consumo dentro do esperado — sem sinal de upgrade necessário.</p>
+          <p className="text-xs text-muted-foreground">{t('healthy')}</p>
         )}
       </CardContent>
     </Card>
@@ -189,6 +215,9 @@ export default function AdminInfraView({
   initialSeries: MetricsSeries;
   initialForecast: ForecastResult;
 }) {
+  const t = useTranslations('admin.infra');
+  const dateFnsLocale = useDateFnsLocale();
+  const configs = chartConfigs(t);
   const [series, setSeries] = useState(initialSeries);
   const [loading, setLoading] = useState(false);
   const [refreshing, setRefreshing] = useState(false);
@@ -209,22 +238,22 @@ export default function AdminInfraView({
       setSeries(next);
     } else {
       toast({
-        title: 'Não deu pra atualizar',
-        description: 'Falha ao coletar os dados agora da VPS via SSH. Tenta de novo em instantes.',
+        title: t('refreshFailed'),
+        description: t('refreshFailedDescription'),
         variant: 'destructive',
       });
     }
     setRefreshing(false);
   }
 
-  const data = toChartRows(series);
+  const data = toChartRows(series, dateFnsLocale, (date) => t('weekBucket', { date }));
 
   return (
     <main className="mx-auto flex w-full max-w-3xl flex-1 flex-col gap-6 overflow-y-auto px-6 py-10">
       <div className="flex items-start justify-between gap-4">
         <div>
-          <h1 className="text-2xl font-bold">Infra</h1>
-          <p className="text-sm text-muted-foreground">Consumo da VPS do LiveKit e previsão de custo.</p>
+          <h1 className="text-2xl font-bold">{t('title')}</h1>
+          <p className="text-sm text-muted-foreground">{t('description')}</p>
         </div>
         <div className="flex flex-col items-end gap-1">
           <button
@@ -234,41 +263,41 @@ export default function AdminInfraView({
             className="flex items-center gap-1.5 rounded-lg border border-border/60 px-3 py-1.5 text-sm transition-colors hover:border-border disabled:opacity-60"
           >
             <RefreshCw className={cn('size-3.5', refreshing && 'animate-spin')} />
-            {refreshing ? 'Coletando...' : 'Atualizar'}
+            {refreshing ? t('collecting') : t('refresh')}
           </button>
           {series.lastUpdatedAt && (
             <span className="text-xs text-muted-foreground">
-              Atualizado em: {format(new Date(series.lastUpdatedAt), 'dd/MM/yy HH:mm')}
+              {t('updatedAt', { when: format(new Date(series.lastUpdatedAt), 'dd/MM/yy HH:mm') })}
             </span>
           )}
         </div>
       </div>
 
       <div className="flex gap-2">
-        {RANGE_OPTIONS.map((option) => (
+        {RANGE_VALUES.map((value) => (
           <button
-            key={option.value}
+            key={value}
             type="button"
             disabled={loading}
-            aria-pressed={series.range === option.value}
-            onClick={() => handleRangeChange(option.value)}
+            aria-pressed={series.range === value}
+            onClick={() => handleRangeChange(value)}
             className={cn(
               'rounded-lg border px-3 py-1.5 text-sm transition-colors',
-              series.range === option.value
+              series.range === value
                 ? 'border-primary bg-primary/5 font-medium'
                 : 'border-border/60 hover:border-border',
             )}
           >
-            {option.label}
+            {t(`ranges.${value}`)}
           </button>
         ))}
       </div>
 
       <div className="grid gap-4 sm:grid-cols-2">
-        <MetricAreaChart title="CPU" data={data} config={CPU_CONFIG} dataKeys={['cpuPercent']} />
-        <MetricAreaChart title="RAM" data={data} config={RAM_CONFIG} dataKeys={['ramUsedMb']} />
-        <MetricAreaChart title="Disco" data={data} config={DISK_CONFIG} dataKeys={['diskUsedGb']} />
-        <MetricAreaChart title="Banda" data={data} config={NET_CONFIG} dataKeys={['netRxMb', 'netTxMb']} />
+        <MetricAreaChart title={t('charts.cpu')} data={data} config={configs.cpu} dataKeys={['cpuPercent']} />
+        <MetricAreaChart title={t('charts.ram')} data={data} config={configs.ram} dataKeys={['ramUsedMb']} />
+        <MetricAreaChart title={t('charts.disk')} data={data} config={configs.disk} dataKeys={['diskUsedGb']} />
+        <MetricAreaChart title={t('charts.bandwidth')} data={data} config={configs.net} dataKeys={['netRxMb', 'netTxMb']} />
       </div>
 
       <ForecastCard forecast={initialForecast} />

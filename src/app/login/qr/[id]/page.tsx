@@ -1,6 +1,7 @@
 'use client';
 
 import { useEffect, useState } from 'react';
+import { useTranslations } from 'next-intl';
 import { HugeIcon } from '@/components/HugeIcon';
 import { routeNames } from '@/app/route.names';
 
@@ -13,6 +14,7 @@ type Status = 'confirming' | 'invalid';
  * resposta do confirm.
  */
 export default function LoginQrPage({ params }: { params: { id: string } }) {
+  const t = useTranslations('auth.qrPage');
   const [status, setStatus] = useState<Status>('confirming');
 
   useEffect(() => {
@@ -41,12 +43,12 @@ export default function LoginQrPage({ params }: { params: { id: string } }) {
       {status === 'confirming' ? (
         <>
           <HugeIcon name="loading-03" size={28} className="animate-spin text-primary" />
-          <p className="text-sm font-bold">Entrando…</p>
+          <p className="text-sm font-bold">{t('signingIn')}</p>
         </>
       ) : (
         <>
-          <p className="text-sm font-bold">Esse código expirou ou já foi usado.</p>
-          <p className="max-w-xs text-sm text-muted-foreground">Gera um QR code novo no outro dispositivo e escaneia de novo.</p>
+          <p className="text-sm font-bold">{t('expiredTitle')}</p>
+          <p className="max-w-xs text-sm text-muted-foreground">{t('expiredDescription')}</p>
         </>
       )}
     </div>

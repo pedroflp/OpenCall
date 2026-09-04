@@ -1,4 +1,5 @@
 import { Link } from 'next-view-transitions';
+import { getTranslations } from 'next-intl/server';
 import { ChannelType } from '@prisma/client';
 import { getUserAccountData } from '@/app/api/user/actions';
 import { routeNames } from '@/app/route.names';
@@ -18,15 +19,21 @@ export default async function ChannelPage({ channelId }: { channelId?: string })
   if (!resolvedChannelId) return <NoChannelsEmptyState type={ChannelType.VOICE} />;
 
   const channel = await getChannel(resolvedChannelId);
-  if (!channel) return (
-    <main className="flex flex-col gap-8 items-center h-full justify-center">
-      <HugeIcon name="mic-off-02" size={92} />
-      <h1 className="text-3xl font-bold">Canal não encontrado</h1>
-      <Link href={routeNames.HOME}>
-        <Button variant="outline">Voltar para o início</Button>
-      </Link>
-    </main>
-  );
+  if (!channel) {
+    // `getTranslations` (e não `useTranslations`) porque isto é Server
+    // Component: o catálogo vem da mesma request que resolveu o cookie.
+    const t = await getTranslations('channels');
+
+    return (
+      <main className="flex flex-col gap-8 items-center h-full justify-center">
+        <HugeIcon name="mic-off-02" size={92} />
+        <h1 className="text-3xl font-bold">{t('notFound')}</h1>
+        <Link href={routeNames.HOME}>
+          <Button variant="outline">{t('backHome')}</Button>
+        </Link>
+      </main>
+    );
+  }
 
   const user = await getUserAccountData();
 

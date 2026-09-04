@@ -12,8 +12,12 @@ import { replyExcerpt } from '@/lib/chat/replyExcerpt';
 import { usePlatformPresenceUsers } from '@/hooks/usePlatformPresenceUsers';
 import type { PlatformPresenceUser } from '@/lib/presence/platformPresence';
 import { HugeIcon } from '@/components/HugeIcon';
+import { ATTACHMENT_KIND_ICON, formatBytes, MAX_ATTACHMENT_BYTES } from '@/lib/chat/attachments';
+import { useLocale, useTranslations } from 'next-intl';
+import { fileIconFor, formatDuration } from './media/format';
 import type { PendingAttachment } from './useChatAttachment';
 import type { ClientMessage, CurrentUser, SendMessageInput, SendMessageResult } from './types';
+import { useAttachmentKindLabel } from './useAttachmentKindLabel';
 
 const TEXTAREA_MAX_LINES = 8;
 const TYPING_THROTTLE_MS = 3_000;
@@ -22,12 +26,13 @@ const MENTION_LIST_RE = /(?:^|\s)@([a-z0-9._]*)$/i;
 interface SlashCommand {
   name: string;
   usage: string;
-  description: string;
+  /** Chave em `chat.composer` — a lista é constante, quem traduz é o menu. */
+  description: 'clearCommandDescription';
 }
 
 /** Só o /clear por enquanto — lista cresce aqui conforme comandos novos entrarem. */
 const SLASH_COMMANDS: SlashCommand[] = [
-  { name: 'clear', usage: '/clear <número>', description: 'Apaga as últimas N mensagens do canal' },
+  { name: 'clear', usage: '/clear <número>', description: 'clearCommandDescription' },
 ];
 
 const CLEAR_PREFIX_RE = /^\/clear(?:\s|$)/i;
@@ -76,53 +81,94 @@ function replyPreviewFor(target: ClientMessage | null): SendMessageInput['replyT
     authorUsername: target.author.username,
     authorAvatar: target.author.avatar,
     excerpt: replyExcerpt(target.content),
-    hasImage: Boolean(target.image),
+    attachmentKind: target.attachment?.kind ?? null,
   };
 }
 
 function ReplyBar({ target, onCancel }: { target: ClientMessage; onCancel: () => void }) {
+  const t = useTranslations('chat.composer');
+  const tKind = useAttachmentKindLabel();
+
   return (
     <div className="flex items-center gap-2 border-b border-border/40 px-3.5 py-2 text-xs">
       <HugeIcon name="arrow-turn-backward" size={16} className="shrink-0 text-muted-foreground" />
       <span className="text-muted-foreground">
-        Respondendo <span className="font-semibold text-foreground">{target.author.username}</span>
+        {t('replyingTo')} <span className="font-semibold text-foreground">{target.author.username}</span>
       </span>
       <span className="flex min-w-0 flex-1 items-center gap-1 text-muted-foreground">
-        {target.image ? (
+        {target.attachment && !target.content ? (
           <>
-            <HugeIcon name="image-01" size={12} className="shrink-0" />
-            <span className="shrink-0">Imagem</span>
+            <HugeIcon name={ATTACHMENT_KIND_ICON[target.attachment.kind]} size={12} className="shrink-0" />
+            <span className="shrink-0">{tKind(target.attachment.kind)}</span>
           </>
         ) : (
           <span className="min-w-0 truncate">{target.content}</span>
         )}
       </span>
-      <button type="button" onClick={onCancel} aria-label="Cancelar resposta" className="shrink-0 text-muted-foreground hover:text-foreground">
+      <button type="button" onClick={onCancel} aria-label={t('cancelReply')} className="shrink-0 text-muted-foreground hover:text-foreground">
         <HugeIcon name="cancel-01" size={14} />
       </button>
     </div>
   );
 }
 
-function AttachmentPreview({ attachment, onRemove, onRetry }: { attachment: PendingAttachment; onRemove: () => void; onRetry: () => void }) {
+/** Miniatura real pra imagem e vídeo (o `blob:` já está na mão), ícone da espécie pro resto. */
+function AttachmentThumbnail({ attachment }: { attachment: PendingAttachment }) {
+  if (attachment.kind === 'IMAGE') {
+    // eslint-disable-next-line @next/next/no-img-element -- preview local (blob:), next/image não aceita blob URL.
+    return <img src={attachment.previewUrl} alt="" className="size-12 shrink-0 rounded-md object-cover" />;
+  }
+
+  if (attachment.kind === 'VIDEO') {
+    return (
+      <span className="relative size-12 shrink-0 overflow-hidden rounded-md bg-black">
+        <video src={attachment.previewUrl} preload="metadata" muted playsInline className="h-full w-full object-cover" />
+        <span className="absolute inset-0 flex items-center justify-center bg-black/25 text-white">
+          <HugeIcon name="play" size={14} />
+        </span>
+      </span>
+    );
+  }
+
+  return (
+    <span className="flex size-12 shrink-0 items-center justify-center rounded-md bg-background/70 text-muted-foreground">
+      <HugeIcon name={attachment.kind === 'AUDIO' ? 'music-note-01' : fileIconFor(attachment.file.name)} size={20} />
+    </span>
+  );
+}
+
+function AttachmentPreview({ attachment, onRemove }: { attachment: PendingAttachment; onRemove: () => void }) {
+  const t = useTranslations('chat.composer');
+  const tKind = useAttachmentKindLabel();
+  const locale = useLocale();
+
+  const details = [
+    tKind(attachment.kind),
+    formatBytes(attachment.file.size, locale),
+    attachment.durationMs ? formatDuration(attachment.durationMs / 1000) : null,
+  ]
+    .filter(Boolean)
+    .join(' · ');
+
   return (
     <div className="flex items-center gap-3 border-b border-border/40 px-3.5 py-2">
-      {attachment.previewUrl && (
-        // eslint-disable-next-line @next/next/no-img-element -- preview local (blob:), next/image não aceita blob URL.
-        <img src={attachment.previewUrl} alt="" className="size-12 shrink-0 rounded-md object-cover" />
-      )}
+      <AttachmentThumbnail attachment={attachment} />
+
       <div className="min-w-0 flex-1">
         <div className="truncate text-xs font-medium">{attachment.file.name}</div>
-        {attachment.status === 'error' && (
-          <div className="mt-0.5 flex items-center gap-2 text-xs text-destructive">
-            <span>{attachment.error === 'IMAGE_TOO_LARGE' ? 'Imagem maior que 10MB' : 'Imagem inválida'}</span>
-            <button type="button" onClick={onRetry} className="font-semibold underline underline-offset-2">
-              tentar de novo
-            </button>
+        {attachment.status === 'error' ? (
+          <div className="mt-0.5 text-xs text-destructive">
+            {t('attachmentTooLarge', {
+              kind: tKind(attachment.kind),
+              max: formatBytes(MAX_ATTACHMENT_BYTES[attachment.kind], locale),
+            })}
           </div>
+        ) : (
+          <div className="mt-0.5 text-[11px] text-muted-foreground">{attachment.status === 'reading' ? t('readingFile') : details}</div>
         )}
       </div>
-      <button type="button" onClick={onRemove} aria-label="Remover anexo" className="shrink-0 text-muted-foreground hover:text-foreground">
+
+      <button type="button" onClick={onRemove} aria-label={t('removeAttachment')} className="shrink-0 text-muted-foreground hover:text-foreground">
         <HugeIcon name="cancel-01" size={16} />
       </button>
     </div>
@@ -138,7 +184,6 @@ export default function MessageComposer({
   gifPickerEnabled,
   onAttachFile,
   onRemoveAttachment,
-  onRetryAttachment,
   onAttachmentSent,
   canClear,
   onClear,
@@ -154,13 +199,13 @@ export default function MessageComposer({
   gifPickerEnabled: boolean;
   onAttachFile: (file: File) => void;
   onRemoveAttachment: () => void;
-  onRetryAttachment: () => void;
   onAttachmentSent: () => void;
   canClear: boolean;
   onClear: (count: number) => Promise<void>;
   blocked: boolean;
   currentUser: CurrentUser;
 }) {
+  const t = useTranslations('chat.composer');
   const [text, setText] = useState('');
   const [clearing, setClearing] = useState(false);
   const [caretPosition, setCaretPosition] = useState(0);
@@ -272,21 +317,31 @@ export default function MessageComposer({
 
     const content = text.trim() || null;
     const mentions = content ? extractMentions(content) : [];
-    const image = attachment?.status === 'ready' ? { file: attachment.file, previewUrl: attachment.previewUrl, width: attachment.width, height: attachment.height } : null;
+    const upload: SendMessageInput['attachment'] =
+      attachment?.status === 'ready'
+        ? {
+            file: attachment.file,
+            kind: attachment.kind,
+            previewUrl: attachment.previewUrl,
+            width: attachment.width,
+            height: attachment.height,
+            durationMs: attachment.durationMs,
+          }
+        : null;
 
     setText('');
     pickedMentionsRef.current.clear();
     // Anexo válido: a posse do preview (blob:) passa pro envio, que revoga
     // quando a mensagem for confirmada ou descartada (ver useChatMessages).
     // Sem anexo válido (nulo ou erro): remove normalmente, revogando aqui.
-    if (image) onAttachmentSent();
+    if (upload) onAttachmentSent();
     else if (attachment) onRemoveAttachment();
     onCancelReply();
     requestAnimationFrame(resizeTextarea);
 
     await onSend({
       content,
-      image,
+      attachment: upload,
       replyToId: replyTarget?.id ?? null,
       replyToPreview: replyPreviewFor(replyTarget),
       mentions,
@@ -312,7 +367,7 @@ export default function MessageComposer({
     async (url: string) => {
       const target = replyTarget;
       onCancelReply();
-      await onSend({ content: url, image: null, replyToId: target?.id ?? null, replyToPreview: replyPreviewFor(target), mentions: [] });
+      await onSend({ content: url, attachment: null, replyToId: target?.id ?? null, replyToPreview: replyPreviewFor(target), mentions: [] });
     },
     [replyTarget, onCancelReply, onSend],
   );
@@ -414,11 +469,10 @@ export default function MessageComposer({
     [handleSend, showCommandMenu, matchingCommands, selectCommand, showMentionMenu, matchingUsers, activeMentionIndex, insertMention, mentionTriggerKey],
   );
 
+  /** Colar arquivo do sistema anexa; colar texto continua colando texto (`files` só vem preenchido no primeiro caso). */
   const handlePaste = useCallback(
     (event: React.ClipboardEvent<HTMLTextAreaElement>) => {
-      const imageItem = Array.from(event.clipboardData.items).find((item) => item.type.startsWith('image/'));
-      if (!imageItem) return;
-      const file = imageItem.getAsFile();
+      const file = event.clipboardData.files[0];
       if (!file) return;
       event.preventDefault();
       onAttachFile(file);
@@ -431,7 +485,7 @@ export default function MessageComposer({
       <div className="shrink-0 px-6 pb-5">
         <div className="flex items-center gap-2.5 rounded-xl bg-muted/50 px-3.5 py-3 text-muted-foreground">
           <HugeIcon name="square-lock-01" size={20} className="shrink-0" />
-          <span className="text-[14.5px]">Um administrador bloqueou você de enviar mensagens</span>
+          <span className="text-[14.5px]">{t('blocked')}</span>
         </div>
       </div>
     );
@@ -443,21 +497,22 @@ export default function MessageComposer({
         <PopoverAnchor asChild>
           <div className="rounded-xl bg-muted/50">
             {replyTarget && <ReplyBar target={replyTarget} onCancel={onCancelReply} />}
-            {attachment && <AttachmentPreview attachment={attachment} onRemove={onRemoveAttachment} onRetry={onRetryAttachment} />}
+            {attachment && <AttachmentPreview attachment={attachment} onRemove={onRemoveAttachment} />}
 
             <div className="flex items-start gap-2.5 px-3.5 py-2.5">
               <button
                 type="button"
-                aria-label="Anexar imagem"
+                aria-label={t('attachFile')}
                 className="shrink-0 text-muted-foreground hover:text-foreground"
                 onClick={() => fileInputRef.current?.click()}
               >
                 <HugeIcon name="attachment-01" size={22} />
               </button>
+              {/* Sem `accept`: qualquer arquivo entra, e a espécie é decidida
+                  pelos bytes no servidor (ver ADR-0013). */}
               <input
                 ref={fileInputRef}
                 type="file"
-                accept="image/png,image/jpeg,image/webp,image/gif"
                 className="hidden"
                 onChange={(event) => {
                   const file = event.target.files?.[0];
@@ -498,7 +553,7 @@ export default function MessageComposer({
                   onPaste={handlePaste}
                   rows={1}
                   enterKeyHint="send"
-                  placeholder="Mensagem"
+                  placeholder={t('placeholder')}
                   className={cn(
                     'max-h-40 min-h-[22px] w-full resize-none bg-transparent text-[14.5px] leading-[22px] placeholder:text-muted-foreground focus:outline-none',
                     isRecognizedClear && 'text-transparent caret-foreground',
@@ -509,7 +564,7 @@ export default function MessageComposer({
               <EmojiPickerPopover onSelect={insertEmoji} side="top" align="end">
                 <button
                   type="button"
-                  aria-label="Inserir emoji"
+                  aria-label={t('insertEmoji')}
                   className="shrink-0 text-muted-foreground opacity-70 transition-opacity hover:opacity-100"
                 >
                   <HugeIcon name="smile" size={20} />
@@ -524,14 +579,14 @@ export default function MessageComposer({
                     <TooltipTrigger asChild>
                       <button
                         type="button"
-                        aria-label="Enviar mensagem"
+                        aria-label={t('sendMessage')}
                         onClick={() => void handleSend()}
                         className="flex size-[26px] shrink-0 items-center justify-center rounded-full bg-primary text-primary-foreground hover:bg-primary/90"
                       >
                         <HugeIcon name="arrow-up-01" size={16} />
                       </button>
                     </TooltipTrigger>
-                    <TooltipContent side="top">Enviar mensagem</TooltipContent>
+                    <TooltipContent side="top">{t('sendMessage')}</TooltipContent>
                   </Tooltip>
                 </TooltipProvider>
               )}
@@ -549,7 +604,7 @@ export default function MessageComposer({
           {showMentionMenu ? (
             <div className="flex flex-col gap-0.5">
               <div className="px-2.5 pb-1 pt-0.5 text-xs font-semibold uppercase tracking-wider text-muted-foreground">
-                Mencionar
+                {t('mention')}
               </div>
               <div className="flex max-h-64 flex-col gap-0.5 overflow-y-auto">
                 {matchingUsers.map((user, index) => (
@@ -585,7 +640,7 @@ export default function MessageComposer({
                   <div className="text-[13.5px] font-semibold">
                     <span className="text-primary">/{command.name}</span> {command.usage.replace(`/${command.name}`, '').trim()}
                   </div>
-                  <div className="text-xs text-muted-foreground">{command.description}</div>
+                  <div className="text-xs text-muted-foreground">{t(command.description)}</div>
                 </div>
               </button>
             ))

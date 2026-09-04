@@ -17,6 +17,7 @@ import {
   type TrackPublishOptions,
 } from 'livekit-client';
 import { RoomAudioRenderer, RoomContext } from '@livekit/components-react';
+import { useTranslations } from 'next-intl';
 import type { RtcConfig } from '@/lib/rtc/channels';
 import { decodeRtcConfig } from '@/lib/rtc/roomMetadata';
 import {
@@ -295,13 +296,29 @@ export function useVoice(): VoiceContextValue {
   return ctx;
 }
 
-const ERROR_MESSAGES: Record<string, string> = {
-  UNAUTHENTICATED: 'Entre na sua conta para usar a voz.',
-  CHANNEL_NOT_FOUND: 'Esse canal não existe.',
-  CHANNEL_FULL: 'O canal está cheio.',
-  TOO_MANY_JOINS: 'Muitas tentativas seguidas. Espere um pouco.',
-  SERVICE_DISABLED: 'OpenCall está temporariamente desativado.',
-};
+/**
+ * Os códigos que `/api/rtc/join` devolve e que têm frase própria em
+ * `voice.joinErrors`. Estreita o `string` cru da resposta antes de virar chave
+ * — código novo no servidor sem frase aqui cai no `fallback`, em vez de pintar
+ * o próprio código dentro do toast.
+ */
+const JOIN_ERRORS = [
+  'UNAUTHENTICATED',
+  'CHANNEL_NOT_FOUND',
+  'CHANNEL_FULL',
+  'TOO_MANY_JOINS',
+  'SERVICE_DISABLED',
+] as const;
+
+function isJoinError(code: string): code is (typeof JOIN_ERRORS)[number] {
+  return (JOIN_ERRORS as readonly string[]).includes(code);
+}
+
+/** `getUserMedia` negado (navegador ou SO bloqueando o microfone) — o browser joga um DOMException cru ("Permission denied"/"NotAllowedError") que não faz sentido nenhum exibido direto num toast. */
+function isMicPermissionError(error: unknown): boolean {
+  if (error instanceof DOMException) return error.name === 'NotAllowedError' || error.name === 'SecurityError';
+  return error instanceof Error && /permission denied/i.test(error.message);
+}
 
 // Só a track de tela (e o eventual áudio de sistema/aba publicado junto) do
 // usuário assistido de fato deve ser recebida — as demais ficam publicadas
@@ -420,18 +437,21 @@ export function VoiceProvider({ children }: { children: React.ReactNode }) {
   // exibe (resolução/fps vindos do banco, ver channelsConfig).
   const [streamQuality, setStreamQuality] = useState<RtcConfig | null>(null);
   const { toast } = useToast();
+  // Anda junto do `toast` em todas as dependências daqui pra baixo: quase todo
+  // aviso deste provider é um par toast + frase traduzida.
+  const t = useTranslations('voice');
 
   const guardRateLimit = useCallback(
     (key: string, limit: { windowMs: number; max: number }) => {
       if (checkRateLimit(key, limit).allowed) return true;
       toast({
         variant: 'destructive',
-        title: 'Devagar aí',
-        description: 'Muitas ações seguidas — espere um instante.',
+        title: t('toasts.rateLimited.title'),
+        description: t('toasts.rateLimited.description'),
       });
       return false;
     },
-    [toast]
+    [toast, t]
   );
 
   useEffect(() => {
@@ -577,7 +597,7 @@ export function VoiceProvider({ children }: { children: React.ReactNode }) {
 
         if (!response.ok) {
           const { error } = await response.json().catch(() => ({ error: '' }));
-          throw new Error(ERROR_MESSAGES[error] ?? 'Não foi possível entrar no canal.');
+          throw new Error(isJoinError(error) ? t(`joinErrors.${error}`) : t('joinErrors.fallback'));
         }
 
         const { token, url, channel: joined, config } = (await response.json()) as JoinResponse;
@@ -736,8 +756,8 @@ export function VoiceProvider({ children }: { children: React.ReactNode }) {
               void next.localParticipant.setScreenShareEnabled(false).then(() => {
                 setScreenSharing(false);
                 toast({
-                  title: 'Transmissão encerrada',
-                  description: 'Um administrador encerrou sua transmissão.',
+                  title: t('toasts.streamEndedByAdmin.title'),
+                  description: t('toasts.streamEndedByAdmin.description'),
                 });
               });
             }
@@ -753,8 +773,8 @@ export function VoiceProvider({ children }: { children: React.ReactNode }) {
                 setCameraEnabled(false);
                 setVideoFacingMode(null);
                 toast({
-                  title: 'Câmera desligada',
-                  description: 'Um administrador de canais desligou sua câmera.',
+                  title: t('toasts.cameraOffByAdmin.title'),
+                  description: t('toasts.cameraOffByAdmin.description'),
                 });
               });
             }
@@ -775,8 +795,8 @@ export function VoiceProvider({ children }: { children: React.ReactNode }) {
                 if (isMuted && next.localParticipant.isMicrophoneEnabled) {
                   void next.localParticipant.setMicrophoneEnabled(false).then(() => setMicEnabled(false));
                   toast({
-                    title: 'Microfone desativado',
-                    description: 'Um administrador de canais te silenciou para todos.',
+                    title: t('toasts.mutedByAdmin.title'),
+                    description: t('toasts.mutedByAdmin.description'),
                   });
                 }
               }
@@ -873,8 +893,8 @@ export function VoiceProvider({ children }: { children: React.ReactNode }) {
             noiseSuppression: true,
           });
           toast({
-            title: 'Microfone escolhido indisponível',
-            description: 'Entramos com o microfone padrão do sistema.',
+            title: t('toasts.micUnavailable.title'),
+            description: t('toasts.micUnavailable.description'),
           });
         }
 
@@ -922,8 +942,12 @@ export function VoiceProvider({ children }: { children: React.ReactNode }) {
         reset();
         toast({
           variant: 'destructive',
-          title: 'Falha ao entrar na voz',
-          description: error instanceof Error ? error.message : 'Erro inesperado.',
+          title: isMicPermissionError(error) ? t('toasts.micPermission.title') : t('toasts.joinFailed'),
+          description: isMicPermissionError(error)
+            ? t('toasts.micPermission.description')
+            : error instanceof Error
+              ? error.message
+              : t('unexpectedError'),
         });
       } finally {
         joining.current = false;
@@ -935,6 +959,7 @@ export function VoiceProvider({ children }: { children: React.ReactNode }) {
       room,
       reset,
       toast,
+      t,
       inputDeviceId,
       outputDeviceId,
       videoDeviceId,
@@ -962,8 +987,8 @@ export function VoiceProvider({ children }: { children: React.ReactNode }) {
     if (next && serverMuted) {
       toast({
         variant: 'destructive',
-        title: 'Você está silenciado',
-        description: 'Um administrador de canais precisa reativar seu microfone.',
+        title: t('toasts.serverMuted.title'),
+        description: t('toasts.serverMuted.description'),
       });
       return;
     }
@@ -981,7 +1006,7 @@ export function VoiceProvider({ children }: { children: React.ReactNode }) {
       stopAttentionSound();
       await room.localParticipant.setAttributes({ deafened: '0' });
     }
-  }, [room, deafened, guardRateLimit, serverMuted, toast]);
+  }, [room, deafened, guardRateLimit, serverMuted, toast, t]);
 
   const toggleDeafen = useCallback(async () => {
     if (!guardRateLimit('deafen', TOGGLE_RATE_LIMIT)) return;
@@ -1114,15 +1139,15 @@ export function VoiceProvider({ children }: { children: React.ReactNode }) {
           // (navegador sem o filtro) não aparece em lugar nenhum da tela.
           toast({
             variant: 'destructive',
-            title: 'Transmissão sem o som do sistema',
-            description: 'Este navegador levaria a voz da call junto. Use o Chrome ou o Edge 140+ pra transmitir com som.',
+            title: t('toasts.streamNoSystemAudio.title'),
+            description: t('toasts.streamNoSystemAudio.description'),
           });
         }
       }
     } catch {
       setScreenSharing(room.localParticipant.isScreenShareEnabled);
     }
-  }, [room, watching, leaveStream, guardRateLimit]);
+  }, [room, watching, leaveStream, guardRateLimit, t]);
 
   const toggleCamera = useCallback(async () => {
     if (!room) return;
@@ -1144,11 +1169,11 @@ export function VoiceProvider({ children }: { children: React.ReactNode }) {
       setCameraEnabled(room.localParticipant.isCameraEnabled);
       toast({
         variant: 'destructive',
-        title: 'Não foi possível ligar a câmera',
-        description: error instanceof Error ? error.message : 'Erro inesperado.',
+        title: t('toasts.cameraOnFailed'),
+        description: error instanceof Error ? error.message : t('unexpectedError'),
       });
     }
-  }, [room, guardRateLimit, toast]);
+  }, [room, guardRateLimit, toast, t]);
 
   // Troca a câmera física ativa sem passar por deviceId — pede o lado oposto
   // (facingMode) e deixa o navegador escolher qual câmera física atende,
@@ -1173,11 +1198,11 @@ export function VoiceProvider({ children }: { children: React.ReactNode }) {
     } catch (error) {
       toast({
         variant: 'destructive',
-        title: 'Não foi possível virar a câmera',
-        description: error instanceof Error ? error.message : 'Erro inesperado.',
+        title: t('toasts.flipCameraFailed'),
+        description: error instanceof Error ? error.message : t('unexpectedError'),
       });
     }
-  }, [room, toast]);
+  }, [room, toast, t]);
 
   // Instrumentação temporária para validar a política de fluidez > resolução
   // (RF-STR): confirma no console se a codificação está de fato estável em
@@ -1228,8 +1253,8 @@ export function VoiceProvider({ children }: { children: React.ReactNode }) {
           void room.localParticipant.setScreenShareEnabled(false).then(() => {
             setScreenSharing(false);
             toast({
-              title: 'Transmissão encerrada',
-              description: 'Ninguém entrou para assistir em 1 minuto, então a transmissão foi encerrada automaticamente.',
+              title: t('toasts.streamEndedNoViewers.title'),
+              description: t('toasts.streamEndedNoViewers.description'),
             });
           });
           return null;
@@ -1239,7 +1264,7 @@ export function VoiceProvider({ children }: { children: React.ReactNode }) {
     }, 1000);
 
     return () => clearInterval(interval);
-  }, [screenSharing, hasViewer, room, toast]);
+  }, [screenSharing, hasViewer, room, toast, t]);
 
   const disconnectParticipant = useCallback(
     async (channelId: string, identity: string) => {
@@ -1253,12 +1278,12 @@ export function VoiceProvider({ children }: { children: React.ReactNode }) {
       } catch {
         toast({
           variant: 'destructive',
-          title: 'Não foi possível desconectar',
-          description: 'Tente novamente em instantes.',
+          title: t('toasts.disconnectFailed'),
+          description: t('tryAgainSoon'),
         });
       }
     },
-    [toast]
+    [toast, t]
   );
 
   const removeSpectator = useCallback(
@@ -1274,12 +1299,12 @@ export function VoiceProvider({ children }: { children: React.ReactNode }) {
       } catch {
         toast({
           variant: 'destructive',
-          title: 'Não foi possível remover o espectador',
-          description: 'Tente novamente em instantes.',
+          title: t('toasts.removeViewerFailed'),
+          description: t('tryAgainSoon'),
         });
       }
     },
-    [channel, toast]
+    [channel, toast, t]
   );
 
   const stopStream = useCallback(
@@ -1295,12 +1320,12 @@ export function VoiceProvider({ children }: { children: React.ReactNode }) {
       } catch {
         toast({
           variant: 'destructive',
-          title: 'Não foi possível encerrar a transmissão',
-          description: 'Tente novamente em instantes.',
+          title: t('toasts.endStreamFailed'),
+          description: t('tryAgainSoon'),
         });
       }
     },
-    [channel, toast]
+    [channel, toast, t]
   );
 
   const stopCamera = useCallback(
@@ -1316,12 +1341,12 @@ export function VoiceProvider({ children }: { children: React.ReactNode }) {
       } catch {
         toast({
           variant: 'destructive',
-          title: 'Não foi possível desligar a câmera',
-          description: 'Tente novamente em instantes.',
+          title: t('toasts.cameraOffFailed'),
+          description: t('tryAgainSoon'),
         });
       }
     },
-    [channel, toast]
+    [channel, toast, t]
   );
 
   const setInputDeviceId = useCallback(
@@ -1336,12 +1361,12 @@ export function VoiceProvider({ children }: { children: React.ReactNode }) {
       } catch (error) {
         toast({
           variant: 'destructive',
-          title: 'Não foi possível trocar o microfone',
-          description: error instanceof Error ? error.message : 'Erro inesperado.',
+          title: t('toasts.switchMicFailed'),
+          description: error instanceof Error ? error.message : t('unexpectedError'),
         });
       }
     },
-    [room, toast]
+    [room, toast, t]
   );
 
   const setOutputDeviceId = useCallback(
@@ -1355,12 +1380,12 @@ export function VoiceProvider({ children }: { children: React.ReactNode }) {
       } catch (error) {
         toast({
           variant: 'destructive',
-          title: 'Não foi possível trocar a saída de áudio',
-          description: error instanceof Error ? error.message : 'Erro inesperado.',
+          title: t('toasts.switchOutputFailed'),
+          description: error instanceof Error ? error.message : t('unexpectedError'),
         });
       }
     },
-    [room, toast]
+    [room, toast, t]
   );
 
   const setVideoDeviceId = useCallback(
@@ -1375,12 +1400,12 @@ export function VoiceProvider({ children }: { children: React.ReactNode }) {
       } catch (error) {
         toast({
           variant: 'destructive',
-          title: 'Não foi possível trocar a câmera',
-          description: error instanceof Error ? error.message : 'Erro inesperado.',
+          title: t('toasts.switchCameraFailed'),
+          description: error instanceof Error ? error.message : t('unexpectedError'),
         });
       }
     },
-    [room, toast]
+    [room, toast, t]
   );
 
   // Atualiza o gate JÁ EM EXECUÇÃO, sem reaquisitar o microfone: arrastar o
@@ -1473,12 +1498,12 @@ export function VoiceProvider({ children }: { children: React.ReactNode }) {
         setServerMutedParticipants((prev) => ({ ...prev, [identity]: !muted }));
         toast({
           variant: 'destructive',
-          title: 'Não foi possível silenciar',
-          description: 'Tente novamente em instantes.',
+          title: t('toasts.muteFailed'),
+          description: t('tryAgainSoon'),
         });
       }
     },
-    [channel, serverMutedParticipants, toast]
+    [channel, serverMutedParticipants, toast, t]
   );
 
   const callAttention = useCallback(

@@ -1,4 +1,5 @@
 'use client';
+import { useTranslations } from 'next-intl';
 
 import { Tabs, TabsList, TabsTrigger, TabsContent } from '@/components/ui/tabs';
 import type { GroupDTO } from '@/app/api/groups/types';
@@ -41,6 +42,7 @@ export default function AdminTabsView({
   currentUserIsAdmin: boolean;
   currentUserIsChannelsAdmin: boolean;
 }) {
+  const t = useTranslations('admin.tabs');
   const infraEnabled = metricsSeries !== null && forecast !== null;
   // Grupos e Transmissão continuam ADMIN-only — um CHANNELS_ACCESS puro (sem
   // ADMIN) só vê Usuários e Canais (que já mostra Admin de canais + Acesso ao
@@ -51,9 +53,9 @@ export default function AdminTabsView({
     return (
       <Tabs defaultValue="users" className="flex flex-1 flex-col">
         <TabsList className="mx-auto mt-6">
-          <TabsTrigger value="users">Usuários</TabsTrigger>
-          <TabsTrigger value="channels">Canais</TabsTrigger>
-          <TabsTrigger value="invites">Convites</TabsTrigger>
+          <TabsTrigger value="users">{t('users')}</TabsTrigger>
+          <TabsTrigger value="channels">{t('channels')}</TabsTrigger>
+          <TabsTrigger value="invites">{t('invites')}</TabsTrigger>
         </TabsList>
 
         <TabsContent value="users" className="flex flex-1 flex-col">
@@ -74,12 +76,12 @@ export default function AdminTabsView({
   return (
     <Tabs defaultValue="users" className="flex flex-1 flex-col">
       <TabsList className="mx-auto mt-6">
-        <TabsTrigger value="users">Usuários</TabsTrigger>
-        <TabsTrigger value="channels">Canais</TabsTrigger>
-        <TabsTrigger value="invites">Convites</TabsTrigger>
-        <TabsTrigger value="groups">Grupos</TabsTrigger>
-        <TabsTrigger value="stream">Transmissão</TabsTrigger>
-        {infraEnabled && <TabsTrigger value="infra">Infra</TabsTrigger>}
+        <TabsTrigger value="users">{t('users')}</TabsTrigger>
+        <TabsTrigger value="channels">{t('channels')}</TabsTrigger>
+        <TabsTrigger value="invites">{t('invites')}</TabsTrigger>
+        <TabsTrigger value="groups">{t('groups')}</TabsTrigger>
+        <TabsTrigger value="stream">{t('stream')}</TabsTrigger>
+        {infraEnabled && <TabsTrigger value="infra">{t('infra')}</TabsTrigger>}
       </TabsList>
 
       <TabsContent value="users" className="flex flex-1 flex-col">

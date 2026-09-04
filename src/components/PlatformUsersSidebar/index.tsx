@@ -3,8 +3,10 @@
 import { useEffect, useState } from 'react';
 import { useSession } from 'next-auth/react';
 import { formatDistanceToNow } from 'date-fns';
-import { ptBR } from 'date-fns/locale';
+import type { Locale as DateFnsLocale } from 'date-fns';
+import { useTranslations } from 'next-intl';
 import Avatar from '@/components/Avatar';
+import { useDateFnsLocale } from '@/i18n/dateFns';
 import { Popover, PopoverAnchor, PopoverContent } from '@/components/ui/popover';
 import { Separator } from '@/components/ui/separator';
 import { Tooltip, TooltipContent, TooltipTrigger } from '@/components/ui/tooltip';
@@ -18,12 +20,6 @@ import type { PresenceStatus, PlatformPresenceUser } from '@/lib/presence/platfo
 import type { GroupDTO } from '@/app/api/groups/types';
 import { cn } from '@/lib/utils';
 
-const STATUS_LABEL: Record<PresenceStatus, string> = {
-  online: 'Online',
-  away: 'Ausente',
-  offline: 'Offline',
-};
-
 const STATUS_DOT_CLASS: Record<PresenceStatus, string> = {
   online: 'bg-green-500',
   away: 'bg-orange-500',
@@ -35,9 +31,14 @@ const STATUS_ORDER: Record<PresenceStatus, number> = { online: 0, away: 1, offli
 /** awaySince só muda no instante da transição (ver resolveAwaySince), então o snapshot fica idêntico poll após poll enquanto alguém segue away/offline — sem isso o texto relativo ("há X min") congela. */
 const RELATIVE_LABEL_REFRESH_MS = 30_000;
 
-function formatLastActive(lastActiveAt?: string): string | null {
+/**
+ * `locale` entra por parâmetro (e não fixo em `ptBR`, como era) porque o "há 5
+ * minutos" tem que virar "5 minutes ago" junto com o resto da interface — quem
+ * chama pega o locale do `date-fns` com `useDateFnsLocale`.
+ */
+function formatLastActive(lastActiveAt: string | undefined, locale: DateFnsLocale): string | null {
   if (!lastActiveAt) return null;
-  return formatDistanceToNow(new Date(lastActiveAt), { locale: ptBR, addSuffix: true });
+  return formatDistanceToNow(new Date(lastActiveAt), { locale, addSuffix: true });
 }
 
 /** Sem lastActiveAt vai pro fim do próprio status — nunca visto ainda não é "recente". */
@@ -63,6 +64,8 @@ function bucketUsersByGroup(
 }
 
 function PresenceAvatar({ avatar, username, status }: { avatar: string; username: string; status: PresenceStatus }) {
+  const t = useTranslations('presence');
+
   return (
     <div className="relative shrink-0">
       <Avatar
@@ -73,7 +76,7 @@ function PresenceAvatar({ avatar, username, status }: { avatar: string; username
       />
       <span
         role="img"
-        aria-label={STATUS_LABEL[status]}
+        aria-label={t(`status.${status}`)}
         className={cn(
           'absolute -bottom-0.5 -right-0.5 block h-3 w-3 rounded-full border-2 border-background',
           STATUS_DOT_CLASS[status],
@@ -83,13 +86,8 @@ function PresenceAvatar({ avatar, username, status }: { avatar: string; username
   );
 }
 
-const CALL_LABEL: Record<CallStatus, string> = {
-  idle: 'Chamar no Discord',
-  sending: 'Chamando...',
-  cooldown: 'Chamado',
-};
-
 function CallAction({ targetUserId }: { targetUserId: string }) {
+  const t = useTranslations('presence.call');
   const { status, remainingMs, call } = useCallAction(targetUserId);
   const disabled = status !== 'idle';
 
@@ -104,7 +102,9 @@ function CallAction({ targetUserId }: { targetUserId: string }) {
       )}
     >
       <HugeIcon name="waving-hand-01" size={16} />
-      {CALL_LABEL[status]}
+      {/* `CallStatus` e as chaves de `presence.call` têm os mesmos nomes de
+          propósito — um `Record` no meio só seria uma tabela identidade. */}
+      {t(status)}
     </button>
   );
 
@@ -113,22 +113,29 @@ function CallAction({ targetUserId }: { targetUserId: string }) {
   return (
     <Tooltip>
       <TooltipTrigger asChild>{button}</TooltipTrigger>
-      <TooltipContent side="left">Aguarde {Math.ceil(remainingMs / 1000)}s pra chamar de novo</TooltipContent>
+      <TooltipContent side="left">{t('cooldownTooltip', { seconds: Math.ceil(remainingMs / 1000) })}</TooltipContent>
     </Tooltip>
   );
 }
 
-const RING_LABEL: Record<RingStatus, string> = {
-  idle: 'Ligar para entrar',
-  'no-channel': 'Ligar para entrar',
-  'already-in-room': 'Ligar para entrar',
-  ringing: 'Chamando...',
-  cooldown: 'Chamado',
-  rejected: 'Recusado',
-};
+/**
+ * Três estados diferentes mostram o MESMO rótulo ("Ligar para entrar") — o que
+ * muda entre eles é só o tooltip que explica por que o botão está apagado. Por
+ * isso aqui a tabela continua existindo: ela colapsa seis estados em quatro
+ * chaves, e não é identidade como a do `CallAction`.
+ */
+const RING_LABEL = {
+  idle: 'idle',
+  'no-channel': 'idle',
+  'already-in-room': 'idle',
+  ringing: 'ringing',
+  cooldown: 'cooldown',
+  rejected: 'rejected',
+} as const satisfies Record<RingStatus, string>;
 
 /** Só faz sentido pra quem já está online/ausente na plataforma — offline não recebe nada em tempo real (ver useRingAction). */
 function RingToJoinAction({ targetUserId, targetVoiceChannelId }: { targetUserId: string; targetVoiceChannelId?: string }) {
+  const t = useTranslations('presence.ring');
   const { status, remainingMs, ring } = useRingAction(targetUserId, targetVoiceChannelId);
   const disabled = status !== 'idle';
 
@@ -143,7 +150,7 @@ function RingToJoinAction({ targetUserId, targetVoiceChannelId }: { targetUserId
       )}
     >
       <HugeIcon name="call-outgoing-01" size={16} />
-      {RING_LABEL[status]}
+      {t(RING_LABEL[status])}
     </button>
   );
 
@@ -151,7 +158,7 @@ function RingToJoinAction({ targetUserId, targetVoiceChannelId }: { targetUserId
     return (
       <Tooltip>
         <TooltipTrigger asChild>{button}</TooltipTrigger>
-        <TooltipContent side="left">Entre em um canal de voz primeiro</TooltipContent>
+        <TooltipContent side="left">{t('noChannelTooltip')}</TooltipContent>
       </Tooltip>
     );
   }
@@ -160,7 +167,7 @@ function RingToJoinAction({ targetUserId, targetVoiceChannelId }: { targetUserId
     return (
       <Tooltip>
         <TooltipTrigger asChild>{button}</TooltipTrigger>
-        <TooltipContent side="left">Usuário já está na sua sala</TooltipContent>
+        <TooltipContent side="left">{t('alreadyInRoomTooltip')}</TooltipContent>
       </Tooltip>
     );
   }
@@ -170,13 +177,14 @@ function RingToJoinAction({ targetUserId, targetVoiceChannelId }: { targetUserId
   return (
     <Tooltip>
       <TooltipTrigger asChild>{button}</TooltipTrigger>
-      <TooltipContent side="left">Aguarde {Math.ceil(remainingMs / 1000)}s pra ligar de novo</TooltipContent>
+      <TooltipContent side="left">{t('cooldownTooltip', { seconds: Math.ceil(remainingMs / 1000) })}</TooltipContent>
     </Tooltip>
   );
 }
 
 /** Toggle de bloqueio de envio no chat — só aparece pra channels_admin (ver hasChannelsAdminAccess), mesma régua do /clear e do kick de voz. */
 function ChatBlockAction({ targetUserId, blocked, onDone }: { targetUserId: string; blocked: boolean; onDone: () => void }) {
+  const t = useTranslations('presence.chatBlock');
   const { pending, toggle } = useChatBlockAction(targetUserId, blocked);
 
   return (
@@ -193,7 +201,7 @@ function ChatBlockAction({ targetUserId, blocked, onDone }: { targetUserId: stri
       )}
     >
       <HugeIcon name={blocked ? 'chat-done-01' : 'chat-lock'} size={16} />
-      {blocked ? 'Liberar no chat' : 'Bloquear no chat'}
+      {blocked ? t('unblock') : t('block')}
     </button>
   );
 }
@@ -209,9 +217,11 @@ function PlatformUserRow({
   currentUserId?: string;
   viewerIsChannelsAdmin: boolean;
 }) {
+  const t = useTranslations('presence');
+  const dateFnsLocale = useDateFnsLocale();
   const [menuOpen, setMenuOpen] = useState(false);
   const showMenu = user.id !== currentUserId;
-  const lastActiveLabel = formatLastActive(user.lastActiveAt);
+  const lastActiveLabel = formatLastActive(user.lastActiveAt, dateFnsLocale);
   // Só reflete o estado da MINHA própria ligação (outgoingCallTargetId vive no
   // CallProvider deste client) — quem recebe a ligação nunca vê isso na lista.
   const { status: ringStatus } = useRingAction(user.id, user.voiceChannelId);
@@ -245,7 +255,7 @@ function PlatformUserRow({
                 <HugeIcon
                   name="call-ringing-01"
                   size={13}
-                  aria-label="Chamando"
+                  aria-label={t('ringingBadge')}
                   className="shrink-0 animate-wiggle-loop text-green-600"
                 />
               )}
@@ -253,7 +263,7 @@ function PlatformUserRow({
             {ringStatus === 'rejected' ? (
               <span className="flex items-center gap-1 truncate text-[11px] text-destructive">
                 <HugeIcon name="call-end-01" size={11} className="shrink-0" />
-                Recusado
+                {t('rejectedBadge')}
               </span>
             ) : (
               lastActiveLabel && (
@@ -291,6 +301,7 @@ function PlatformUserRow({
 }
 
 export default function PlatformUsersSidebar() {
+  const t = useTranslations('presence');
   const { data: session } = useSession();
   const { users, groups, loading } = usePlatformPresenceUsers();
   const currentUserId = session?.user?.id;
@@ -332,7 +343,7 @@ export default function PlatformUsersSidebar() {
 
         <ul className="flex flex-col gap-1 mt-6">
           <div className={cn("px-2 pb-1 text-xs opacity-60 text-muted-foreground uppercase tracking-wider")}>
-            Geral
+            {t('general')}
           </div>
           {rest.map((user) => (
             <PlatformUserRow key={user.id} user={user} currentUserId={currentUserId} viewerIsChannelsAdmin={viewerIsChannelsAdmin} />

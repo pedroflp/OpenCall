@@ -1,12 +1,14 @@
 'use client';
 
 import { useState } from 'react';
+import { useTranslations } from 'next-intl';
 import { HugeIcon } from '@/components/HugeIcon';
 import { Button } from '@/components/ui/button';
 import { Tooltip, TooltipContent, TooltipTrigger } from '@/components/ui/tooltip';
 import QrLoginScanner from '@/components/QrLoginScanner';
 
 export default function QrLoginButton({ collapsed = false }: { collapsed?: boolean }) {
+  const t = useTranslations('auth');
   const [open, setOpen] = useState(false);
 
   if (collapsed) {
@@ -14,11 +16,11 @@ export default function QrLoginButton({ collapsed = false }: { collapsed?: boole
       <>
         <Tooltip>
           <TooltipTrigger asChild>
-            <Button onClick={() => setOpen(true)} size="icon" variant="outline" aria-label="Entrar com QR Code">
+            <Button onClick={() => setOpen(true)} size="icon" variant="outline" aria-label={t('signInWithQr')}>
               <HugeIcon name="qr-code-scan" size={20} />
             </Button>
           </TooltipTrigger>
-          <TooltipContent side="right">Entrar com QR Code</TooltipContent>
+          <TooltipContent side="right">{t('signInWithQr')}</TooltipContent>
         </Tooltip>
         <QrLoginScanner open={open} onOpenChange={setOpen} />
       </>
@@ -29,7 +31,7 @@ export default function QrLoginButton({ collapsed = false }: { collapsed?: boole
     <>
       <Button onClick={() => setOpen(true)} variant="outline" className="w-full gap-2 py-6">
         <HugeIcon name="qr-code-scan" size={20} />
-        <span>Entrar com QR Code</span>
+        <span>{t('signInWithQr')}</span>
       </Button>
       <QrLoginScanner open={open} onOpenChange={setOpen} />
     </>

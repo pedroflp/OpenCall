@@ -1,4 +1,5 @@
 'use client';
+import { useTranslations } from 'next-intl';
 
 import { useState, type ReactNode } from 'react';
 import { ChannelType } from '@prisma/client';
@@ -31,6 +32,8 @@ export default function DeleteChannelDialog({
   open?: boolean;
   onOpenChange?: (open: boolean) => void;
 }) {
+  const t = useTranslations('admin.channels.delete');
+  const tAdmin = useTranslations('admin');
   const { toast } = useToast();
   const [uncontrolledOpen, setUncontrolledOpen] = useState(false);
   const open = controlledOpen ?? uncontrolledOpen;
@@ -53,11 +56,11 @@ export default function DeleteChannelDialog({
     setPending(false);
 
     if (!result.ok) {
-      toast({ title: 'Não deu pra excluir o canal', description: 'Tenta de novo daqui a pouco.', variant: 'destructive' });
+      toast({ title: t('failed'), description: tAdmin('tryAgainSoon'), variant: 'destructive' });
       return;
     }
 
-    toast({ title: 'Canal excluído permanentemente.' });
+    toast({ title: t('done') });
     handleOpenChange(false);
     onDeleted(channel.id);
   }
@@ -66,26 +69,29 @@ export default function DeleteChannelDialog({
     <Dialog open={open} onOpenChange={handleOpenChange}>
       {trigger && <DialogTrigger asChild>{trigger}</DialogTrigger>}
       <DialogContent>
-        <DialogTitle>Excluir canal permanentemente</DialogTitle>
-        <DialogDescription>Essa ação não pode ser desfeita.</DialogDescription>
+        <DialogTitle>{t('title')}</DialogTitle>
+        <DialogDescription>{t('description')}</DialogDescription>
 
         <div className="space-y-4">
+          {/* Nome e contagem entram como TAGS do ICU: os dois vêm em negrito
+              no meio da frase, e o "e N mensagens" some quando o canal está
+              vazio — um `plural` resolve isso sem três concatenações aqui. */}
           <p className="text-sm text-muted-foreground">
-            Isso vai apagar o canal <span className="font-semibold text-foreground">&quot;{channel.name}&quot;</span>
-            {(channel.messageCount ?? 0) > 0 && (
-              <>
-                {' '}
-                e <span className="font-semibold text-foreground">{channel.messageCount}</span>{' '}
-                {channel.messageCount === 1 ? 'mensagem' : 'mensagens'}
-              </>
-            )}
-            {' '}permanentemente.
-            {isVoice && ' Quem já estiver conectado na sala não é desconectado, mas ninguém mais vai conseguir entrar.'}
+            {t.rich('body', {
+              name: (chunks) => <span className="font-semibold text-foreground">&quot;{chunks}&quot;</span>,
+              count: (chunks) => <span className="font-semibold text-foreground">{chunks}</span>,
+              channelName: channel.name,
+              messages: channel.messageCount ?? 0,
+            })}
+            {isVoice && ` ${t('voiceNote')}`}
           </p>
 
           <div className="space-y-2">
             <Label>
-              Digite <span className="font-semibold text-foreground">{channel.name}</span> pra confirmar
+              {t.rich('confirmLabel', {
+                name: (chunks) => <span className="font-semibold text-foreground">{chunks}</span>,
+                channelName: channel.name,
+              })}
             </Label>
             <Input value={confirmText} onChange={(e) => setConfirmText(e.target.value)} autoComplete="off" />
           </div>
@@ -93,7 +99,7 @@ export default function DeleteChannelDialog({
 
         <DialogFooter>
           <Button variant="destructive" onClick={handleDelete} disabled={!matches || pending}>
-            Excluir permanentemente
+            {t('confirm')}
           </Button>
         </DialogFooter>
       </DialogContent>

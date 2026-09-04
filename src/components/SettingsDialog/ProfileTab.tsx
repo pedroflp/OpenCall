@@ -2,6 +2,7 @@
 
 import { useRef, useState } from 'react';
 import { useRouter } from 'next/navigation';
+import { useTranslations } from 'next-intl';
 import Avatar from '@/components/Avatar';
 import { HugeIcon } from '@/components/HugeIcon';
 import { Button } from '@/components/ui/button';
@@ -34,14 +35,24 @@ const ACCEPTED = 'image/png,image/jpeg,image/gif,image/webp,image/avif';
 /** Espelha MAX_AVATAR_BYTES do servidor só pra recusar antes de subir 10MB à toa. */
 const MAX_BYTES = 10 * 1024 * 1024;
 
-const ERROR_MESSAGES: Record<string, string> = {
-  UNSUPPORTED_CONTENT_TYPE: 'Formato não aceito. Use PNG, JPG, GIF, WebP ou AVIF.',
-  INVALID_IMAGE_BYTES: 'Esse arquivo não é uma imagem válida.',
-  IMAGE_TOO_LARGE: 'A imagem passa de 10 MB.',
-  ANIMATION_TOO_HEAVY: 'Esse GIF fica pesado demais depois de enquadrado. Tente um com menos quadros.',
-  INVALID_NICKNAME: `O apelido precisa ter de 2 a ${NICKNAME_MAX_LENGTH} caracteres.`,
-  RATE_LIMITED: 'Calma aí — espere um pouco antes de tentar de novo.',
-};
+/**
+ * Os códigos que a rota devolve e que têm frase própria em
+ * `settings.profile.errors`. A lista existe pra estreitar o `string` cru da
+ * resposta antes de virar chave: um código novo no servidor sem frase aqui cai
+ * no genérico, em vez de pintar o próprio código na tela.
+ */
+const KNOWN_ERRORS = [
+  'UNSUPPORTED_CONTENT_TYPE',
+  'INVALID_IMAGE_BYTES',
+  'IMAGE_TOO_LARGE',
+  'ANIMATION_TOO_HEAVY',
+  'INVALID_NICKNAME',
+  'RATE_LIMITED',
+] as const;
+
+function isKnownError(code: string): code is (typeof KNOWN_ERRORS)[number] {
+  return (KNOWN_ERRORS as readonly string[]).includes(code);
+}
 
 interface ProfileMaskState {
   displayName: string | null;
@@ -57,6 +68,8 @@ interface ProfileMaskState {
 type ProfileResponse = ProfileMaskState & { error?: string; retryAfterMs?: number };
 
 export default function ProfileTab({ user }: { user: UserDTO | null }) {
+  const t = useTranslations('settings.profile');
+  const tCommon = useTranslations('common');
   const router = useRouter();
   const { toast } = useToast();
   const fileInputRef = useRef<HTMLInputElement>(null);
@@ -100,10 +113,12 @@ export default function ProfileTab({ user }: { user: UserDTO | null }) {
     const seconds = Math.ceil((response?.retryAfterMs ?? 0) / 1000);
     const description =
       code === 'RATE_LIMITED' && seconds > 0
-        ? `Calma aí — tente de novo em ${seconds}s.`
-        : ERROR_MESSAGES[code] ?? 'Tente de novo em instantes.';
+        ? t('rateLimitedSeconds', { seconds })
+        : isKnownError(code)
+          ? t(`errors.${code}`, { max: NICKNAME_MAX_LENGTH })
+          : tCommon('tryAgainSoon');
 
-    toast({ title: 'Não deu pra salvar', description, variant: 'destructive' });
+    toast({ title: t('saveFailed'), description, variant: 'destructive' });
   }
 
   /**
@@ -145,8 +160,14 @@ export default function ProfileTab({ user }: { user: UserDTO | null }) {
       await applyMask(
         data,
         data.displayName
-          ? { title: 'Apelido salvo', description: `Todo mundo já está te vendo como ${data.displayName}.` }
-          : { title: 'Apelido removido', description: `Você voltou a aparecer como ${discordUsername}.` },
+          ? {
+              title: t('nicknameSaved.title'),
+              description: t('nicknameSaved.description', { name: data.displayName }),
+            }
+          : {
+              title: t('nicknameRemoved.title'),
+              description: t('nicknameRemoved.description', { username: discordUsername }),
+            },
       );
     } finally {
       setSavingName(false);
@@ -171,22 +192,24 @@ export default function ProfileTab({ user }: { user: UserDTO | null }) {
     // A confirmação nomeia o que ESTA pessoa tem guardado: quem só subiu foto
     // não tem apelido pra "continuar guardado", e a frase genérica falaria de
     // um campo vazio.
-    const guardado = [data.displayName && 'seu apelido', data.displayAvatar && 'sua foto']
-      .filter(Boolean)
-      .join(' e ');
+    //
+    // Quem monta a frase é o `select` do ICU, e não um `join(' e ')` daqui: a
+    // lista de duas coisas se escreve de um jeito em cada língua, e a posição
+    // do "continua guardado" muda com ela.
+    const guardado = data.displayName && data.displayAvatar ? 'both' : data.displayName ? 'name' : 'avatar';
 
     await applyMask(
       data,
       data.useDiscordProfile
         ? {
-            title: 'Usando o perfil do Discord',
-            description: `Você aparece como ${discordUsername}, com a foto de lá. Aqui ${guardado} continua guardado.`,
+            title: t('discordOn.title'),
+            description: t('discordOn.description', { username: discordUsername, saved: guardado }),
           }
         : {
-            title: 'Máscara ativa',
+            title: t('maskOn.title'),
             description: data.displayName
-              ? `Você voltou a aparecer como ${data.displayName}.`
-              : 'Sua foto voltou a valer.',
+              ? t('maskOn.withName', { name: data.displayName })
+              : t('maskOn.avatarOnly'),
           },
     );
   }
@@ -202,7 +225,7 @@ export default function ProfileTab({ user }: { user: UserDTO | null }) {
       const response = await fetch('/api/user/profile', { method: 'POST', body: form });
       const data = (await response.json().catch(() => null)) as ProfileResponse | null;
       if (!response.ok || !data) return fail(data);
-      await applyMask(data, { title: 'Foto atualizada', description: 'Já é ela que aparece pra todo mundo.' });
+      await applyMask(data, { title: t('photoUpdated.title'), description: t('photoUpdated.description') });
     } finally {
       setSavingAvatar(false);
     }
@@ -214,7 +237,7 @@ export default function ProfileTab({ user }: { user: UserDTO | null }) {
       const response = await fetch('/api/user/profile', { method: 'DELETE' });
       const data = (await response.json().catch(() => null)) as ProfileResponse | null;
       if (!response.ok || !data) return fail(data);
-      await applyMask(data, { title: 'Foto removida', description: 'Voltou a valer a foto do seu Discord.' });
+      await applyMask(data, { title: t('photoRemoved.title'), description: t('photoRemoved.description') });
     } finally {
       setSavingAvatar(false);
     }
@@ -230,7 +253,7 @@ export default function ProfileTab({ user }: { user: UserDTO | null }) {
 
     const bytes = new Uint8Array(await file.slice(0, 64 * 1024).arrayBuffer());
     if (isAnimatedImage(bytes)) {
-      toast({ title: 'Imagem animada', description: 'GIFs são enquadrados pelo centro, sem recorte.' });
+      toast({ title: t('animatedImage.title'), description: t('animatedImage.description') });
       void uploadAvatar(file, null);
       return;
     }
@@ -241,10 +264,8 @@ export default function ProfileTab({ user }: { user: UserDTO | null }) {
   return (
     <div className="space-y-4">
       <div>
-        <p className="text-[11px] font-bold uppercase tracking-wider text-muted-foreground">Perfil</p>
-        <p className="mt-1 text-xs text-muted-foreground">
-          Um apelido e uma foto só seus, por cima do que vem do Discord. Valem em todo o OpenCall.
-        </p>
+        <p className="text-[11px] font-bold uppercase tracking-wider text-muted-foreground">{t('heading')}</p>
+        <p className="mt-1 text-xs text-muted-foreground">{t('description')}</p>
       </div>
 
       {pendingFile ? (
@@ -286,7 +307,7 @@ export default function ProfileTab({ user }: { user: UserDTO | null }) {
               <button
                 type="button"
                 onClick={() => fileInputRef.current?.click()}
-                aria-label="Enviar foto"
+                aria-label={t('uploadPhoto')}
                 className="flex h-20 w-20 shrink-0 items-center justify-center rounded-full border-2 border-dashed border-border bg-muted/20 text-muted-foreground transition-colors hover:border-foreground/25 hover:text-foreground/70"
               >
                 <HugeIcon name="image-upload" size={28} />
@@ -297,19 +318,17 @@ export default function ProfileTab({ user }: { user: UserDTO | null }) {
               <div className="flex flex-wrap items-center gap-2">
                 <Button variant="secondary" size="sm" onClick={() => fileInputRef.current?.click()} disabled={savingAvatar}>
                   <HugeIcon name="image-01" size={16} />
-                  {mask.displayAvatar ? 'Trocar foto' : 'Enviar foto'}
+                  {mask.displayAvatar ? t('changePhoto') : t('uploadPhoto')}
                 </Button>
 
                 {mask.displayAvatar && (
                   <Button variant="ghost" size="sm" className="text-destructive hover:text-destructive" onClick={removeAvatar} disabled={savingAvatar}>
-                    Remover
+                    {tCommon('remove')}
                   </Button>
                 )}
               </div>
 
-              <p className="text-xs text-muted-foreground">
-                PNG, JPG, GIF, WebP ou AVIF, até 10 MB. GIF continua animado, enquadrado pelo centro.
-              </p>
+              <p className="text-xs text-muted-foreground">{t('photoHint')}</p>
             </div>
 
             <input
@@ -330,7 +349,7 @@ export default function ProfileTab({ user }: { user: UserDTO | null }) {
 
           <div className="space-y-2">
             <label htmlFor="profile-nickname" className="text-xs font-medium text-muted-foreground">
-              Apelido
+              {t('nickname')}
             </label>
             <div className="flex items-center gap-2">
               <Input
@@ -345,12 +364,10 @@ export default function ProfileTab({ user }: { user: UserDTO | null }) {
                 }}
               />
               <Button size="sm" onClick={saveNickname} disabled={!nicknameDirty || savingName}>
-                Salvar
+                {tCommon('save')}
               </Button>
             </div>
-            <p className="text-xs text-muted-foreground">
-              Vazio usa seu nome do Discord ({user.username}).
-            </p>
+            <p className="text-xs text-muted-foreground">{t('nicknameHint', { username: user.username })}</p>
           </div>
 
           {/* Só com APELIDO guardado — ver `podeVoltarProDiscord` lá em cima. */}
@@ -360,7 +377,7 @@ export default function ProfileTab({ user }: { user: UserDTO | null }) {
 
               <div className="flex items-center justify-between gap-4">
                 <div className="min-w-0">
-                  <p className="text-sm font-medium">Usar meu perfil do Discord</p>
+                  <p className="text-sm font-medium">{t('useDiscordProfile')}</p>
 
                   {/* A conta do Discord MOSTRADA, em vez de descrita. A frase
                       que estava aqui explicava o destino do switch com palavras
@@ -380,7 +397,7 @@ export default function ProfileTab({ user }: { user: UserDTO | null }) {
                 <Switch
                   checked={mask.useDiscordProfile}
                   onCheckedChange={(checked) => void toggleDiscordProfile(checked)}
-                  aria-label="Usar meu perfil do Discord"
+                  aria-label={t('useDiscordProfile')}
                 />
               </div>
             </>

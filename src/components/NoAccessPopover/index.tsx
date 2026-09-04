@@ -2,6 +2,7 @@
 
 import { useEffect, useRef, useState } from 'react';
 import { useRouter, useSearchParams } from 'next/navigation';
+import { useTranslations } from 'next-intl';
 import { HugeIcon } from '@/components/HugeIcon';
 import { Button } from '@/components/ui/button';
 import { Dialog, DialogContent, DialogDescription, DialogTitle } from '@/components/ui/dialog';
@@ -25,8 +26,8 @@ async function redeemInviteCode(code: string): Promise<void> {
   if (!res.ok) throw new Error('INVALID_CODE');
 }
 
-/** `?convite=` na URL — quem chega autenticado por esse link (ou acabou de logar vindo de um) resgata sozinho, sem colar nada. */
-const INVITE_QUERY_PARAM = 'convite';
+/** `?invite=` na URL — quem chega autenticado por esse link (ou acabou de logar vindo de um) resgata sozinho, sem colar nada. */
+const INVITE_QUERY_PARAM = 'invite';
 
 /**
  * Mesmo shell visual do LoginPopover (2 colunas, coluna decorativa à
@@ -36,6 +37,7 @@ const INVITE_QUERY_PARAM = 'convite';
  * antigo aviso estático quando authUser existe e canalAccess não.
  */
 export default function NoAccessPopover() {
+  const t = useTranslations('auth.noAccess');
   const router = useRouter();
   const searchParams = useSearchParams();
   const [code, setCode] = useState('');
@@ -52,7 +54,7 @@ export default function NoAccessPopover() {
       .catch((err: Error) => setState(err.message === 'RATE_LIMITED' ? 'blocked' : 'error'));
   }
 
-  // Chega autenticado (ou acabou de autenticar vindo) com `?convite=` na URL —
+  // Chega autenticado (ou acabou de autenticar vindo) com `?invite=` na URL —
   // o Discord OAuth preserva a URL inteira como callback (ver LoginPopover),
   // então esse param sobrevive ao login. Resgata sozinho, sem pedir pra colar.
   useEffect(() => {
@@ -93,19 +95,16 @@ export default function NoAccessPopover() {
         >
           <HugeIcon name="shield-01" size={44} className="relative text-primary" />
           <div className="relative space-y-2">
-            <p className="text-sm text-foreground/70">Quase lá</p>
-            <p className="text-2xl font-bold leading-tight text-foreground">Um código de convite libera os canais pra você.</p>
+            <p className="text-sm text-foreground/70">{t('almostThere')}</p>
+            <p className="text-2xl font-bold leading-tight text-foreground">{t('almostThereSubtitle')}</p>
           </div>
         </div>
 
         <div className={cn('flex flex-col justify-center gap-6 p-6 md:p-8', veiled)}>
           <div className="space-y-2">
             <HugeIcon name="lock-01" size={36} className="text-primary md:hidden" />
-            <DialogTitle className="text-2xl font-bold">Código de convite</DialogTitle>
-            <DialogDescription>
-              Sua conta ainda não tem acesso aos canais. Cola aqui o código que um admin te passou, ou peça pra ele liberar em
-              /admin/channels.
-            </DialogDescription>
+            <DialogTitle className="text-2xl font-bold">{t('title')}</DialogTitle>
+            <DialogDescription>{t('description')}</DialogDescription>
           </div>
 
           <div className="flex flex-col gap-3">
@@ -113,19 +112,17 @@ export default function NoAccessPopover() {
               value={code}
               onChange={(e) => setCode(e.target.value)}
               onKeyDown={(e) => e.key === 'Enter' && handleSubmit()}
-              placeholder="Código de convite"
+              placeholder={t('placeholder')}
               autoFocus
               disabled={state === 'checking'}
               className="font-mono uppercase tracking-widest"
             />
 
-            {state === 'error' && <p className="text-xs text-destructive">Código inválido, expirado ou revogado.</p>}
-            {state === 'blocked' && (
-              <p className="text-xs text-destructive">Muitas tentativas seguidas. Espera alguns minutos e tenta de novo.</p>
-            )}
+            {state === 'error' && <p className="text-xs text-destructive">{t('invalid')}</p>}
+            {state === 'blocked' && <p className="text-xs text-destructive">{t('blocked')}</p>}
 
             <Button type="button" className="w-full" disabled={!code.trim() || state === 'checking'} onClick={handleSubmit}>
-              {state === 'checking' ? 'Verificando…' : 'Resgatar acesso'}
+              {state === 'checking' ? t('checking') : t('redeem')}
             </Button>
           </div>
         </div>
@@ -137,6 +134,8 @@ export default function NoAccessPopover() {
 }
 
 function AuthorizedSeal() {
+  const t = useTranslations('auth.noAccess');
+
   return (
     <div
       role="status"
@@ -146,8 +145,8 @@ function AuthorizedSeal() {
         <HugeIcon name="tick-02" size={34} />
       </span>
       <div className="space-y-1.5">
-        <p className="text-xl font-bold text-foreground">Acesso liberado</p>
-        <p className="text-sm text-muted-foreground">Carregando os canais…</p>
+        <p className="text-xl font-bold text-foreground">{t('granted')}</p>
+        <p className="text-sm text-muted-foreground">{t('grantedDescription')}</p>
       </div>
     </div>
   );

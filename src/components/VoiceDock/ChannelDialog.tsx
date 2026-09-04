@@ -2,6 +2,7 @@
 
 import { useState, type ReactNode } from 'react';
 import { useRouter } from 'next/navigation';
+import { useTranslations } from 'next-intl';
 import { ChannelType } from '@prisma/client';
 import { HugeIcon } from '@/components/HugeIcon';
 import { Dialog, DialogContent, DialogFooter, DialogTitle, DialogTrigger } from '@/components/ui/dialog';
@@ -54,6 +55,7 @@ export default function ChannelDialog({
   onOpenChange?: (open: boolean) => void;
   onSaved?: (channel: AdminChannelDTO) => void;
 }) {
+  const t = useTranslations('channels.dialog');
   const router = useRouter();
   const { toast } = useToast();
   const isEditing = Boolean(channel);
@@ -101,8 +103,8 @@ export default function ChannelDialog({
     if (!result.ok || !savedChannel) {
       if (tempId) cancelChannelCreate(tempId);
       toast({
-        title: isEditing ? 'Não deu pra salvar o canal' : 'Não deu pra criar o canal',
-        description: 'Tenta de novo daqui a pouco.',
+        title: isEditing ? t('saveFailed') : t('createFailed'),
+        description: t('tryAgainSoon'),
         variant: 'destructive',
       });
       return;
@@ -110,7 +112,7 @@ export default function ChannelDialog({
 
     if (tempId) resolveChannelCreate(tempId, savedChannel.id);
 
-    toast({ title: isEditing ? 'Canal atualizado!' : 'Canal criado!' });
+    toast({ title: isEditing ? t('updated') : t('created') });
     setOpen(false);
     resetToChannelOrDefaults();
 
@@ -141,11 +143,11 @@ export default function ChannelDialog({
           <DialogTrigger asChild>{trigger}</DialogTrigger>
         ))}
       <DialogContent>
-        <DialogTitle>{isEditing ? 'Editar canal' : 'Novo canal'}</DialogTitle>
+        <DialogTitle>{isEditing ? t('editTitle') : t('createTitle')}</DialogTitle>
 
         <div className="space-y-4">
           <div className={cn('space-y-2 transition-opacity', isEditing && 'opacity-60')}>
-            <Label>Tipo de canal</Label>
+            <Label>{t('channelType')}</Label>
             <RadioGroup
               value={type}
               onValueChange={(value) => setType(value as ChannelType)}
@@ -157,9 +159,9 @@ export default function ChannelDialog({
                 <div className="space-y-0.5">
                   <div className="flex items-center gap-1.5 text-sm font-medium">
                     <HugeIcon name="hashtag" size={16} />
-                    Texto
+                    {t('text')}
                   </div>
-                  <p className="text-xs text-muted-foreground">Envie mensagens, imagens, GIFs, emojis, opiniões e piadas</p>
+                  <p className="text-xs text-muted-foreground">{t('textDescription')}</p>
                 </div>
               </label>
               <label className={cn('flex items-start gap-3', !isEditing && 'cursor-pointer')}>
@@ -167,18 +169,18 @@ export default function ChannelDialog({
                 <div className="space-y-0.5">
                   <div className="flex items-center gap-1.5 text-sm font-medium">
                     <HugeIcon name="volume-high" size={16} />
-                    Voz
+                    {t('voice')}
                   </div>
-                  <p className="text-xs text-muted-foreground">Passe tempo com a turma com voz, vídeo e compartilhamento de tela</p>
+                  <p className="text-xs text-muted-foreground">{t('voiceDescription')}</p>
                 </div>
               </label>
             </RadioGroup>
-            {isEditing && <p className="text-xs text-muted-foreground">O tipo não pode ser alterado depois de criado.</p>}
+            {isEditing && <p className="text-xs text-muted-foreground">{t('typeLocked')}</p>}
           </div>
 
           <div className="space-y-2">
-            <Label>Nome</Label>
-            <Input value={name} onChange={(e) => setName(e.target.value)} placeholder="Ex: Geral" maxLength={NAME_MAX_LENGTH} />
+            <Label>{t('name')}</Label>
+            <Input value={name} onChange={(e) => setName(e.target.value)} placeholder={t('namePlaceholder')} maxLength={NAME_MAX_LENGTH} />
           </div>
 
           {isVoice && (
@@ -196,7 +198,7 @@ export default function ChannelDialog({
                   }}
                 />
                 <Label htmlFor="limit-channel-size" className="cursor-pointer">
-                  Limitar tamanho
+                  {t('limitSize')}
                 </Label>
               </div>
 
@@ -218,7 +220,7 @@ export default function ChannelDialog({
 
         <DialogFooter>
           <Button onClick={handleSubmit} disabled={invalid || submitting}>
-            {isEditing ? 'Salvar alterações' : 'Criar canal'}
+            {isEditing ? t('saveChanges') : t('create')}
           </Button>
         </DialogFooter>
       </DialogContent>

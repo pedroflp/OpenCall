@@ -1,4 +1,5 @@
 'use client';
+import { useTranslations } from 'next-intl';
 
 import { useEffect, useState } from 'react';
 import { HugeIcon } from '@/components/HugeIcon';
@@ -8,6 +9,7 @@ import { DEFAULT_SOUND_EFFECTS_VOLUME, loadChannelPreferences } from '@/lib/rtc/
 import { getSoundEffectsVolume, setSoundEffectsVolume } from '@/lib/sound';
 
 export default function SoundEffectsVolume() {
+  const t = useTranslations('voice.controls');
   const [volume, setVolume] = useState(DEFAULT_SOUND_EFFECTS_VOLUME);
 
   useEffect(() => {
@@ -20,7 +22,7 @@ export default function SoundEffectsVolume() {
     <div className="flex flex-col gap-2">
       <Label htmlFor="sound-effects-volume" className="flex items-center gap-1.5 text-xs font-medium text-muted-foreground">
         <HugeIcon name={percent > 0 ? 'volume-high' : 'volume-off'} size={14} />
-        {/* Efeitos sonoros */}
+        {t('soundEffects')}
       </Label>
       <div className="relative">
         <Slider

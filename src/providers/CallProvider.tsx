@@ -1,4 +1,5 @@
 'use client';
+import { useTranslations } from 'next-intl';
 
 import { createContext, useCallback, useContext, useEffect, useRef, useState } from 'react';
 import { useSession } from 'next-auth/react';
@@ -50,6 +51,7 @@ export function useCall(): CallContextValue {
 export function CallProvider({ children }: { children: React.ReactNode }) {
   const { status: sessionStatus } = useSession();
   const { join } = useVoice();
+  const t = useTranslations('call');
   const { toast } = useToast();
 
   const [incomingCall, setIncomingCall] = useState<IncomingCall | null>(null);
@@ -168,7 +170,7 @@ export function CallProvider({ children }: { children: React.ReactNode }) {
         if (!response.ok) return;
         if (accept) await join(channelId);
       } catch {
-        toast({ title: 'Não deu pra responder a chamada', description: 'Tenta de novo.', variant: 'destructive' });
+        toast({ title: t('respondFailed'), description: t('respondFailedDescription'), variant: 'destructive' });
       }
     },
     [incomingCall, clearIncoming, join, toast],

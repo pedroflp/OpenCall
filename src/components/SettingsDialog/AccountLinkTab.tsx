@@ -1,5 +1,6 @@
 'use client';
 
+import { useTranslations } from 'next-intl';
 import DevicePairingPanel from '@/components/DevicePairingModal/DevicePairingPanel';
 
 /**
@@ -14,14 +15,13 @@ import DevicePairingPanel from '@/components/DevicePairingModal/DevicePairingPan
  * ficaria fazendo polling a cada 1,5s por trás de qualquer outra aba.
  */
 export default function AccountLinkTab({ active }: { active: boolean }) {
+  const t = useTranslations('settings.accountLink');
+
   return (
     <div className="space-y-4">
       <div>
-        <p className="text-[11px] font-bold uppercase tracking-wider text-muted-foreground">Conexão e dispositivos</p>
-        <p className="mt-1 text-xs text-muted-foreground">
-          Entre na mesma conta em outro aparelho escaneando um QR, ou digitando o código lá. Não precisa do Discord de
-          novo.
-        </p>
+        <p className="text-[11px] font-bold uppercase tracking-wider text-muted-foreground">{t('heading')}</p>
+        <p className="mt-1 text-xs text-muted-foreground">{t('description')}</p>
       </div>
 
       {/* `max-w-xs` é a largura do modal irmão: o QR tem 240px fixos, e num vão

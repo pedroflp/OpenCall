@@ -8,6 +8,7 @@
     "build": "next build",
     "start": "next start",
     "lint": "next lint",
+    "check:messages": "node scripts/check-messages.mjs",
     "postinstall": "prisma generate",
     "docker:up": "docker compose up -d --wait postgres minio livekit && docker compose up minio-init",
     "docker:down": "docker compose down",
@@ -53,6 +54,7 @@
     "motion": "^12.38.0",
     "next": "^14.2.35",
     "next-auth": "^4.24.15",
+    "next-intl": "^4.14.2",
     "next-view-transitions": "^0.3.5",
     "qrcode": "^1.5.4",
     "react": "^18.3.1",
@@ -73,6 +75,7 @@
     "@types/ssh2": "^1.15.5",
     "eslint": "^8.57.0",
     "eslint-config-next": "14.2.2",
+    "intl-messageformat": "^11.2.14",
     "postcss": "^8.5.26",
     "prisma": "^6.19.3",
     "typescript": "^5.8.3"
