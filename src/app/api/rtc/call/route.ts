@@ -11,8 +11,8 @@ function err(status: number, code: string) {
   return NextResponse.json({ error: code }, { status });
 }
 
-// Debaixo de /api/rtc pra herdar o gate de canalAccess do middleware, mesmo
-// motivo do /api/rtc/invite.
+// Debaixo de /api/rtc pra herdar o gate de canalAccess do middleware — só quem
+// já tem acesso ao canal pode ligar pra alguém entrar nele.
 export async function POST(req: NextRequest) {
   const user = await getUser();
   if (!user) return err(401, 'UNAUTHENTICATED');

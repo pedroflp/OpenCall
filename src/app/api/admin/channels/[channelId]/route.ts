@@ -58,18 +58,13 @@ export async function PATCH(req: NextRequest, { params }: { params: { channelId:
  * original) — a UI de admin exige double confirm (nome do canal digitado)
  * antes de chamar essa rota, já que não tem volta.
  *
- * TextMessage/TextChannelRead cascade pela FK (ver schema.prisma). VoiceChannelAlert
- * não tem FK pro canal (é uma tabela solta por channelId string) — limpa
- * manualmente na mesma transação pra não deixar linha órfã de alerta do Discord.
+ * TextMessage/TextChannelRead cascade pela FK (ver schema.prisma).
  */
 export async function DELETE(_req: NextRequest, { params }: { params: { channelId: string } }) {
   if (!(await isCurrentUserChannelsAdmin())) return err(403, 'FORBIDDEN');
 
   try {
-    const [, channel] = await prisma.$transaction([
-      prisma.voiceChannelAlert.deleteMany({ where: { channelId: params.channelId } }),
-      prisma.channel.delete({ where: { id: params.channelId } }),
-    ]);
+    const channel = await prisma.channel.delete({ where: { id: params.channelId } });
     invalidateChannelsCache();
     publishToChannel({ type: 'channel_deleted', channelType: channel.type });
     return new NextResponse(null, { status: 204 });

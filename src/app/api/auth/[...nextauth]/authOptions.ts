@@ -70,7 +70,7 @@ export const authOptions: AuthOptions = {
 
       return true;
     },
-    async jwt({ token, user, account }) {
+    async jwt({ token, user, account, trigger }) {
       if (account) {
         token.accessToken = account.access_token;
       }
@@ -87,7 +87,12 @@ export const authOptions: AuthOptions = {
         !token.rolesFetchedAt ||
         Date.now() - token.rolesFetchedAt > ROLES_CACHE_TTL_MS ||
         (Boolean(token.id) && rolesCacheInvalidatedAfter(token.id as string, token.rolesFetchedAt ?? 0));
-      if (token.id && (account || rolesStale)) {
+      // `update` é o cliente pedindo explicitamente pra re-resolver a sessão
+      // (ver NoAccessPopover, logo depois de resgatar um convite). Nunca é
+      // periódico, sempre tem alguém esperando o valor novo na tela, e é a
+      // única passagem por aqui que reescreve o COOKIE — que é o que o
+      // middleware lê, cru, sem chamar este callback. Vale a query.
+      if (token.id && (account || trigger === 'update' || rolesStale)) {
         try {
           const dbUser = await prisma.user.findUnique({ where: { id: token.id as string }, select: { roles: true } });
           const roles = dbUser ? mapPrismaRoles(dbUser.roles) : undefined;

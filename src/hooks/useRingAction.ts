@@ -16,8 +16,8 @@ export type RingStatus = 'idle' | 'no-channel' | 'already-in-room' | 'ringing' |
  * "Ligar para entrar" — ringa alguém pra entrar no canal em que EU já estou
  * (por isso `no-channel` quando ainda não entrei em nenhum, e
  * `already-in-room` quando o alvo já está nesse mesmo canal). Namespace
- * próprio no cooldown compartilhado (`ring:`) pra não colidir com o de
- * useCallAction (chamada via DM do Discord), que é uma ação independente.
+ * próprio (`ring:`) no cooldown compartilhado pra não colidir com nenhuma
+ * outra ação que venha a usar o mesmo Map.
  */
 export function useRingAction(targetUserId: string, targetVoiceChannelId?: string) {
   const t = useTranslations('presence.actions');

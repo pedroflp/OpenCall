@@ -6,7 +6,6 @@ import { loadChannelsIdentity } from '@/lib/profile/query';
 import { getChannelsConfig } from '@/lib/rtc/channelsConfig';
 import { livekitApi, livekitUrl } from '@/lib/rtc/server';
 import { checkRateLimit } from '@/lib/rtc/rateLimit';
-import { notifyChannelJoin } from '@/lib/discord/voiceChannelAlert';
 
 export const runtime = 'nodejs';
 export const dynamic = 'force-dynamic';
@@ -59,11 +58,6 @@ export async function POST(req: NextRequest) {
   });
 
   const [identity, isAdmin] = await Promise.all([identityPromise, isCurrentUserAdmin()]);
-
-  // Fire-and-forget: alerta no bate-papo do Discord não pode atrasar a
-  // emissão do token (isso é o que trava o usuário entrando na chamada). Vai
-  // com a máscara: o alerta é sobre o canal, não sobre o Discord.
-  notifyChannelJoin(channel, identity).catch((error) => console.error('[rtc/join] failed to send channel alert', error));
 
   const token = new AccessToken(
     process.env.LIVEKIT_API_KEY!,

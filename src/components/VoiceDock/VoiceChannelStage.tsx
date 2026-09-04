@@ -18,6 +18,7 @@ import { Slider } from '@/components/ui/slider';
 import { Tooltip, TooltipContent, TooltipTrigger } from '@/components/ui/tooltip';
 import { useVoice } from '@/providers/VoiceProvider';
 import { useParticipantMedia } from '@/hooks/useParticipantMedia';
+import { useSelfIdentity } from '@/hooks/useSelfIdentity';
 import { useStageOverlayToggle } from '@/hooks/useStageOverlayToggle';
 import { useParticipantGridLayout } from '@/hooks/useParticipantGridLayout';
 import { useSpeakingIndicator } from '@/hooks/useSpeakingIndicator';
@@ -692,15 +693,26 @@ function ConnectedStage({
   );
 }
 
-/** Otimista: o próprio usuário ainda não está no LiveKit, só entrando. Opacidade baixa + shimmer no card inteiro. */
+/**
+ * Otimista: o próprio usuário ainda não está no LiveKit, só entrando. Opacidade
+ * baixa + shimmer no card inteiro.
+ *
+ * Passa pela máscara de perfil como todo o resto dos canais (ver
+ * useSelfIdentity): este card é o mesmo rosto que o LiveKit vai devolver um
+ * segundo depois, e ler `user` cru fazia quem tem apelido aparecer com o nome
+ * do Discord durante a conexão e trocar de identidade ao conectar. O switch
+ * "usar meu perfil do Discord" também é respeitado aqui, porque a regra é uma
+ * só — `channelsIdentity`.
+ */
 function OptimisticSelfTile({ user }: { user: UserDTO | null }) {
   const tCommon = useTranslations('common');
-  const name = user?.username || tCommon('you');
+  const identity = useSelfIdentity(user);
+  const name = identity?.username || tCommon('you');
 
   return (
     <div className="relative flex w-[110px] flex-col items-center gap-2.5 opacity-50">
       <Avatar
-        image={user?.avatar}
+        image={identity?.avatar}
         fallback={name.slice(0, 2)}
         size={20}
         className="ring-4 ring-transparent ring-offset-4 ring-offset-background"

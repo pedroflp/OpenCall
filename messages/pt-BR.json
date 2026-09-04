@@ -78,12 +78,6 @@
       "away": "Ausente",
       "offline": "Offline"
     },
-    "call": {
-      "idle": "Chamar no Discord",
-      "sending": "Chamando...",
-      "cooldown": "Chamado",
-      "cooldownTooltip": "Aguarde {seconds}s pra chamar de novo"
-    },
     "ring": {
       "idle": "Ligar para entrar",
       "ringing": "Chamando...",
@@ -98,14 +92,10 @@
       "unblock": "Liberar no chat"
     },
     "actions": {
-      "callFailed": "Não deu pra chamar",
       "ringFailed": "Não deu pra ligar",
       "networkFailed": "Falha de rede, tenta de novo.",
       "tryAgainSoon": "Tenta de novo daqui a pouco.",
       "tryAgain": "Tenta de novo.",
-      "callErrors": {
-        "DM_BLOCKED": "Esse usuário não aceita DMs de membros do servidor."
-      },
       "ringErrors": {
         "TARGET_OFFLINE": "Essa pessoa não está online.",
         "CHANNEL_NOT_FOUND": "Canal inválido."
@@ -273,24 +263,11 @@
     },
     "invite": {
       "title": "Convidar para os canais",
-      "description": "Compartilhe o link com quem você quiser, ou chame alguém direto no Discord.",
+      "description": "Compartilhe o link com quem você quiser.",
       "copyLink": "Copiar link",
       "linkCopied": "Link copiado!",
       "copyFailed": "Não deu pra copiar",
-      "copyFailedDescription": "Copie manualmente.",
-      "sendFailed": "Não deu pra enviar",
-      "sendFailedDescription": "Tenta de novo daqui a pouco.",
-      "networkFailedDescription": "Falha de rede, tenta de novo.",
-      "sending": "Enviando…",
-      "sentCooldown": "Enviado — aguarde {seconds}s",
-      "sendToChannel": "Enviar no bate-papo",
-      "sendToDiscord": "Enviar no Discord",
-      "send": "Enviar",
-      "discordUserIdPlaceholder": "ID do usuário no Discord",
-      "howToGetIdLabel": "Como pegar o ID",
-      "howToGetId": "<b>Como pegar o ID</b>: Clique com o botão direito no usuário, \"Copiar ID do usuário\" (se não aparecer, ative o modo desenvolvedor nas configurações).",
-      "someone": "Alguém",
-      "discordMessage": "# {username} está te chamando pra call\nEntra na chamada dos canais do OpenCall 👇\n{url}"
+      "copyFailedDescription": "Copie manualmente."
     },
     "dock": {
       "join": "Entrar",

@@ -78,12 +78,6 @@
       "away": "Away",
       "offline": "Offline"
     },
-    "call": {
-      "idle": "Ping on Discord",
-      "sending": "Pinging...",
-      "cooldown": "Pinged",
-      "cooldownTooltip": "Wait {seconds}s to ping again"
-    },
     "ring": {
       "idle": "Ring them in",
       "ringing": "Ringing...",
@@ -98,14 +92,10 @@
       "unblock": "Unblock in chat"
     },
     "actions": {
-      "callFailed": "Couldn't ping them",
       "ringFailed": "Couldn't ring them",
       "networkFailed": "Network failed, try again.",
       "tryAgainSoon": "Try again in a bit.",
       "tryAgain": "Try again.",
-      "callErrors": {
-        "DM_BLOCKED": "This user doesn't accept DMs from server members."
-      },
       "ringErrors": {
         "TARGET_OFFLINE": "This person isn't online.",
         "CHANNEL_NOT_FOUND": "Invalid channel."
@@ -273,24 +263,11 @@
     },
     "invite": {
       "title": "Invite people to the channels",
-      "description": "Share the link with whoever you want, or ping someone straight on Discord.",
+      "description": "Share the link with whoever you want.",
       "copyLink": "Copy link",
       "linkCopied": "Link copied!",
       "copyFailed": "Couldn't copy",
-      "copyFailedDescription": "Copy it manually.",
-      "sendFailed": "Couldn't send it",
-      "sendFailedDescription": "Try again in a bit.",
-      "networkFailedDescription": "Network failed, try again.",
-      "sending": "Sending…",
-      "sentCooldown": "Sent — wait {seconds}s",
-      "sendToChannel": "Send to the chat",
-      "sendToDiscord": "Send on Discord",
-      "send": "Send",
-      "discordUserIdPlaceholder": "Discord user ID",
-      "howToGetIdLabel": "How to get the ID",
-      "howToGetId": "<b>How to get the ID</b>: right-click the user, \"Copy User ID\" (if you don't see it, turn on developer mode in the settings).",
-      "someone": "Someone",
-      "discordMessage": "# {username} is calling you into a call\nJoin the OpenCall channels 👇\n{url}"
+      "copyFailedDescription": "Copy it manually."
     },
     "dock": {
       "join": "Join",
