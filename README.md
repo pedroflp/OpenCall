@@ -16,7 +16,7 @@ lives.
 
 ## Documentation
 
-Documentation site for [OpenCall](https://github.com/pedroflp/OpenCall).
+Documentation site for [OpenCall](https://opencall.orbtalabs.com/).
 
 ## Development
 
