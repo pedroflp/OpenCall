@@ -13,11 +13,11 @@ export default function VoiceControls({ className }: { className?: string }) {
 
   return (
     <div className={className}>
-      <ControlButton label={micEnabled ? 'Desligar microfone' : 'Ligar microfone'} active={micEnabled} onClick={toggleMic}>
+      <ControlButton label={micEnabled ? t('micOff') : t('micOn')} active={micEnabled} onClick={toggleMic}>
         <HugeIcon name={micEnabled ? 'mic-02' : 'mic-off-02'} size={18} />
       </ControlButton>
 
-      <ControlButton label={deafened ? 'Voltar a ouvir' : 'Silenciar tudo'} active={!deafened} onClick={toggleDeafen}>
+      <ControlButton label={deafened ? t('deafenOff') : t('deafenOn')} active={!deafened} onClick={toggleDeafen}>
         <HugeIcon name={deafened ? 'headphone-mute' : 'headphones'} size={18} />
       </ControlButton>
 

@@ -196,7 +196,7 @@ export default function SelfControlCard({ channelName, user }: { channelName: st
                 onClick={() => toggleScreenShare()}
               >
                 <HugeIcon name="computer" size={20} />
-                {!watching && "Transmitir"}
+                {!watching && t('startStream')}
               </Button>
             )
           )}
@@ -240,13 +240,13 @@ export default function SelfControlCard({ channelName, user }: { channelName: st
           </div>
           <div className="flex shrink-0 items-center gap-0.5">
             <SelfButton
-              label={serverMuted ? 'Silenciado por um administrador de canais' : micEnabled ? 'Desligar microfone' : 'Ligar microfone'}
+              label={serverMuted ? t('micMutedByAdmin') : micEnabled ? t('micOff') : t('micOn')}
               active={!micEnabled}
               onClick={() => toggleMic()}
             >
               <HugeIcon name={micEnabled ? 'mic-02' : 'mic-off-02'} size={19} />
             </SelfButton>
-            <SelfButton label={deafened ? 'Voltar a ouvir' : 'Silenciar tudo'} active={deafened} onClick={() => toggleDeafen()}>
+            <SelfButton label={deafened ? t('deafenOff') : t('deafenOn')} active={deafened} onClick={() => toggleDeafen()}>
               <HugeIcon name={deafened ? 'headphone-mute' : 'headphones'} size={19} />
             </SelfButton>
             <Tooltip>

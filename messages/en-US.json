@@ -192,7 +192,12 @@
       "leaveStream": "Leave stream",
       "settings": "Settings",
       "leaveChannel": "Leave channel",
-      "soundEffects": "Sound effects"
+      "soundEffects": "Sound effects",
+      "micOn": "Turn microphone on",
+      "micOff": "Turn microphone off",
+      "micMutedByAdmin": "Muted by a channel admin",
+      "deafenOn": "Mute everything",
+      "deafenOff": "Resume listening"
     },
     "sidebar": {
       "channelOptions": "Channel options",
