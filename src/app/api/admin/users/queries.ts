@@ -4,7 +4,7 @@ import type { AdminUserDTO } from './types';
 
 export async function listAdminUsers(): Promise<AdminUserDTO[]> {
   const dbUsers = await prisma.user.findMany({
-    select: { id: true, username: true, avatar: true, groups: true, roles: true },
+    select: { id: true, username: true, avatar: true, groups: true, roles: true, bannedAt: true },
     orderBy: { username: 'asc' },
   });
 
@@ -14,5 +14,6 @@ export async function listAdminUsers(): Promise<AdminUserDTO[]> {
     avatar: user.avatar,
     groups: user.groups,
     roles: mapPrismaRoles(user.roles),
+    bannedAt: user.bannedAt?.toISOString() ?? null,
   }));
 }

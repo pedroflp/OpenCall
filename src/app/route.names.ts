@@ -8,6 +8,7 @@ export const routeNames = {
   // getDefaultTextChannelId) — '/text/<channelId>' abre um canal específico.
   CHANNEL_TEXT: '/text',
   CHANNEL_TEXT_ID: (channelId: string) => `/text/${channelId}`,
+  DM: (conversationId: string) => `/dm/${conversationId}`,
   ADMIN: '/admin',
   ADMIN_CHANNELS: '/admin/channels',
   // Página pública (sem canalAccess) — só existe pra dar uma prévia rica

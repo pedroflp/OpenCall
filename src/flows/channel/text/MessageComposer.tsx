@@ -176,7 +176,7 @@ function AttachmentPreview({ attachment, onRemove }: { attachment: PendingAttach
 }
 
 export default function MessageComposer({
-  channelId,
+  onTypingNotify,
   onSend,
   replyTarget,
   onCancelReply,
@@ -189,8 +189,10 @@ export default function MessageComposer({
   onClear,
   blocked,
   currentUser,
+  allowMentions = true,
 }: {
-  channelId: string;
+  /** Throttle de digitando já embutido aqui dentro — quem chama só decide PRA ONDE (canal ou DM). */
+  onTypingNotify: () => void;
   onSend: (input: SendMessageInput) => Promise<SendMessageResult>;
   replyTarget: ClientMessage | null;
   onCancelReply: () => void;
@@ -204,6 +206,8 @@ export default function MessageComposer({
   onClear: (count: number) => Promise<void>;
   blocked: boolean;
   currentUser: CurrentUser;
+  /** false em DM: não existe @menção fora de canal. */
+  allowMentions?: boolean;
 }) {
   const t = useTranslations('chat.composer');
   const [text, setText] = useState('');
@@ -232,7 +236,7 @@ export default function MessageComposer({
   const clearCount = canClear ? matchClearCommand(text) : null;
   const isClearCommand = clearCount !== null;
 
-  const mentionTrigger = useMemo(() => findMentionTrigger(text, caretPosition), [text, caretPosition]);
+  const mentionTrigger = useMemo(() => (allowMentions ? findMentionTrigger(text, caretPosition) : null), [allowMentions, text, caretPosition]);
   const mentionTriggerKey = mentionTrigger ? `${mentionTrigger.start}:${mentionTrigger.query}` : null;
   const matchingUsers = useMemo(() => {
     if (!mentionTrigger) return [];
@@ -258,12 +262,8 @@ export default function MessageComposer({
     const now = Date.now();
     if (now < nextTypingAtRef.current) return;
     nextTypingAtRef.current = now + TYPING_THROTTLE_MS;
-    fetch('/api/chat/typing', {
-      method: 'POST',
-      headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify({ channelId }),
-    }).catch(() => { });
-  }, [channelId]);
+    onTypingNotify();
+  }, [onTypingNotify]);
 
   const resizeTextarea = useCallback(() => {
     const el = textareaRef.current;

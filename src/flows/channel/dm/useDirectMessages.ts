@@ -1,25 +1,18 @@
 'use client';
 
 import { useCallback, useEffect, useRef, useState } from 'react';
-import type { MessageDTO } from '@/lib/chat/dto';
-import type { ChatEvent } from '@/lib/chat/signal';
-import { subscribeToChatConnection, subscribeToChatResync } from '@/lib/chat/realtime';
-import type { ClientMessage, CurrentUser, SendMessageInput, SendMessageResult } from './types';
+import type { BaseMessageDTO } from '@/lib/chat/dto';
+import { subscribeToDmConnection, subscribeToDmResync } from '@/lib/dm/realtime';
+import type { DmEvent } from '@/lib/dm/signal';
+import type { ClientMessage, CurrentUser, SendMessageInput, SendMessageResult } from '@/flows/channel/text/types';
 
 const UPLOADS_URL = '/api/chat/uploads';
 
-export interface ClearMessagesResult {
-  ok: boolean;
-  error?: string;
-  count?: number;
+function messagesUrl(conversationId: string): string {
+  return `/api/dm/messages?conversationId=${encodeURIComponent(conversationId)}`;
 }
 
-/**
- * XMLHttpRequest, não fetch: é a única API do browser que expõe progresso de
- * upload (`upload.onprogress`), e sem barra de progresso um vídeo de 80MB
- * parece travado. O arquivo vai como corpo cru — nome e tamanho na query (ver
- * ADR-0011).
- */
+/** XMLHttpRequest, não fetch: única API do browser com progresso de upload (ver useChatMessages.ts do canal geral). */
 function uploadAttachmentFile(file: File, onProgress: (fraction: number) => void): Promise<{ key: string }> {
   return new Promise((resolve, reject) => {
     const xhr = new XMLHttpRequest();
@@ -38,7 +31,7 @@ function uploadAttachmentFile(file: File, onProgress: (fraction: number) => void
   });
 }
 
-/** Best-effort: upload terminou mas a mensagem nunca foi criada (ver deleteAttachment em storage.ts) — nunca deixa a UI esperando por isso. */
+/** Best-effort: upload terminou mas a mensagem nunca foi criada — nunca deixa a UI esperando por isso. */
 function deleteOrphanAttachment(key: string): void {
   fetch(`${UPLOADS_URL}?key=${encodeURIComponent(key)}`, { method: 'DELETE' }).catch(() => {});
 }
@@ -50,13 +43,8 @@ function sortByCreatedAt(messages: ClientMessage[]): ClientMessage[] {
   });
 }
 
-/**
- * Uma mensagem real (chegada por resposta do POST ou por SSE, o que vier
- * primeiro) nunca é duplicada: se o id já existe, no-op; se existe uma
- * otimista pendente com o mesmo nonce, ela é promovida; senão, é anexada —
- * é o dedupe de A5 na RFC-008, compartilhado pelos dois caminhos de chegada.
- */
-function upsertFromServer(prev: ClientMessage[], dto: MessageDTO, clientNonce?: string): ClientMessage[] {
+/** Mesmo dedupe de useChatMessages.ts — mensagem real (POST ou SSE, o que chegar primeiro) nunca duplica. */
+function upsertFromServer(prev: ClientMessage[], dto: BaseMessageDTO, clientNonce?: string): ClientMessage[] {
   if (prev.some((m) => m.id === dto.id)) return prev;
 
   const optimisticIndex = clientNonce ? prev.findIndex((m) => m.clientNonce === clientNonce && m.status !== 'sent') : -1;
@@ -70,43 +58,44 @@ function upsertFromServer(prev: ClientMessage[], dto: MessageDTO, clientNonce?: 
 }
 
 interface MessagesPage {
-  messages: MessageDTO[];
+  messages: BaseMessageDTO[];
   nextCursor: string | null;
-  blocked: boolean;
 }
 
-export function useChatMessages(channelId: string, currentUser: CurrentUser | null) {
+/**
+ * Espelha useChatMessages.ts (canal geral) — mesmo tamanho e forma, mirando
+ * os endpoints de DM. Sem mentionedUserIds/blocked/clearMessages: não
+ * existem em DM.
+ */
+export function useDirectMessages(conversationId: string, currentUser: CurrentUser | null) {
   const [messages, setMessages] = useState<ClientMessage[]>([]);
   const [loadingInitial, setLoadingInitial] = useState(true);
   const [loadingOlder, setLoadingOlder] = useState(false);
   const [hasMore, setHasMore] = useState(true);
-  const [blocked, setBlocked] = useState(false);
   const nextCursorRef = useRef<string | null>(null);
   const loadingOlderRef = useRef(false);
   const pendingInputsRef = useRef<Map<string, SendMessageInput>>(new Map());
-  const messagesUrl = `/api/chat/messages?channelId=${encodeURIComponent(channelId)}`;
 
   const loadInitial = useCallback(async () => {
     setLoadingInitial(true);
     try {
-      const response = await fetch(messagesUrl);
+      const response = await fetch(messagesUrl(conversationId));
       if (!response.ok) return;
       const data = (await response.json()) as MessagesPage;
       setMessages(sortByCreatedAt(data.messages.map((message) => ({ ...message, status: 'sent' as const }))));
       nextCursorRef.current = data.nextCursor;
       setHasMore(Boolean(data.nextCursor));
-      setBlocked(data.blocked);
     } finally {
       setLoadingInitial(false);
     }
-  }, [messagesUrl]);
+  }, [conversationId]);
 
   const loadOlder = useCallback(async () => {
     if (!nextCursorRef.current || loadingOlderRef.current) return;
     loadingOlderRef.current = true;
     setLoadingOlder(true);
     try {
-      const response = await fetch(`${messagesUrl}&cursor=${encodeURIComponent(nextCursorRef.current)}`);
+      const response = await fetch(`${messagesUrl(conversationId)}&cursor=${encodeURIComponent(nextCursorRef.current)}`);
       if (!response.ok) return;
       const data = (await response.json()) as MessagesPage;
       const older = sortByCreatedAt(data.messages.map((message) => ({ ...message, status: 'sent' as const })));
@@ -117,11 +106,11 @@ export function useChatMessages(channelId: string, currentUser: CurrentUser | nu
       loadingOlderRef.current = false;
       setLoadingOlder(false);
     }
-  }, [messagesUrl]);
+  }, [conversationId]);
 
   const resync = useCallback(async () => {
     try {
-      const response = await fetch(messagesUrl);
+      const response = await fetch(messagesUrl(conversationId));
       if (!response.ok) return;
       const data = (await response.json()) as MessagesPage;
       setMessages((prev) => {
@@ -129,37 +118,29 @@ export function useChatMessages(channelId: string, currentUser: CurrentUser | nu
         const fresh = data.messages.filter((m) => !existingIds.has(m.id)).map((m) => ({ ...m, status: 'sent' as const }));
         return fresh.length === 0 ? prev : sortByCreatedAt([...prev, ...fresh]);
       });
-      setBlocked(data.blocked);
     } catch {
       // Próxima reconexão tenta de novo.
     }
-  }, [messagesUrl]);
+  }, [conversationId]);
 
   useEffect(() => {
     void loadInitial();
   }, [loadInitial]);
 
+  // O stream /api/dm/events cobre TODAS as conversas do usuário — filtra
+  // pela conversa aberta, senão um evento de outra conversa vazaria pra cá.
   useEffect(() => {
-    return subscribeToChatConnection((event: ChatEvent) => {
-      // Uma única conexão SSE por aba cobre todos os canais (ver realtime.ts)
-      // — cada hook filtra pelo canal que está exibindo.
+    return subscribeToDmConnection((event: DmEvent) => {
+      if (event.conversationId !== conversationId) return;
       if (event.type === 'message') {
-        if (event.channelId !== channelId) return;
         setMessages((prev) => upsertFromServer(prev, event.message, event.clientNonce));
       } else if (event.type === 'deleted') {
-        if (event.channelId !== channelId) return;
         setMessages((prev) => prev.filter((m) => m.id !== event.id));
-      } else if (event.type === 'cleared') {
-        if (event.channelId !== channelId) return;
-        const clearedIds = new Set(event.ids);
-        setMessages((prev) => prev.filter((m) => !clearedIds.has(m.id)));
-      } else if (event.type === 'blocked' && event.userId === currentUser?.id) {
-        setBlocked(event.blocked);
       }
     });
-  }, [channelId, currentUser?.id]);
+  }, [conversationId]);
 
-  useEffect(() => subscribeToChatResync(() => void resync()), [resync]);
+  useEffect(() => subscribeToDmResync(() => void resync()), [resync]);
 
   const sendMessage = useCallback(
     async (input: SendMessageInput): Promise<SendMessageResult> => {
@@ -170,10 +151,6 @@ export function useChatMessages(channelId: string, currentUser: CurrentUser | nu
       const optimistic: ClientMessage = {
         id: clientNonce,
         content: input.content,
-        // Preview local (blob:) — a key real só existe depois do upload logo
-        // abaixo, então ainda não há URL pública pra apontar. `kind` e `mime`
-        // são o palpite do cliente; o DTO do servidor sobrescreve os dois na
-        // confirmação (ver ADR-0013).
         attachment: input.attachment
           ? {
               kind: input.attachment.kind,
@@ -201,8 +178,6 @@ export function useChatMessages(channelId: string, currentUser: CurrentUser | nu
       const trackProgress = (fraction: number) =>
         setMessages((prev) => prev.map((m) => (m.clientNonce === clientNonce ? { ...m, uploadProgress: fraction } : m)));
 
-      // Sobe o arquivo só agora — anexo descartado antes do envio nunca chega
-      // a existir no R2 (ver useChatAttachment).
       let uploadedKey: string | null = null;
 
       try {
@@ -211,14 +186,12 @@ export function useChatMessages(channelId: string, currentUser: CurrentUser | nu
           uploadedKey = uploaded.key;
         }
 
-        const response = await fetch('/api/chat/messages', {
+        const response = await fetch('/api/dm/messages', {
           method: 'POST',
           headers: { 'Content-Type': 'application/json' },
           body: JSON.stringify({
-            channelId,
+            conversationId,
             content: input.content,
-            // Só a chave e o metadado de apresentação: espécie, mime, tamanho e
-            // nome o servidor tira do próprio objeto (ver §5.4 da RFC).
             attachment:
               uploadedKey && input.attachment
                 ? {
@@ -229,7 +202,6 @@ export function useChatMessages(channelId: string, currentUser: CurrentUser | nu
                   }
                 : null,
             replyToId: input.replyToId,
-            mentionedUserIds: input.mentions.map((mention) => mention.id),
             clientNonce,
           }),
         });
@@ -241,7 +213,7 @@ export function useChatMessages(channelId: string, currentUser: CurrentUser | nu
           return { ok: false, error: data?.error, retryAfterMs: data?.retryAfterMs };
         }
 
-        const dto = (await response.json()) as MessageDTO & { clientNonce: string };
+        const dto = (await response.json()) as BaseMessageDTO & { clientNonce: string };
         pendingInputsRef.current.delete(clientNonce);
         setMessages((prev) => upsertFromServer(prev, dto, clientNonce));
         if (input.attachment) URL.revokeObjectURL(input.attachment.previewUrl);
@@ -252,7 +224,7 @@ export function useChatMessages(channelId: string, currentUser: CurrentUser | nu
         return { ok: false, error: error instanceof Error ? error.message : 'NETWORK_ERROR' };
       }
     },
-    [channelId, currentUser],
+    [conversationId, currentUser],
   );
 
   const discardMessage = useCallback((clientNonce: string) => {
@@ -266,26 +238,6 @@ export function useChatMessages(channelId: string, currentUser: CurrentUser | nu
   const removeMessage = useCallback((id: string) => {
     setMessages((prev) => prev.filter((m) => m.id !== id));
   }, []);
-
-  const clearMessages = useCallback(async (count: number): Promise<ClearMessagesResult> => {
-    try {
-      const response = await fetch('/api/chat/messages/clear', {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ channelId, count }),
-      });
-      if (!response.ok) {
-        const data = (await response.json().catch(() => null)) as { error?: string } | null;
-        return { ok: false, error: data?.error };
-      }
-      const data = (await response.json()) as { deletedIds: string[] };
-      const clearedIds = new Set(data.deletedIds);
-      setMessages((prev) => prev.filter((m) => !clearedIds.has(m.id)));
-      return { ok: true, count: data.deletedIds.length };
-    } catch {
-      return { ok: false, error: 'NETWORK_ERROR' };
-    }
-  }, [channelId]);
 
   const retryMessage = useCallback(
     (clientNonce: string) => {
@@ -303,12 +255,10 @@ export function useChatMessages(channelId: string, currentUser: CurrentUser | nu
     loadingInitial,
     loadingOlder,
     hasMore,
-    blocked,
     loadOlder,
     sendMessage,
     retryMessage,
     discardMessage,
     removeMessage,
-    clearMessages,
   };
 }

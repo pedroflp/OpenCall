@@ -94,11 +94,16 @@ export const authOptions: AuthOptions = {
       // middleware lê, cru, sem chamar este callback. Vale a query.
       if (token.id && (account || trigger === 'update' || rolesStale)) {
         try {
-          const dbUser = await prisma.user.findUnique({ where: { id: token.id as string }, select: { roles: true } });
+          const dbUser = await prisma.user.findUnique({ where: { id: token.id as string }, select: { roles: true, bannedAt: true } });
           const roles = dbUser ? mapPrismaRoles(dbUser.roles) : undefined;
-          token.canalAccess = hasCanalAccess(roles);
-          token.isAdmin = Boolean(roles?.includes(UserRoles.ADMIN));
-          token.isChannelsAdmin = hasChannelsAdminAccess(roles);
+          // bannedAt sobrepõe `roles` de propósito (ver POST /api/admin/users/
+          // [userId]/ban): sem isso, reativar o toggle de CANAL_ACCESS num
+          // usuário banido devolveria acesso na sessão mesmo sem desbanir —
+          // o carimbo é quem de fato tranca, os roles sozinhos não bastam.
+          const banned = Boolean(dbUser?.bannedAt);
+          token.canalAccess = !banned && hasCanalAccess(roles);
+          token.isAdmin = !banned && Boolean(roles?.includes(UserRoles.ADMIN));
+          token.isChannelsAdmin = !banned && hasChannelsAdminAccess(roles);
           token.rolesFetchedAt = Date.now();
         } catch (err) {
           console.error('[jwt] fetch canalAccess failed:', err);

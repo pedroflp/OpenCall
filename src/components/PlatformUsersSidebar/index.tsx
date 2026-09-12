@@ -1,6 +1,7 @@
 'use client';
 
 import { useEffect, useState } from 'react';
+import { useRouter } from 'next/navigation';
 import { useSession } from 'next-auth/react';
 import { formatDistanceToNow } from 'date-fns';
 import type { Locale as DateFnsLocale } from 'date-fns';
@@ -15,6 +16,8 @@ import { PlatformUsersSidebarSkeleton } from './Skeleton';
 import { usePlatformPresenceUsers } from '@/hooks/usePlatformPresenceUsers';
 import { useRingAction, type RingStatus } from '@/hooks/useRingAction';
 import { useChatBlockAction } from '@/hooks/useChatBlockAction';
+import { refreshDirectConversations } from '@/hooks/useDirectConversations';
+import { routeNames } from '@/app/route.names';
 import type { PresenceStatus, PlatformPresenceUser } from '@/lib/presence/platformPresence';
 import type { GroupDTO } from '@/app/api/groups/types';
 import { cn } from '@/lib/utils';
@@ -148,6 +151,47 @@ function RingToJoinAction({ targetUserId, targetVoiceChannelId }: { targetUserId
   );
 }
 
+/**
+ * Manda pra DM com este usuário — acha-ou-cria a conversa e navega. Sem gate
+ * de admin nem de `chatBlocked`: bloqueio de chat é moderação do canal
+ * público, não se aplica a DM.
+ */
+function SendDmAction({ targetUserId, onDone }: { targetUserId: string; onDone: () => void }) {
+  const t = useTranslations('dm.picker');
+  const router = useRouter();
+  const [pending, setPending] = useState(false);
+
+  const start = async () => {
+    setPending(true);
+    try {
+      const response = await fetch('/api/dm/conversations', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ userId: targetUserId }),
+      });
+      if (!response.ok) return;
+      const data = (await response.json()) as { id: string };
+      onDone();
+      refreshDirectConversations();
+      router.push(routeNames.DM(data.id));
+    } finally {
+      setPending(false);
+    }
+  };
+
+  return (
+    <button
+      type="button"
+      disabled={pending}
+      onClick={() => void start()}
+      className="flex w-full items-center gap-2 rounded-sm px-2 py-1.5 text-left text-sm transition-colors hover:bg-secondary disabled:cursor-not-allowed disabled:opacity-50"
+    >
+      <HugeIcon name="bubble-chat" size={16} />
+      {t('sendMessage')}
+    </button>
+  );
+}
+
 /** Toggle de bloqueio de envio no chat — só aparece pra channels_admin (ver hasChannelsAdminAccess), mesma régua do /clear e do kick de voz. */
 function ChatBlockAction({ targetUserId, blocked, onDone }: { targetUserId: string; blocked: boolean; onDone: () => void }) {
   const t = useTranslations('presence.chatBlock');
@@ -186,10 +230,10 @@ function PlatformUserRow({
   const t = useTranslations('presence');
   const dateFnsLocale = useDateFnsLocale();
   const [menuOpen, setMenuOpen] = useState(false);
-  // Sem ação nenhuma dentro, o popover seria só o cabeçalho com o nome que a
-  // linha já mostra — por isso o menu depende de haver ao menos uma: ligar
-  // (só pra quem não está offline) ou bloquear o chat (só pra channels_admin).
-  const showMenu = user.id !== currentUserId && (user.activeStatus !== 'offline' || viewerIsChannelsAdmin);
+  // "Enviar mensagem" está sempre disponível pra outro usuário (DM não exige
+  // presença), então o menu sempre tem ao menos uma ação — diferente de
+  // antes, quando dependia de ligar (só online) ou bloquear (só admin).
+  const showMenu = user.id !== currentUserId;
   const lastActiveLabel = formatLastActive(user.lastActiveAt, dateFnsLocale);
   // Só reflete o estado da MINHA própria ligação (outgoingCallTargetId vive no
   // CallProvider deste client) — quem recebe a ligação nunca vê isso na lista.
@@ -252,17 +296,15 @@ function PlatformUserRow({
 
           <Separator className="my-1" />
 
-          {user.activeStatus !== 'offline' && (
-            <>
-              <RingToJoinAction targetUserId={user.id} targetVoiceChannelId={user.voiceChannelId} />
-              {/* Separador só entre DUAS seções — com o alvo offline o bloqueio
-                  de chat é o único item, e ele já vem logo abaixo do cabeçalho. */}
-              {viewerIsChannelsAdmin && <Separator className="my-1" />}
-            </>
-          )}
+          <SendDmAction targetUserId={user.id} onDone={() => setMenuOpen(false)} />
+
+          {user.activeStatus !== 'offline' && <RingToJoinAction targetUserId={user.id} targetVoiceChannelId={user.voiceChannelId} />}
 
           {viewerIsChannelsAdmin && (
-            <ChatBlockAction targetUserId={user.id} blocked={user.chatBlocked} onDone={() => setMenuOpen(false)} />
+            <>
+              <Separator className="my-1" />
+              <ChatBlockAction targetUserId={user.id} blocked={user.chatBlocked} onDone={() => setMenuOpen(false)} />
+            </>
           )}
         </PopoverContent>
       )}

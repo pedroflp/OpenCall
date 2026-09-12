@@ -1,9 +1,14 @@
-import type { MessageDTO } from '@/lib/chat/dto';
+import type { BaseMessageDTO } from '@/lib/chat/dto';
 import type { AttachmentKind } from '@/lib/chat/attachments';
 
 export type MessageStatus = 'sent' | 'sending' | 'error';
 
-export interface ClientMessage extends MessageDTO {
+/**
+ * Sem `channelId`: este tipo é compartilhado entre o chat de canal e o de DM
+ * (ver flows/channel/dm/useDirectMessages.ts) — nenhum dos componentes que o
+ * consomem (MessageItem, MessageList, MessageComposer) lê esse campo.
+ */
+export interface ClientMessage extends BaseMessageDTO {
   clientNonce?: string;
   status: MessageStatus;
   /** 0..1 enquanto os bytes sobem — só existe em mensagem otimista com anexo (ver useChatMessages). */
@@ -34,8 +39,8 @@ export interface SendMessageInput {
   content: string | null;
   attachment: PendingUpload | null;
   replyToId: string | null;
-  replyToPreview: MessageDTO['replyTo'];
-  mentions: MessageDTO['mentions'];
+  replyToPreview: BaseMessageDTO['replyTo'];
+  mentions: BaseMessageDTO['mentions'];
 }
 
 export interface SendMessageResult {

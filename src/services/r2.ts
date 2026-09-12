@@ -6,16 +6,23 @@ import { S3Client } from '@aws-sdk/client-s3';
 const GLOBAL_KEY = '__opencallR2Cache__';
 const cache = globalThis as unknown as { [GLOBAL_KEY]?: S3Client };
 
-// R2_ENDPOINT só existe pro docker-compose local (aponta pro MinIO em vez do
-// R2 de verdade) — em produção fica vazio e o endpoint é sempre o da
-// Cloudflare. forcePathStyle é exigido pelo MinIO (bucket no path, não em
-// subdomínio); R2 aceita os dois modos então ligar não quebra nada.
+// R2_ENDPOINT aponta pra qualquer storage compatível com S3 que não seja o R2:
+// o MinIO do docker-compose local, e o Neon Object Storage no caminho da demo
+// (ver docs/armazenamento). Vazio = R2 da Cloudflare, o padrão.
+// forcePathStyle é exigido tanto pelo MinIO quanto pelo Neon (bucket no path,
+// não em subdomínio); R2 aceita os dois modos, então ligar não quebra nada.
 const endpoint = process.env.R2_ENDPOINT || `https://${process.env.R2_ACCOUNT_ID}.r2.cloudflarestorage.com`;
+
+// A região entra no escopo da assinatura SigV4, então ela não é decorativa: o
+// R2 exige literalmente "auto" (é o default aqui), enquanto um endpoint que
+// implementa o protocolo de verdade valida a região real da conta — o Neon
+// documenta us-east-2 / eu-central-1. O MinIO ignora, qualquer valor serve.
+const region = process.env.R2_REGION || 'auto';
 
 export const r2: S3Client =
   cache[GLOBAL_KEY] ??
   new S3Client({
-    region: 'auto',
+    region,
     endpoint,
     forcePathStyle: Boolean(process.env.R2_ENDPOINT),
     // Sem checksum de requisição por padrão. Com corpo STREAMADO (o upload de

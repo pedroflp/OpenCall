@@ -41,9 +41,14 @@ export interface AttachmentDTO {
   durationMs: number | null;
 }
 
-export interface MessageDTO {
+/**
+ * Forma compartilhada entre mensagem de canal e de DM (ver lib/dm/dto.ts) — os
+ * componentes de exibição (MessageItem, MessageList, MessageContent) são os
+ * MESMOS nos dois casos e nunca leem `channelId`, só o que está aqui. DM não
+ * tem @menção (sempre `mentions: []`), mas satisfaz o mesmo shape.
+ */
+export interface BaseMessageDTO {
   id: string;
-  channelId: string;
   content: string | null;
   attachment: AttachmentDTO | null;
   author: { id: string; username: string; avatar: string };
@@ -62,7 +67,23 @@ export interface MessageDTO {
   createdAt: string;
 }
 
-function toAttachmentDTO(row: MessageWithRelations): AttachmentDTO | null {
+export interface MessageDTO extends BaseMessageDTO {
+  channelId: string;
+}
+
+/** Campos de anexo — mesmas colunas em TextMessage e DirectMessage (ver lib/dm/dto.ts), daí virar função exportada em vez de ficar presa a MessageWithRelations. */
+export interface AttachmentColumns {
+  attachmentKey: string | null;
+  attachmentKind: AttachmentKind | null;
+  attachmentName: string | null;
+  attachmentMime: string | null;
+  attachmentBytes: number | null;
+  attachmentWidth: number | null;
+  attachmentHeight: number | null;
+  attachmentDurationMs: number | null;
+}
+
+export function toAttachmentDTO(row: AttachmentColumns): AttachmentDTO | null {
   if (!row.attachmentKey || !row.attachmentKind || row.attachmentBytes == null) return null;
 
   return {

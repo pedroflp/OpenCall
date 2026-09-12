@@ -74,6 +74,15 @@ model User {
   /// por canal.
   chatBlocked Boolean @default(false) @map("chat_blocked")
 
+  /// Banimento de verdade, distinto do toggle de CANAL_ACCESS (ver
+  /// POST/DELETE /api/admin/users/[userId]/ban): banir tira CANAL_ACCESS e
+  /// CHANNELS_ACCESS de `roles` E marca esse carimbo, que /api/invite/redeem
+  /// passa a checar — sem ele, um banido resgataria acesso de volta com
+  /// qualquer convite novo, já que roles por si só não impede resgate.
+  /// Desbanir só zera o carimbo; devolver os roles é ação separada do admin.
+  bannedAt   DateTime? @map("banned_at")
+  bannedById String?   @map("banned_by_id")
+
   /// true depois que o usuário marca "Não mostrar novamente" no popup de
   /// instalar como app (ver InstallAppButton) — para de aparecer em qualquer
   /// janela/dispositivo mobile dele daí em diante.
@@ -118,6 +127,11 @@ model User {
 
   textMessages        TextMessage[]        @relation("TextMessageAuthor")
   textMessageMentions TextMessageMention[]
+
+  directConversationsAsA  DirectConversation[]     @relation("DirectConversationAsA")
+  directConversationsAsB  DirectConversation[]     @relation("DirectConversationAsB")
+  directMessages          DirectMessage[]          @relation("DirectMessageAuthor")
+  directConversationReads DirectConversationRead[]
 
   @@map("users")
 }
@@ -254,6 +268,94 @@ model TextChannelRead {
   @@id([userId, channelId])
   @@index([channelId])
   @@map("text_channel_reads")
+}
+
+/// Conversa 1:1 entre dois usuários (ver docs/rfc-mensagens-diretas.md).
+/// `participantAId` é sempre o MENOR id string dos dois — não "quem iniciou".
+/// Isso é o que permite achar-ou-criar via upsert sobre o unique composto:
+/// duas pessoas mandando "iniciar conversa" uma pra outra ao mesmo tempo
+/// resolvem pro mesmo par, e o Postgres resolve a corrida sozinho (ver
+/// orderParticipants em lib/dm/access.ts).
+model DirectConversation {
+  id String @id @default(cuid())
+
+  participantAId String @map("participant_a_id")
+  participantA   User   @relation("DirectConversationAsA", fields: [participantAId], references: [id], onDelete: Cascade)
+
+  participantBId String @map("participant_b_id")
+  participantB   User   @relation("DirectConversationAsB", fields: [participantBId], references: [id], onDelete: Cascade)
+
+  createdAt DateTime @default(now()) @map("created_at")
+
+  /// Bump a cada mensagem nova — evita agregar `messages` só pra ordenar a
+  /// lista de conversas por atividade recente.
+  lastMessageAt DateTime? @map("last_message_at")
+
+  messages DirectMessage[]
+  reads    DirectConversationRead[]
+
+  @@unique([participantAId, participantBId], name: "participantPair")
+  @@index([participantAId, lastMessageAt(sort: Desc)])
+  @@index([participantBId, lastMessageAt(sort: Desc)])
+  @@map("direct_conversations")
+}
+
+model DirectMessage {
+  id             String             @id @default(cuid())
+  conversationId String             @map("conversation_id")
+  conversation   DirectConversation @relation(fields: [conversationId], references: [id], onDelete: Cascade)
+
+  authorId String @map("author_id")
+  author   User   @relation("DirectMessageAuthor", fields: [authorId], references: [id], onDelete: Cascade)
+
+  /// Null quando a mensagem é só anexo — mesmo invariante de TextMessage
+  /// (ao menos um entre content e attachmentKey, checado na rota).
+  content String? @db.VarChar(2000)
+
+  /// Mesmas colunas de anexo de TextMessage (ver ADR-0012/0013) — sem
+  /// @menção (não existe DM com @menção) e sem reação (fora do escopo do
+  /// primeiro porte de DM, ver docs/rfc-mensagens-diretas.md).
+  attachmentKind       AttachmentKind? @map("attachment_kind")
+  attachmentKey        String?         @map("attachment_key")
+  attachmentName       String?         @map("attachment_name")
+  attachmentMime       String?         @map("attachment_mime")
+  attachmentBytes      Int?            @map("attachment_bytes")
+  attachmentWidth      Int?            @map("attachment_width")
+  attachmentHeight     Int?            @map("attachment_height")
+  attachmentDurationMs Int?            @map("attachment_duration_ms")
+
+  /// SetNull, não Cascade — mesmo motivo de TextMessage.replyTo.
+  replyToId String?         @map("reply_to_id")
+  replyTo   DirectMessage?  @relation("DirectMessageReply", fields: [replyToId], references: [id], onDelete: SetNull)
+  replies   DirectMessage[] @relation("DirectMessageReply")
+
+  createdAt DateTime  @default(now()) @map("created_at")
+  deletedAt DateTime? @map("deleted_at")
+  deletedBy String?   @map("deleted_by")
+
+  @@index([conversationId, createdAt(sort: Desc), id(sort: Desc)])
+  @@index([replyToId])
+  @@map("direct_messages")
+}
+
+/// Estado de leitura por usuário e conversa — mesmo desenho de
+/// TextChannelRead, mais `hiddenAt` (não existe em canal de texto):
+/// "remover da barra lateral" sem apagar nada, reaparece sozinha quando chega
+/// mensagem nova ou a conversa é reaberta pelo picker de nova DM.
+model DirectConversationRead {
+  userId String @map("user_id")
+  user   User   @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  conversationId String             @map("conversation_id")
+  conversation   DirectConversation @relation(fields: [conversationId], references: [id], onDelete: Cascade)
+
+  lastReadMessageId String?   @map("last_read_message_id")
+  updatedAt         DateTime  @updatedAt @map("updated_at")
+  hiddenAt          DateTime? @map("hidden_at")
+
+  @@id([userId, conversationId])
+  @@index([conversationId])
+  @@map("direct_conversation_reads")
 }
 
 /// Amostra horária de CPU/RAM/disco/rede da VPS do LiveKit (ver

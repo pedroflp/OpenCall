@@ -4,6 +4,9 @@ import { useTranslations } from 'next-intl';
 import { useEffect, useState } from 'react';
 import { useAdminRefresh } from '@/flows/admin/refresh';
 import Avatar from '@/components/Avatar';
+import { Badge } from '@/components/ui/badge';
+import { Button } from '@/components/ui/button';
+import { Dialog, DialogContent, DialogDescription, DialogFooter, DialogTitle } from '@/components/ui/dialog';
 import { Switch } from '@/components/ui/switch';
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from '@/components/ui/table';
 import { Tooltip, TooltipContent, TooltipTrigger } from '@/components/ui/tooltip';
@@ -39,6 +42,86 @@ function useRoleToggle(endpoint: string, serverChecked: boolean, onChanged: () =
   return { checked, pending, toggle };
 }
 
+/**
+ * Diferente do toggle de OpenCall access (só flipa CANAL_ACCESS — qualquer
+ * convite novo devolve o acesso), banir marca `bannedAt` no usuário, o que
+ * POST /api/invite/redeem passa a recusar: de verdade tira a pessoa do
+ * OpenCall, não só desliga o acesso atual. Também derruba a call ativa dela
+ * (ver POST /api/admin/users/[userId]/ban). Reversível — desbanir só solta o
+ * bloqueio de resgate, não devolve o role sozinho — mas exige confirmação por
+ * ser destrutivo o bastante pra merecer o passo a mais.
+ */
+function BanUserAction({ user, disabled, onChanged }: { user: AdminUserDTO; disabled: boolean; onChanged: () => void }) {
+  const t = useTranslations('admin.users.ban');
+  const tAdmin = useTranslations('admin');
+  const { toast } = useToast();
+  const [open, setOpen] = useState(false);
+  const [pending, setPending] = useState(false);
+  const banned = Boolean(user.bannedAt);
+
+  async function handleUnban() {
+    setPending(true);
+    try {
+      const response = await fetch(`/api/admin/users/${user.id}/ban`, { method: 'DELETE' });
+      if (!response.ok) throw new Error();
+      onChanged();
+    } catch {
+      toast({ title: t('unbanFailed'), description: tAdmin('tryAgainSoon'), variant: 'destructive' });
+    } finally {
+      setPending(false);
+    }
+  }
+
+  async function handleBan() {
+    setPending(true);
+    try {
+      const response = await fetch(`/api/admin/users/${user.id}/ban`, { method: 'POST' });
+      if (!response.ok) throw new Error();
+      setOpen(false);
+      onChanged();
+    } catch {
+      toast({ title: t('banFailed'), description: tAdmin('tryAgainSoon'), variant: 'destructive' });
+    } finally {
+      setPending(false);
+    }
+  }
+
+  if (banned) {
+    return (
+      <div className="flex items-center gap-2">
+        <Badge variant="destructive">{t('bannedBadge')}</Badge>
+        <Button type="button" variant="outline" size="sm" onClick={() => void handleUnban()} loading={pending}>
+          {t('unban')}
+        </Button>
+      </div>
+    );
+  }
+
+  return (
+    <>
+      <Button type="button" variant="destructive" size="sm" disabled={disabled} onClick={() => setOpen(true)}>
+        {t('ban')}
+      </Button>
+      <Dialog open={open} onOpenChange={setOpen}>
+        <DialogContent>
+          <DialogTitle>{t('confirmTitle')}</DialogTitle>
+          <DialogDescription>
+            {t.rich('confirmDescription', {
+              name: (chunks) => <span className="font-semibold text-foreground">{chunks}</span>,
+              username: user.username,
+            })}
+          </DialogDescription>
+          <DialogFooter>
+            <Button type="button" variant="destructive" onClick={() => void handleBan()} loading={pending}>
+              {t('confirm')}
+            </Button>
+          </DialogFooter>
+        </DialogContent>
+      </Dialog>
+    </>
+  );
+}
+
 function PermissionsRow({
   user,
   isSelf,
@@ -52,6 +135,7 @@ function PermissionsRow({
 }) {
   const t = useTranslations('admin.users');
   const tAdmin = useTranslations('admin');
+  const tBan = useTranslations('admin.users.ban');
   const targetIsAdmin = user.roles.includes(UserRoles.ADMIN);
   // Literal, não OR'd com ADMIN: ADMIN + CHANNELS_ACCESS juntos formam o combo
   // "superadmin" — precisa dar pra ver quem tem os dois de fato.
@@ -105,6 +189,20 @@ function PermissionsRow({
     />
   );
 
+  // Mesmo gate da rota (isCurrentUserAdmin — CHANNELS_ACCESS puro não bane
+  // ninguém) + as duas mesmas exceções do /api/rtc/kick: não em si mesmo, não
+  // em outro ADMIN.
+  const banDisabled = isSelf || targetIsAdmin || !currentUserIsAdmin;
+  const banTooltip = user.bannedAt
+    ? null
+    : isSelf
+      ? t('selfTooltip')
+      : targetIsAdmin
+        ? tBan('adminTooltip')
+        : !currentUserIsAdmin
+          ? t('adminOnlyAccessTooltip')
+          : null;
+
   return (
     <TableRow>
       <TableCell>
@@ -142,6 +240,21 @@ function PermissionsRow({
           canalAccessControl
         )}
       </TableCell>
+
+      <TableCell>
+        {banTooltip ? (
+          <Tooltip>
+            <TooltipTrigger asChild>
+              <div className="w-fit">
+                <BanUserAction user={user} disabled={banDisabled} onChanged={onChanged} />
+              </div>
+            </TooltipTrigger>
+            <TooltipContent>{banTooltip}</TooltipContent>
+          </Tooltip>
+        ) : (
+          <BanUserAction user={user} disabled={banDisabled} onChanged={onChanged} />
+        )}
+      </TableCell>
     </TableRow>
   );
 }
@@ -171,6 +284,7 @@ export default function AdminUsersView({
             <TableHead>{t('columnUser')}</TableHead>
             <TableHead>{t('columnChannelsAdmin')}</TableHead>
             <TableHead>{t('columnAccess')}</TableHead>
+            <TableHead>{t('columnActions')}</TableHead>
           </TableRow>
         </TableHeader>
         <TableBody>

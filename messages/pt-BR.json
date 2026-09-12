@@ -469,6 +469,7 @@
       "placeholder": "Código de convite",
       "invalid": "Código inválido, expirado ou revogado.",
       "blocked": "Muitas tentativas seguidas. Espera alguns minutos e tenta de novo.",
+      "banned": "Sua conta foi removida do OpenCall. Fale com um admin se achar que isso é engano.",
       "checking": "Verificando…",
       "redeem": "Resgatar acesso",
       "granted": "Acesso liberado",
@@ -552,6 +553,31 @@
       "volume": "Volume"
     }
   },
+  "dm": {
+    "rail": {
+      "newConversation": "Nova mensagem direta",
+      "hideConversation": "Remover da barra lateral"
+    },
+    "picker": {
+      "title": "Com quem vamos conversar?",
+      "description": "Busque o usuário que você quer enviar uma mensagem direta e selecione para iniciar o chat.",
+      "searchPlaceholder": "Buscar pessoa",
+      "noResults": "Ninguém encontrado.",
+      "recent": "Recentes",
+      "general": "Geral",
+      "sendMessage": "Enviar mensagem"
+    },
+    "view": {
+      "back": "Voltar",
+      "dropFileHere": "Solte o arquivo aqui",
+      "deleteTitle": "Apagar mensagem?",
+      "deleteDescription": "Isso não pode ser desfeito. A mensagem some pros dois.",
+      "delete": "Apagar",
+      "deleteFailed": "Não deu pra apagar a mensagem",
+      "deleteFailedRetry": "Tenta de novo.",
+      "deleteFailedNetwork": "Verifica sua conexão e tenta de novo."
+    }
+  },
   "admin": {
     "tabs": {
       "users": "Usuários",
@@ -569,6 +595,7 @@
       "columnUser": "Usuário",
       "columnChannelsAdmin": "Admin de canais",
       "columnAccess": "Acesso ao OpenCall",
+      "columnActions": "Ações",
       "adminBadge": "Admin",
       "updateFailed": "Não deu pra atualizar",
       "selfTooltip": "Você não pode alterar isso pra você mesmo por aqui",
@@ -578,7 +605,18 @@
       "removeChannelsAdmin": "Remover admin de canais de {username}",
       "grantChannelsAdmin": "Tornar {username} admin de canais",
       "revokeAccess": "Remover acesso ao OpenCall de {username}",
-      "grantAccess": "Dar acesso ao OpenCall para {username}"
+      "grantAccess": "Dar acesso ao OpenCall para {username}",
+      "ban": {
+        "ban": "Remover",
+        "unban": "Desbanir",
+        "bannedBadge": "Banido",
+        "adminTooltip": "Admin não pode ser removido",
+        "confirmTitle": "Remover usuário do OpenCall?",
+        "confirmDescription": "<name>{username}</name> perde o acesso, é desconectado de qualquer call ativa agora, e não consegue voltar nem com um convite novo. Dá pra desfazer depois.",
+        "confirm": "Remover",
+        "banFailed": "Não deu pra remover",
+        "unbanFailed": "Não deu pra desbanir"
+      }
     },
     "channels": {
       "title": "Canais",

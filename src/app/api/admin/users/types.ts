@@ -6,4 +6,5 @@ export type AdminUserDTO = {
   avatar: string;
   groups: string[];
   roles: UserRoles[];
+  bannedAt: string | null;
 }

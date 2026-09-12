@@ -11,7 +11,7 @@ import { Input } from '@/components/ui/input';
 import { normalizeInviteCode } from '@/lib/invite/inviteCode';
 import { cn } from '@/lib/utils';
 
-type State = 'idle' | 'checking' | 'error' | 'blocked' | 'success';
+type State = 'idle' | 'checking' | 'error' | 'blocked' | 'banned' | 'success';
 
 /** Quanto o selo de "acesso liberado" fica na tela antes do refresh. */
 const SUCCESS_HOLD_MS = 1400;
@@ -33,6 +33,7 @@ async function redeemInviteCode(code: string): Promise<void> {
   });
 
   if (res.status === 429) throw new Error('RATE_LIMITED');
+  if (res.status === 403) throw new Error('BANNED');
   if (!res.ok) throw new Error('INVALID_CODE');
 }
 
@@ -66,7 +67,11 @@ export default function NoAccessPopover() {
     setState('checking');
     redeemInviteCode(normalized)
       .then(() => setState('success'))
-      .catch((err: Error) => setState(err.message === 'RATE_LIMITED' ? 'blocked' : 'error'));
+      .catch((err: Error) => {
+        if (err.message === 'RATE_LIMITED') return setState('blocked');
+        if (err.message === 'BANNED') return setState('banned');
+        setState('error');
+      });
   }
 
   // Chega autenticado (ou acabou de autenticar vindo) com `?invite=` na URL —
@@ -152,24 +157,28 @@ export default function NoAccessPopover() {
             <DialogDescription>{t('description')}</DialogDescription>
           </div>
 
-          <div className="flex flex-col gap-3">
-            <Input
-              value={code}
-              onChange={(e) => setCode(e.target.value)}
-              onKeyDown={(e) => e.key === 'Enter' && handleSubmit()}
-              placeholder={t('placeholder')}
-              autoFocus
-              disabled={state === 'checking'}
-              className="font-mono uppercase tracking-widest"
-            />
+          {state === 'banned' ? (
+            <p className="text-sm text-destructive">{t('banned')}</p>
+          ) : (
+            <div className="flex flex-col gap-3">
+              <Input
+                value={code}
+                onChange={(e) => setCode(e.target.value)}
+                onKeyDown={(e) => e.key === 'Enter' && handleSubmit()}
+                placeholder={t('placeholder')}
+                autoFocus
+                disabled={state === 'checking'}
+                className="font-mono uppercase tracking-widest"
+              />
 
-            {state === 'error' && <p className="text-xs text-destructive">{t('invalid')}</p>}
-            {state === 'blocked' && <p className="text-xs text-destructive">{t('blocked')}</p>}
+              {state === 'error' && <p className="text-xs text-destructive">{t('invalid')}</p>}
+              {state === 'blocked' && <p className="text-xs text-destructive">{t('blocked')}</p>}
 
-            <Button type="button" className="w-full" disabled={!code.trim() || state === 'checking'} onClick={handleSubmit}>
-              {state === 'checking' ? t('checking') : t('redeem')}
-            </Button>
-          </div>
+              <Button type="button" className="w-full" disabled={!code.trim() || state === 'checking'} onClick={handleSubmit}>
+                {state === 'checking' ? t('checking') : t('redeem')}
+              </Button>
+            </div>
+          )}
         </div>
 
         {success && <AuthorizedSeal />}

@@ -32,19 +32,25 @@ export async function POST(req: NextRequest) {
   if (!code) return err(400, 'INVALID_CODE');
 
   try {
-    const granted = await prisma.$transaction(async (tx) => {
-      const invite = await tx.inviteCode.findUnique({ where: { code } });
-      if (!invite || invite.revokedAt) return false;
+    const result = await prisma.$transaction(async (tx) => {
+      const dbUser = await tx.user.findUniqueOrThrow({ where: { id: user.id }, select: { roles: true, bannedAt: true } });
+      // Banido (ver POST /api/admin/users/[userId]/ban) não resgata convite
+      // novo — sem esse corte, remover CANAL_ACCESS de `roles` não seguraria
+      // ninguém, já que qualquer código válido devolveria o acesso.
+      if (dbUser.bannedAt) return 'banned' as const;
 
-      const dbUser = await tx.user.findUniqueOrThrow({ where: { id: user.id }, select: { roles: true } });
+      const invite = await tx.inviteCode.findUnique({ where: { code } });
+      if (!invite || invite.revokedAt) return 'invalid' as const;
+
       if (!dbUser.roles.includes(UserRole.CANAL_ACCESS)) {
         await tx.user.update({ where: { id: user.id }, data: { roles: { push: UserRole.CANAL_ACCESS } } });
       }
       await tx.inviteCode.update({ where: { id: invite.id }, data: { redeemedCount: { increment: 1 } } });
-      return true;
+      return 'granted' as const;
     });
 
-    if (!granted) return err(404, 'INVALID_CODE');
+    if (result === 'banned') return err(403, 'BANNED');
+    if (result === 'invalid') return err(404, 'INVALID_CODE');
 
     invalidateRolesCache(user.id);
     return NextResponse.json({ ok: true });

@@ -4,6 +4,7 @@ import { getUser, isCurrentUserCanalAccess } from '@/app/api/auth/[...nextauth]/
 import { getUserAccountData } from '@/app/api/user/actions'
 import VoiceChannelSidebar from '@/components/VoiceDock/VoiceChannelSidebar'
 import { VoiceChannelStageSkeleton } from '@/components/VoiceDock/VoiceChannelStageSkeleton'
+import DirectMessagesRail from '@/components/DirectMessagesRail'
 import PlatformUsersSidebar from '@/components/PlatformUsersSidebar'
 import { PlatformUsersSidebarSkeleton } from '@/components/PlatformUsersSidebar/Skeleton'
 import InstallAppButton from '@/components/InstallAppButton'
@@ -40,6 +41,7 @@ export default async function ChannelsLayout({ children }: { children: React.Rea
       <main className="overflow-hidden max-[899px]:flex max-[899px]:h-screen max-[899px]:w-screen max-[899px]:items-center max-[899px]:justify-center">
         <main className="flex h-screen w-full flex-row overflow-hidden max-[899px]:mt-2 max-[899px]:mb-auto max-[899px]:h-[97vh] max-[899px]:w-[98vw] max-[899px]:rounded-2xl">
           <div className="dark flex h-full w-full overflow-hidden bg-card text-foreground">
+            {user && canalAccess && <DirectMessagesRail />}
             <VoiceChannelSidebar user={user} />
             <div className="relative m-auto h-[calc(100vh-1rem)] w-full flex-1 overflow-hidden rounded-2xl">
               {user && canalAccess ? children : <VoiceChannelStageSkeleton />}

@@ -1,7 +1,6 @@
 'use client';
 
 import { useEffect, useRef, useState } from 'react';
-import { markChatRead } from '@/hooks/useChatUnread';
 import type { ClientMessage } from './types';
 
 interface ReadState {
@@ -20,15 +19,20 @@ interface ReadState {
  * página carregada (backlog grande), a âncora cai no topo do que já está
  * carregado em vez do ponto exato — carregar páginas antigas só pra achar o
  * ponto certo não valia o custo aqui (ver relatório final da implementação).
+ *
+ * `readEndpoint`/`onMarkRead` desacoplam este hook de canal-de-texto
+ * especificamente — é o mesmo hook usado pelo chat de DM (ver
+ * flows/channel/dm), só apontando pros endpoints de /api/dm/*.
  */
 export function useUnreadDivider(params: {
-  channelId: string;
+  readEndpoint: string;
+  onMarkRead: (messageId: string) => void;
   messages: ClientMessage[];
   loadingInitial: boolean;
   atBottom: boolean;
   currentUserId: string | null;
 }) {
-  const { channelId, messages, loadingInitial, atBottom, currentUserId } = params;
+  const { readEndpoint, onMarkRead, messages, loadingInitial, atBottom, currentUserId } = params;
 
   const [dividerMessageId, setDividerMessageId] = useState<string | null>(null);
   const [visible, setVisible] = useState(true);
@@ -50,7 +54,7 @@ export function useUnreadDivider(params: {
 
     (async () => {
       try {
-        const response = await fetch(`/api/chat/read?channelId=${encodeURIComponent(channelId)}`);
+        const response = await fetch(readEndpoint);
         if (!response.ok) return;
         const data = (await response.json()) as ReadState;
         if (data.unreadCount <= 0) return;
@@ -67,7 +71,7 @@ export function useUnreadDivider(params: {
         // Sem divisor em caso de falha — não é crítico o suficiente pra travar a lista.
       }
     })();
-  }, [channelId, loadingInitial, messages]);
+  }, [readEndpoint, loadingInitial, messages]);
 
   // Chegou no fundo com a aba visível: marca lido e o divisor some com fade
   // (o caller decide o fade via dividerMessageId virando null).
@@ -79,8 +83,8 @@ export function useUnreadDivider(params: {
     prevLastIdRef.current = latest.id;
     dismissedRef.current = true;
     setDividerMessageId(null);
-    if (latest.status === 'sent') markChatRead(channelId, latest.id);
-  }, [channelId, atBottom, visible, messages]);
+    if (latest.status === 'sent') onMarkRead(latest.id);
+  }, [onMarkRead, atBottom, visible, messages]);
 
   // Mensagem nova chegando enquanto rolado pra cima: se não há divisor na
   // tela, ancora um novo antes dela (ver §8.2).

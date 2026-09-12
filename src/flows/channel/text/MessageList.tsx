@@ -53,7 +53,8 @@ export function MessageListSkeleton() {
 }
 
 export default function MessageList({
-  channelId,
+  readEndpoint,
+  onMarkRead,
   messages,
   loadingInitial,
   loadingOlder,
@@ -67,7 +68,8 @@ export default function MessageList({
   onRetry,
   onDiscard,
 }: {
-  channelId: string;
+  readEndpoint: string;
+  onMarkRead: (messageId: string) => void;
   messages: ClientMessage[];
   loadingInitial: boolean;
   loadingOlder: boolean;
@@ -91,7 +93,7 @@ export default function MessageList({
   const isInitialRenderRef = useRef(true);
   const messageRefs = useRef(new Map<string, HTMLDivElement>());
 
-  const { dividerMessageId } = useUnreadDivider({ channelId, messages, loadingInitial, atBottom, currentUserId });
+  const { dividerMessageId } = useUnreadDivider({ readEndpoint, onMarkRead, messages, loadingInitial, atBottom, currentUserId });
 
   const updateAtBottom = useCallback((value: boolean) => {
     atBottomRef.current = value;
